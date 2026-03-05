@@ -1,6 +1,7 @@
 <script>
   import { createClient } from '@supabase/supabase-js';
   import { page } from '$app/state';
+  import { friendlyAuthError } from '$lib/auth-errors.js';
 
   let mode = $state('login'); // 'login' or 'register'
   let email = $state('');
@@ -32,7 +33,7 @@
     if (mode === 'login') {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        errorMsg = error.message;
+        errorMsg = friendlyAuthError(error.message);
       } else {
         // Set cookies via server endpoint so server-side auth works
         await fetch('/auth/callback', {
@@ -50,7 +51,7 @@
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
-        errorMsg = error.message;
+        errorMsg = friendlyAuthError(error.message);
       } else {
         successMsg = 'Check your email for a confirmation link.';
       }

@@ -30,17 +30,37 @@
     if (errorRate > 5) return 'var(--color-degraded)';
     return 'var(--color-operational)';
   }
+
+  function statusLabel(errorRate) {
+    if (errorRate > 20) return 'Down';
+    if (errorRate > 5) return 'Degraded';
+    return 'Healthy';
+  }
 </script>
 
-{#if regions.length > 0}
+{#if data === undefined}
+  <section class="region-breakdown">
+    <h2>Regional Status</h2>
+    <div class="region-grid">
+      {#each { length: 4 } as _}
+        <div class="region-card skeleton-card">
+          <div class="skeleton-line" style="width: 60%"></div>
+          <div class="skeleton-line" style="width: 80%; margin-top: 0.5rem"></div>
+          <div class="skeleton-line" style="width: 50%; margin-top: 0.25rem"></div>
+        </div>
+      {/each}
+    </div>
+  </section>
+{:else if regions.length > 0}
   <section class="region-breakdown">
     <h2>Regional Status</h2>
     <div class="region-grid">
       {#each regions as region}
         <div class="region-card">
           <div class="region-header">
-            <span class="region-dot" style="background: {statusColor(region.errorRate)}"></span>
+            <span class="region-dot" style="background: {statusColor(region.errorRate)}" aria-hidden="true"></span>
             <span class="region-name">{region.name}</span>
+            <span class="region-status-label" style="color: {statusColor(region.errorRate)}">{statusLabel(region.errorRate)}</span>
           </div>
           <div class="region-stats">
             <span>{region.signals} signals</span>
@@ -96,11 +116,33 @@
     color: var(--color-text);
   }
 
+  .region-status-label {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
   .region-stats {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
     font-size: 0.75rem;
     color: var(--color-text-muted);
+  }
+
+  .skeleton-card {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line {
+    height: 12px;
+    background: var(--color-surface-hover);
+    border-radius: 4px;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 </style>

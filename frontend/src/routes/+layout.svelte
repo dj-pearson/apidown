@@ -79,8 +79,13 @@
 
 <style>
   header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface);
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   nav {

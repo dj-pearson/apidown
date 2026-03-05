@@ -49,9 +49,19 @@
   });
 </script>
 
-{#if chart}
+{#if data === undefined}
+  <div class="chart-skeleton">
+    <div class="skeleton-bar" style="height: 60%"></div>
+    <div class="skeleton-bar" style="height: 80%"></div>
+    <div class="skeleton-bar" style="height: 45%"></div>
+    <div class="skeleton-bar" style="height: 70%"></div>
+    <div class="skeleton-bar" style="height: 55%"></div>
+    <div class="skeleton-bar" style="height: 90%"></div>
+    <div class="skeleton-bar" style="height: 40%"></div>
+  </div>
+{:else if chart}
   <div class="chart-container">
-    <svg viewBox="0 0 {W} {H}" class="latency-chart">
+    <svg viewBox="0 0 {W} {H}" class="latency-chart" role="img" aria-label="24-hour latency chart showing P50 and P95 response times">
       <!-- Grid lines -->
       {#each chart.yTicks as tick}
         <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y} stroke="var(--color-border)" stroke-width="0.5" />
@@ -124,5 +134,29 @@
     font-size: 0.9rem;
     text-align: center;
     padding: 2rem 0;
+  }
+
+  .chart-skeleton {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 200px;
+    padding: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+
+  .skeleton-bar {
+    flex: 1;
+    background: var(--color-surface-hover);
+    border-radius: 2px;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 </style>

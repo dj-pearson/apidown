@@ -93,3 +93,38 @@ img {
   max-width: 100%;
   height: auto;
 }
+
+/* Print styles for incident detail and other pages */
+@media print {
+  :root {
+    --color-bg: #fff;
+    --color-surface: #fff;
+    --color-text: #111;
+    --color-text-muted: #555;
+    --color-border: #ccc;
+  }
+
+  html {
+    background: #fff;
+    color: #111;
+  }
+
+  header, footer, .skip-to-content {
+    display: none !important;
+  }
+
+  main {
+    padding: 0.5rem !important;
+    max-width: 100% !important;
+  }
+
+  a {
+    color: #111;
+    text-decoration: underline;
+  }
+
+  /* Prevent page breaks inside incident timeline entries */
+  .incident-card, .timeline-entry, .update-row, details {
+    break-inside: avoid;
+  }
+}

@@ -787,8 +787,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 49,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Copy buttons added to all code blocks on docs page with Copied! feedback"
     },
     {
       "id": "US-050",
@@ -803,8 +803,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 50,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Sticky TOC sidebar on desktop, collapsible dropdown on mobile, scroll-based highlighting"
     },
     {
       "id": "US-051",
@@ -819,8 +819,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 51,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Server-side pagination with 20 per page, load more button, total count display"
     },
     {
       "id": "US-052",
@@ -835,8 +835,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 52,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Skeleton placeholders for LatencyChart, RegionBreakdown, and UptimeBar when data is undefined"
     },
     {
       "id": "US-053",
@@ -851,8 +851,8 @@
         "Typecheck passes"
       ],
       "priority": 53,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Reusable Toast.svelte with success/error/info variants, auto-dismiss, fixed position"
     },
     {
       "id": "US-054",
@@ -867,8 +867,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 54,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Shared Button.svelte (primary/secondary/danger/ghost) and Card.svelte in lib/components/ui/"
     },
     {
       "id": "US-055",
@@ -883,8 +883,8 @@
         "Typecheck passes"
       ],
       "priority": 55,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "LatencyChart has role=img aria-label; UptimeBar segments keyboard-navigable with aria-live tooltip; RegionBreakdown has text status labels"
     },
     {
       "id": "US-056",
@@ -899,8 +899,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 56,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Sort toggle with By Category/Status/Name, localStorage persistence"
     },
     {
       "id": "US-057",
@@ -915,8 +915,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 57,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "FAQ accordion with 5 questions using native details/summary elements"
     },
     {
       "id": "US-058",
@@ -931,8 +931,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 58,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Header sticky with backdrop-filter blur and z-index"
     },
     {
       "id": "US-059",
@@ -947,8 +947,8 @@
         "Typecheck passes"
       ],
       "priority": 59,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Print media query in app.css hides nav/footer, adjusts colors for print"
     },
     {
       "id": "US-060",
@@ -963,8 +963,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 60,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Live/Reconnecting/Offline indicator based on Supabase channel status"
     },
     {
       "id": "US-061",
@@ -979,8 +979,8 @@
         "Typecheck passes"
       ],
       "priority": 61,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "auth-errors.js maps Supabase errors to friendly messages, used in login page"
     }
   ]
 }

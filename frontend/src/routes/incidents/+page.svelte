@@ -1,8 +1,21 @@
 <script>
+  import { goto } from '$app/navigation';
+
   let { data } = $props();
   let incidents = $state(data.incidents);
+  let totalCount = $state(data.totalCount);
+  let currentPage = $state(data.page);
+  let pageSize = data.pageSize;
   let filterSeverity = $state('all');
   let filterStatus = $state('all');
+  let loadingMore = $state(false);
+
+  // Update state when data changes (navigation)
+  $effect(() => {
+    incidents = data.incidents;
+    totalCount = data.totalCount;
+    currentPage = data.page;
+  });
 
   let filteredIncidents = $derived.by(() => {
     return incidents.filter(inc => {
@@ -12,6 +25,16 @@
       return true;
     });
   });
+
+  let displayedCount = $derived(incidents.length);
+  let hasMore = $derived(currentPage * pageSize < totalCount);
+
+  async function loadMore() {
+    loadingMore = true;
+    const nextPage = currentPage + 1;
+    await goto(`/incidents?page=${nextPage}`, { replaceState: false, noScroll: true });
+    loadingMore = false;
+  }
 
   function formatDate(iso) {
     return new Date(iso).toLocaleString('en-US', {
@@ -29,7 +52,7 @@
 <h1>Incidents</h1>
 <p class="subtitle">Active and recent incidents across all monitored APIs</p>
 
-{#if incidents.length === 0}
+{#if totalCount === 0}
   <div class="empty-state">
     <p>No incidents recorded yet. All systems operational.</p>
     <p class="empty-timestamp">As of {formatDate(new Date().toISOString())}</p>
@@ -53,7 +76,7 @@
         <option value="resolved">Resolved</option>
       </select>
     </div>
-    <span class="filter-count">{filteredIncidents.length} of {incidents.length} incidents</span>
+    <span class="filter-count">Showing {displayedCount} of {totalCount} incidents</span>
   </div>
 
   {#if filteredIncidents.length === 0}
@@ -86,6 +109,14 @@
         </a>
       {/each}
     </div>
+
+    {#if hasMore}
+      <div class="load-more">
+        <button class="load-more-btn" disabled={loadingMore} onclick={loadMore}>
+          {loadingMore ? 'Loading…' : 'Load more'}
+        </button>
+      </div>
+    {/if}
   {/if}
 {/if}
 
@@ -236,5 +267,31 @@
 
   .clear-filters:hover {
     border-color: var(--color-primary);
+  }
+
+  .load-more {
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+
+  .load-more-btn {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-primary);
+    padding: 0.6rem 2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .load-more-btn:hover {
+    border-color: var(--color-primary);
+  }
+
+  .load-more-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>
