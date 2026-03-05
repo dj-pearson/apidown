@@ -1,5 +1,5 @@
 <script>
-  import { getSupabase } from '$lib/supabase.js';
+  import { createClient } from '@supabase/supabase-js';
   import { goto } from '$app/navigation';
 
   let { data } = $props();
@@ -10,6 +10,13 @@
   let newKeyLabel = $state('');
   let creatingKey = $state(false);
   let newKeyValue = $state('');
+
+  function getAuthClient() {
+    const url = data.supabaseUrl;
+    const key = data.supabaseAnonKey;
+    if (!url || !key) return null;
+    return createClient(url, key);
+  }
 
   async function createApiKey() {
     creatingKey = true;
@@ -24,7 +31,6 @@
         const body = await res.json();
         newKeyValue = body.key;
         newKeyLabel = '';
-        // Refresh keys list
         location.reload();
       }
     } catch {
@@ -34,14 +40,15 @@
   }
 
   async function revokeKey(keyId) {
-    const supabase = getSupabase();
+    const supabase = getAuthClient();
+    if (!supabase) return;
     await supabase.from('api_keys').update({ is_active: false }).eq('id', keyId);
     apiKeys = apiKeys.map(k => k.id === keyId ? { ...k, is_active: false } : k);
   }
 
   async function logout() {
-    const supabase = getSupabase();
-    await supabase.auth.signOut();
+    const supabase = getAuthClient();
+    if (supabase) await supabase.auth.signOut();
     document.cookie = 'sb-access-token=; Max-Age=0; path=/';
     document.cookie = 'sb-refresh-token=; Max-Age=0; path=/';
     goto('/');

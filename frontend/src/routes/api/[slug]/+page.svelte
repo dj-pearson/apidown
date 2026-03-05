@@ -1,6 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
-  import { getSupabase } from '$lib/supabase.js';
+  import { createClient } from '@supabase/supabase-js';
   import LatencyChart from '$lib/components/LatencyChart.svelte';
   import RegionBreakdown from '$lib/components/RegionBreakdown.svelte';
   import UptimeBar from '$lib/components/UptimeBar.svelte';
@@ -9,7 +8,6 @@
   let api = $state(data.api);
   let incidents = $state(data.incidents);
   let latencyData = $state(data.latencyData);
-  let channel;
 
   // Report button state
   let reportSubmitting = $state(false);
@@ -50,9 +48,14 @@
   // Get unique regions from recent data
   let regions = $derived([...new Set(latencyData.map(d => d.region).filter(Boolean))]);
 
-  onMount(() => {
-    const supabase = getSupabase();
-    channel = supabase
+  // Real-time subscription
+  $effect(() => {
+    const url = data.supabaseUrl;
+    const key = data.supabaseAnonKey;
+    if (!url || !key) return;
+
+    const supabase = createClient(url, key);
+    const channel = supabase
       .channel(`api-detail-${api.slug}`)
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -63,10 +66,10 @@
         api = { ...api, ...payload.new };
       })
       .subscribe();
-  });
 
-  onDestroy(() => {
-    if (channel) getSupabase().removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   });
 
   function formatDate(iso) {

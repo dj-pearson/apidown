@@ -1,6 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
-  import { getSupabase } from '$lib/supabase.js';
+  import { createClient } from '@supabase/supabase-js';
   import StatusCard from '$lib/components/StatusCard.svelte';
 
   let { data } = $props();
@@ -8,7 +7,6 @@
   let activeIncidents = $state(data.activeIncidents);
   let sparklineData = data.sparklineData || {};
   let searchQuery = $state('');
-  let channel;
 
   // Group APIs by category
   let groupedApis = $derived.by(() => {
@@ -40,9 +38,14 @@
 
   let operationalCount = $derived(apis.filter(a => a.current_status === 'operational').length);
 
-  onMount(() => {
-    const supabase = getSupabase();
-    channel = supabase
+  // Real-time subscription via $effect — runs after layout's $effect has set up Supabase config
+  $effect(() => {
+    const url = data.supabaseUrl;
+    const key = data.supabaseAnonKey;
+    if (!url || !key) return;
+
+    const supabase = createClient(url, key);
+    const channel = supabase
       .channel('api-status-changes')
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -54,10 +57,10 @@
         );
       })
       .subscribe();
-  });
 
-  onDestroy(() => {
-    if (channel) getSupabase().removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   });
 </script>
 
