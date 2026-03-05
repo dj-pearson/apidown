@@ -27,8 +27,15 @@ export async function load({ cookies, platform }) {
       return { user: null, supabaseUrl, supabaseAnonKey, ingestUrl };
     }
 
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
     return {
-      user: { id: user.id, email: user.email },
+      user: { id: user.id, email: user.email, isAdmin: profile?.is_admin || false },
       supabaseUrl,
       supabaseAnonKey,
       ingestUrl,

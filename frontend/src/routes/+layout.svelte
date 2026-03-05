@@ -42,6 +42,9 @@
       <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false}>Incidents</a>
       <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false}>Docs</a>
       {#if user}
+        {#if user.isAdmin}
+          <a href="/admin" class:active={isActive('/admin')} onclick={() => mobileMenuOpen = false}>Admin</a>
+        {/if}
         <a href="/dashboard" class:active={isActive('/dashboard')} onclick={() => mobileMenuOpen = false}>Dashboard</a>
       {:else}
         <a href="/login" class:active={isActive('/login')} onclick={() => mobileMenuOpen = false}>Log In</a>
