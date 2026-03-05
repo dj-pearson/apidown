@@ -92,6 +92,16 @@ function getSeverity(errorRate, latencyRatio, reporters, syntheticOnly = false) 
   // When only synthetic probes are reporting, lower the reporter threshold
   const minReporters = syntheticOnly ? 2 : 5;
   if (reporters < minReporters) return null;
+
+  if (syntheticOnly) {
+    // Synthetic probes: only use error rate (latency is unreliable — measures
+    // network path from worker, not real user experience)
+    if (errorRate > 0.50) return 'critical';
+    if (errorRate > 0.20) return 'major';
+    if (errorRate > 0.10) return 'minor';
+    return null;
+  }
+
   if (errorRate > 0.50) return 'critical';
   if (errorRate > 0.20 || latencyRatio > 5) return 'major';
   if (errorRate > 0.05 || latencyRatio > 2) return 'minor';

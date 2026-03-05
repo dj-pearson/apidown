@@ -5,8 +5,16 @@ const SDK_SIGNAL_THRESHOLD = 10;
 const SDK_REPORTER_THRESHOLD = 3;
 const API_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+// Domains that require account-specific subdomains and can't be probed at root
+const UNPROBEABLE_DOMAINS = [
+  'blob.core.windows.net',      // Needs {account}.blob.core.windows.net
+  'documents.azure.com',         // Needs {account}.documents.azure.com
+  'r2.cloudflarestorage.com',    // Needs {account}.r2.cloudflarestorage.com
+];
+
 let cachedApis = [];
 let lastApiRefresh = 0;
+let rpcMissing = false; // Suppress repeated RPC error logs
 
 /**
  * Run synthetic probes against all monitored APIs.
@@ -66,7 +74,12 @@ async function refreshApiList(supabase) {
     return;
   }
 
-  cachedApis = (data || []).filter(api => api.base_domains && api.base_domains.length > 0);
+  cachedApis = (data || []).filter(api => {
+    if (!api.base_domains || api.base_domains.length === 0) return false;
+    // Skip domains that require account-specific subdomains
+    const domain = api.base_domains[0];
+    return !UNPROBEABLE_DOMAINS.some(d => domain === d || domain.endsWith('.' + d));
+  });
   lastApiRefresh = now;
   console.log(`[probe] Loaded ${cachedApis.length} APIs for probing`);
 }
@@ -78,6 +91,11 @@ async function refreshApiList(supabase) {
 async function getApisWithSdkCoverage(supabase) {
   const skipSet = new Set();
 
+  // Skip RPC if we already know it doesn't exist
+  if (rpcMissing) {
+    return await getApisWithSdkCoverageFallback(supabase);
+  }
+
   const { data, error } = await supabase.rpc('get_sdk_coverage_apis', {
     p_min_signals: SDK_SIGNAL_THRESHOLD,
     p_min_reporters: SDK_REPORTER_THRESHOLD,
@@ -87,6 +105,7 @@ async function getApisWithSdkCoverage(supabase) {
   if (error) {
     // RPC might not exist yet — fall back to manual query
     if (error.message.includes('does not exist')) {
+      rpcMissing = true;
       return await getApisWithSdkCoverageFallback(supabase);
     }
     console.error('[probe] SDK coverage check failed:', error.message);
@@ -175,12 +194,13 @@ async function probeApi(api, region) {
       }
     }
 
-    // 2xx, 3xx, 401, 403 = "up"; 5xx = "down"
+    // Any HTTP response means the server is alive and reachable.
+    // Only 5xx indicates a server-side problem.
     const code = response.status;
-    if (code < 400 || code === 401 || code === 403) {
-      statusCode = 200;
-    } else {
+    if (code >= 500) {
       statusCode = 503;
+    } else {
+      statusCode = 200;
     }
   } catch (err) {
     // Timeout, DNS failure, connection refused = down
