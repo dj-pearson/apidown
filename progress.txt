@@ -28,9 +28,9 @@ MVP core is deployed and running:
 
 == Story Status ==
 -- Phase 1: MVP Polish --
-US-001: pending - Remove temporary error handling from homepage
-US-002: pending - Add favicon and meta assets
-US-003: pending - Add nav links and footer to layout
+US-001: DONE - Remove temporary error handling from homepage
+US-002: DONE - Add favicon and meta assets
+US-003: DONE - Add nav links and footer to layout
 
 -- Phase 2: Dashboard Visuals --
 US-004: pending - Add latency sparklines to homepage

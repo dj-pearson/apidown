@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0f172a"/>
+  <text x="600" y="260" text-anchor="middle" font-family="system-ui, sans-serif" font-size="72" font-weight="700" fill="#fff">APIdown.net</text>
+  <text x="600" y="340" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" fill="#94a3b8">Is the API actually down — or is it your code?</text>
+  <circle cx="440" cy="440" r="12" fill="#22c55e"/><text x="462" y="448" font-family="system-ui, sans-serif" font-size="24" fill="#94a3b8">Real-time</text>
+  <circle cx="600" cy="440" r="12" fill="#eab308"/><text x="622" y="448" font-family="system-ui, sans-serif" font-size="24" fill="#94a3b8">Crowd-sourced</text>
+  <circle cx="800" cy="440" r="12" fill="#ef4444"/><text x="822" y="448" font-family="system-ui, sans-serif" font-size="24" fill="#94a3b8">Neutral</text>
+</svg>
