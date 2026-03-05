@@ -1,4 +1,4 @@
-import { env as pubEnv } from '$env/dynamic/public';
+import { getEnv } from '$lib/supabase-server.js';
 
 export async function load({ url }) {
   const token = url.searchParams.get('token');
@@ -9,7 +9,7 @@ export async function load({ url }) {
 
   // Call the ingest service to unsubscribe
   try {
-    const ingestUrl = pubEnv.PUBLIC_INGEST_URL || 'https://ingest.apidown.net';
+    const ingestUrl = getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net';
     const res = await fetch(`${ingestUrl}/v1/unsubscribe?token=${encodeURIComponent(token)}`);
     const data = await res.json();
 

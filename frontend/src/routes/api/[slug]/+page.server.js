@@ -1,6 +1,5 @@
-import { getSupabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
 import { error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
 
 export async function load({ params }) {
   const supabaseAdmin = getSupabaseAdmin();
@@ -79,6 +78,6 @@ export async function load({ params }) {
     latencyData: latencyData || [],
     uptimePercent,
     dailyUptime,
-    ingestUrl: env.PUBLIC_INGEST_URL || 'https://ingest.apidown.net',
+    ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
   };
 }

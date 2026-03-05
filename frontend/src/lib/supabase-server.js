@@ -1,15 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/private';
-import { env as pubEnv } from '$env/dynamic/public';
 
 let _supabaseAdmin;
+let _platform;
+
+/** Call once from +layout.server.js to provide the platform env */
+export function setPlatform(platform) {
+  _platform = platform;
+  _supabaseAdmin = null; // reset on new request
+}
+
+/** Get a platform env var by name (tries with and without PUBLIC_/PRIVATE_ prefix) */
+export function getEnv(name) {
+  const cf = _platform?.env || {};
+  return cf[name] || '';
+}
 
 export function getSupabaseAdmin() {
   if (!_supabaseAdmin) {
-    const url = pubEnv.PUBLIC_SUPABASE_URL;
-    const key = env.PRIVATE_SUPABASE_SERVICE_KEY;
+    const cf = _platform?.env || {};
+    const url = cf.PUBLIC_SUPABASE_URL || cf.SUPABASE_URL;
+    const key = cf.PRIVATE_SUPABASE_SERVICE_KEY || cf.SUPABASE_SERVICE_KEY;
     if (!url || !key) {
-      throw new Error('Missing Supabase environment variables');
+      throw new Error(
+        `Missing Supabase env vars. Found keys: ${Object.keys(cf).join(', ') || 'none'}`
+      );
     }
     _supabaseAdmin = createClient(url, key);
   }

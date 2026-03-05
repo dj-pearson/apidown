@@ -1,11 +1,16 @@
-import { env as pubEnv } from '$env/dynamic/public';
+import { setPlatform } from '$lib/supabase-server.js';
 
-export async function load({ cookies }) {
-  // Pass public env vars to client (Cloudflare Pages doesn't reliably
-  // expose them via $env/dynamic/public on the client side)
-  const supabaseUrl = pubEnv.PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = pubEnv.PUBLIC_SUPABASE_ANON_KEY || '';
-  const ingestUrl = pubEnv.PUBLIC_INGEST_URL || 'https://ingest.apidown.net';
+export async function load({ cookies, platform }) {
+  // Make platform available to supabase-server module
+  setPlatform(platform);
+
+  // On Cloudflare Pages, env vars are in platform.env
+  const cf = platform?.env || {};
+
+  // Try both naming conventions (PUBLIC_ prefix and without)
+  const supabaseUrl = cf.PUBLIC_SUPABASE_URL || cf.SUPABASE_URL || '';
+  const supabaseAnonKey = cf.PUBLIC_SUPABASE_ANON_KEY || cf.SUPABASE_ANON_KEY || '';
+  const ingestUrl = cf.PUBLIC_INGEST_URL || cf.INGEST_URL || 'https://ingest.apidown.net';
 
   // Try to get user from Supabase auth cookie
   const accessToken = cookies.get('sb-access-token');
