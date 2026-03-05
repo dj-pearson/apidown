@@ -42,6 +42,9 @@ async function evaluateApi(supabase, api) {
 
   if (window.total_signals < 5) return; // Not enough data
 
+  // Determine signal source: check if all reporters are synthetic
+  const syntheticOnly = await isSyntheticOnly(supabase, api.id);
+
   // Get 30-day baseline
   const { data: baselineData, error: bErr } = await supabase
     .rpc('get_api_baseline', { p_api_id: api.id, p_days: 30 });
@@ -54,10 +57,11 @@ async function evaluateApi(supabase, api) {
   const latencyRatio = window.p95_ms / baselineP95;
   const uniqueReporters = window.unique_reporters || 0;
 
-  const severity = getSeverity(errorRate, latencyRatio, uniqueReporters);
+  const severity = getSeverity(errorRate, latencyRatio, uniqueReporters, syntheticOnly);
+  const source = syntheticOnly ? 'synthetic' : (uniqueReporters > 0 ? 'hybrid' : 'sdk');
 
   if (severity && api.current_status === 'operational') {
-    await createIncident(supabase, api, severity, window, errorRate);
+    await createIncident(supabase, api, severity, window, errorRate, source);
   } else if (severity && api.current_status !== 'operational') {
     // Already in incident — check if severity needs upgrade
     await maybeUpgradeIncident(supabase, api, severity);
@@ -66,8 +70,28 @@ async function evaluateApi(supabase, api) {
   }
 }
 
-function getSeverity(errorRate, latencyRatio, reporters) {
-  if (reporters < 5) return null;
+/**
+ * Check if all recent reporters for an API are synthetic probes.
+ */
+async function isSyntheticOnly(supabase, apiId) {
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('signals')
+    .select('reporter_hash')
+    .eq('api_id', apiId)
+    .gt('time', fiveMinAgo)
+    .not('reporter_hash', 'like', 'synth-%')
+    .limit(1);
+
+  if (error) return false;
+  // If no non-synthetic reporters found, it's synthetic-only
+  return !data || data.length === 0;
+}
+
+function getSeverity(errorRate, latencyRatio, reporters, syntheticOnly = false) {
+  // When only synthetic probes are reporting, lower the reporter threshold
+  const minReporters = syntheticOnly ? 2 : 5;
+  if (reporters < minReporters) return null;
   if (errorRate > 0.50) return 'critical';
   if (errorRate > 0.20 || latencyRatio > 5) return 'major';
   if (errorRate > 0.05 || latencyRatio > 2) return 'minor';
@@ -80,7 +104,7 @@ function severityToStatus(severity) {
   return 'operational';
 }
 
-async function createIncident(supabase, api, severity, window, errorRate) {
+async function createIncident(supabase, api, severity, window, errorRate, source = 'sdk') {
   const newStatus = severityToStatus(severity);
   const title = `${api.name} - ${severity === 'critical' ? 'Major Outage' : 'Degraded Performance'} Detected`;
 
@@ -107,7 +131,7 @@ async function createIncident(supabase, api, severity, window, errorRate) {
     await supabase.from('incident_updates').insert({
       incident_id: incident.id,
       status: 'investigating',
-      message: `Anomaly detected: ${(errorRate * 100).toFixed(1)}% error rate from ${window.total_signals} signals across ${(window.regions || []).length} region(s). Investigating.`,
+      message: `Anomaly detected (${source}): ${(errorRate * 100).toFixed(1)}% error rate from ${window.total_signals} signals across ${(window.regions || []).length} region(s). Investigating.`,
     });
   }
 
@@ -131,7 +155,7 @@ async function createIncident(supabase, api, severity, window, errorRate) {
     }));
   }
 
-  console.log(`[anomaly] INCIDENT CREATED: ${api.slug} → ${severity} (error rate: ${(errorRate * 100).toFixed(1)}%)`);
+  console.log(`[anomaly] INCIDENT CREATED: ${api.slug} → ${severity} (error rate: ${(errorRate * 100).toFixed(1)}%, source: ${source})`);
 }
 
 async function maybeUpgradeIncident(supabase, api, newSeverity) {

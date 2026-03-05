@@ -5,6 +5,8 @@ import { runAnomalyDetection, setRedis } from './lib/anomaly-detector.js';
 import { drainAlerts } from './lib/alert-worker.js';
 import { refreshMaterializedView, runRetention } from './lib/maintenance.js';
 import { runDigestAlerts } from './lib/digest-worker.js';
+import { runSyntheticProbes } from './lib/synthetic-probe.js';
+import { runStatusPageScraper } from './lib/statuspage-scraper.js';
 
 const SIGNAL_INTERVAL = 10_000;   // Drain signals every 10s
 const ANOMALY_INTERVAL = 60_000;  // Run anomaly detection every 60s
@@ -12,6 +14,8 @@ const ALERT_INTERVAL   = 15_000;  // Process alerts every 15s
 const REFRESH_INTERVAL = 60_000;  // Refresh materialized view every 60s
 const DIGEST_INTERVAL  = 60 * 60 * 1000; // Digest alerts every hour
 const RETENTION_INTERVAL = 24 * 60 * 60 * 1000; // Retention cleanup daily
+const PROBE_INTERVAL   = 60_000;  // Synthetic probes every 60s
+const SCRAPE_INTERVAL  = 5 * 60 * 1000; // Status page scraping every 5min
 
 async function start() {
   console.log('[worker] Starting APIdown worker...');
@@ -67,9 +71,6 @@ async function start() {
     }
   }
 
-  // Run initial drain
-  await signalLoop();
-
   // Digest alert loop
   async function digestLoop() {
     try {
@@ -79,6 +80,29 @@ async function start() {
     }
   }
 
+  // Synthetic probe loop
+  async function probeLoop() {
+    try {
+      await runSyntheticProbes(supabase);
+    } catch (err) {
+      console.error('[worker] Synthetic probe error:', err.message);
+    }
+  }
+
+  // Status page scraper loop
+  async function scrapeLoop() {
+    try {
+      await runStatusPageScraper(supabase);
+    } catch (err) {
+      console.error('[worker] Status page scraper error:', err.message);
+    }
+  }
+
+  // Run initial drain and first probe
+  await signalLoop();
+  probeLoop();   // Fire-and-forget first probe
+  scrapeLoop();  // Fire-and-forget first scrape
+
   // Schedule recurring loops
   setInterval(signalLoop, SIGNAL_INTERVAL);
   setInterval(anomalyLoop, ANOMALY_INTERVAL);
@@ -86,6 +110,8 @@ async function start() {
   setInterval(refreshLoop, REFRESH_INTERVAL);
   setInterval(digestLoop, DIGEST_INTERVAL);
   setInterval(retentionLoop, RETENTION_INTERVAL);
+  setInterval(probeLoop, PROBE_INTERVAL);
+  setInterval(scrapeLoop, SCRAPE_INTERVAL);
 
   // Simple health HTTP server for container probes
   const http = await import('http');
