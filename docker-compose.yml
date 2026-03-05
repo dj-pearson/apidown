@@ -1,0 +1,62 @@
+services:
+  # ─── Redis ─────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # ─── Fastify Ingest Service ────────────────
+  ingest:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingest
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - LOG_LEVEL=info
+    depends_on:
+      - redis
+
+  # ─── Worker (Aggregation + Anomaly + Alerts) ─
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - ALERT_FROM_EMAIL=${ALERT_FROM_EMAIL:-alerts@apidown.net}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+    depends_on:
+      - redis
+
+  # ─── SvelteKit Frontend ────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - PRIVATE_SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+
+volumes:
+  redis_data:

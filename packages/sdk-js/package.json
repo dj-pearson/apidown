@@ -1,0 +1,37 @@
+{
+  "name": "apidown-monitor",
+  "version": "1.0.0",
+  "description": "Passive API health signal collector for APIdown.net",
+  "main": "src/index.js",
+  "module": "src/index.mjs",
+  "exports": {
+    ".": {
+      "require": "./src/index.js",
+      "import": "./src/index.mjs"
+    }
+  },
+  "types": "src/index.d.ts",
+  "files": [
+    "src/index.js",
+    "src/index.mjs",
+    "src/index.d.ts"
+  ],
+  "keywords": [
+    "api",
+    "monitoring",
+    "health",
+    "uptime",
+    "status",
+    "apidown"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pearsonmedia/apidown-monitor-js"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

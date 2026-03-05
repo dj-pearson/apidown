@@ -1,0 +1,7 @@
+# Worker Service — Aggregation + Anomaly Detection + Alerts
+FROM node:20-alpine
+WORKDIR /app
+COPY services/worker/package.json services/worker/package-lock.json* ./
+RUN npm ci --omit=dev
+COPY services/worker/src ./src
+CMD ["node", "src/worker.js"]

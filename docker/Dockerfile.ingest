@@ -1,0 +1,10 @@
+# Ingest Service — Fastify
+FROM node:20-alpine
+WORKDIR /app
+COPY services/ingest/package.json services/ingest/package-lock.json* ./
+RUN npm ci --omit=dev
+COPY services/ingest/src ./src
+ENV PORT=3001
+ENV HOST=0.0.0.0
+EXPOSE 3001
+CMD ["node", "src/server.js"]
