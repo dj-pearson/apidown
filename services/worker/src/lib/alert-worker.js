@@ -77,6 +77,8 @@ async function processAlert(supabase, alertJob) {
         await sendDiscordAlert(sub, alertJob);
       } else if (sub.channel === 'teams') {
         await sendTeamsAlert(sub, alertJob);
+      } else if (sub.channel === 'webhook') {
+        await sendWebhookAlert(sub, alertJob);
       }
       // Log that we sent it
       await supabase.from('alert_log').insert({
@@ -248,4 +250,43 @@ async function sendTeamsAlert(sub, alertJob) {
   });
 
   console.log(`[alerts] Teams webhook sent for ${api_name}`);
+}
+
+async function sendWebhookAlert(sub, alertJob) {
+  const { api_name, severity, title, regions, event_type, api_slug, incident_id } = alertJob;
+  const isResolved = event_type === 'resolved';
+
+  const payload = {
+    event: isResolved ? 'incident.resolved' : 'incident.created',
+    api: {
+      name: api_name,
+      slug: api_slug,
+      status_url: `https://apidown.net/api/${api_slug}`,
+    },
+    incident: {
+      id: incident_id,
+      title: isResolved ? `${api_name} - Resolved` : title,
+      severity: isResolved ? 'resolved' : severity,
+      status: isResolved ? 'resolved' : 'investigating',
+      regions: regions || [],
+      url: `https://apidown.net/incidents/${incident_id}`,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  const response = await fetch(sub.destination, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'APIdown-Webhook/1.0',
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Webhook returned ${response.status}`);
+  }
+
+  console.log(`[alerts] Webhook sent to ${sub.destination} for ${api_name}`);
 }

@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin, setPlatform } from '$lib/supabase-server.js';
 
 const STATUS_CONFIG = {
   operational: { label: 'operational', color: '#22c55e' },
@@ -10,7 +10,8 @@ const STATUS_CONFIG = {
  * GET /api/[slug]/badge.svg
  * Returns a shields.io-style SVG status badge for embedding in READMEs.
  */
-export async function GET({ params }) {
+export async function GET({ params, platform }) {
+  setPlatform(platform);
   const supabase = getSupabaseAdmin();
 
   const { data: api } = await supabase

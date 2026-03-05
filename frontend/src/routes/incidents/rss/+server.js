@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin, setPlatform } from '$lib/supabase-server.js';
 
 const SITE_URL = 'https://apidown.net';
 
@@ -6,7 +6,8 @@ const SITE_URL = 'https://apidown.net';
  * GET /incidents/rss
  * Returns an RSS 2.0 feed of recent incidents.
  */
-export async function GET() {
+export async function GET({ platform }) {
+  setPlatform(platform);
   const supabase = getSupabaseAdmin();
 
   const { data: incidents, error } = await supabase

@@ -1,6 +1,7 @@
-import { getSupabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin, setPlatform } from '$lib/supabase-server.js';
 
-export async function GET() {
+export async function GET({ platform }) {
+  setPlatform(platform);
   const supabase = getSupabaseAdmin();
   const { data: apis } = await supabase
     .from('apis')

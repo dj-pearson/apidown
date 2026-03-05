@@ -3,7 +3,7 @@ const subscribeSchema = {
   required: ['api_slug', 'channel', 'destination'],
   properties: {
     api_slug: { type: 'string', minLength: 1, maxLength: 100 },
-    channel: { type: 'string', enum: ['email', 'slack', 'pagerduty', 'discord', 'teams'] },
+    channel: { type: 'string', enum: ['email', 'slack', 'pagerduty', 'discord', 'teams', 'webhook'] },
     destination: { type: 'string', minLength: 3, maxLength: 500 },
   },
 };
@@ -26,6 +26,11 @@ export async function subscriptionsRoute(fastify) {
     // Basic URL validation for slack channel
     if (channel === 'slack' && !destination.startsWith('https://hooks.slack.com/')) {
       return reply.code(400).send({ error: 'Invalid Slack webhook URL' });
+    }
+
+    // Generic webhook URL validation
+    if (channel === 'webhook' && !destination.startsWith('https://')) {
+      return reply.code(400).send({ error: 'Webhook URL must use HTTPS' });
     }
 
     // Resolve slug → api_id
