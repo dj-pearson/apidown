@@ -1,8 +1,9 @@
 <script>
-  import { createClient } from '@supabase/supabase-js';
-  import LatencyChart from '$lib/components/LatencyChart.svelte';
-  import RegionBreakdown from '$lib/components/RegionBreakdown.svelte';
-  import UptimeBar from '$lib/components/UptimeBar.svelte';
+  import { createClient } from "@supabase/supabase-js";
+  import LatencyChart from "$lib/components/LatencyChart.svelte";
+  import RegionBreakdown from "$lib/components/RegionBreakdown.svelte";
+  import UptimeBar from "$lib/components/UptimeBar.svelte";
+  import SEO from "$lib/components/SEO.svelte";
 
   let { data } = $props();
   let api = $state(data.api);
@@ -12,42 +13,50 @@
 
   // Report button state
   let reportSubmitting = $state(false);
-  let reportMessage = $state('');
+  let reportMessage = $state("");
 
   // Subscribe form state
   let showSubscribe = $state(false);
-  let subEmail = $state('');
+  let subEmail = $state("");
   let subSubmitting = $state(false);
-  let subMessage = $state('');
+  let subMessage = $state("");
 
   const ingestUrl = data.ingestUrl;
 
   const statusColors = {
-    operational: 'var(--color-operational)',
-    degraded: 'var(--color-degraded)',
-    down: 'var(--color-down)',
+    operational: "var(--color-operational)",
+    degraded: "var(--color-degraded)",
+    down: "var(--color-down)",
   };
 
   const statusLabels = {
-    operational: 'Operational',
-    degraded: 'Degraded',
-    down: 'Down',
+    operational: "Operational",
+    degraded: "Degraded",
+    down: "Down",
   };
 
   // Compute summary stats from latency data
   let avgP50 = $derived(
     latencyData.length > 0
-      ? Math.round(latencyData.reduce((s, d) => s + (d.p50_ms || 0), 0) / latencyData.length)
-      : 0
+      ? Math.round(
+          latencyData.reduce((s, d) => s + (d.p50_ms || 0), 0) /
+            latencyData.length,
+        )
+      : 0,
   );
   let avgP95 = $derived(
     latencyData.length > 0
-      ? Math.round(latencyData.reduce((s, d) => s + (d.p95_ms || 0), 0) / latencyData.length)
-      : 0
+      ? Math.round(
+          latencyData.reduce((s, d) => s + (d.p95_ms || 0), 0) /
+            latencyData.length,
+        )
+      : 0,
   );
 
   // Get unique regions from recent data
-  let regions = $derived([...new Set(latencyData.map(d => d.region).filter(Boolean))]);
+  let regions = $derived([
+    ...new Set(latencyData.map((d) => d.region).filter(Boolean)),
+  ]);
 
   // Real-time subscription
   $effect(() => {
@@ -58,14 +67,18 @@
     const supabase = createClient(url, key);
     const channel = supabase
       .channel(`api-detail-${api.slug}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'apis',
-        filter: `id=eq.${api.id}`,
-      }, (payload) => {
-        api = { ...api, ...payload.new };
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "apis",
+          filter: `id=eq.${api.id}`,
+        },
+        (payload) => {
+          api = { ...api, ...payload.new };
+        },
+      )
       .subscribe();
 
     return () => {
@@ -74,73 +87,122 @@
   });
 
   function formatDate(iso) {
-    return new Date(iso).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
     });
   }
 
   async function reportIssue() {
     reportSubmitting = true;
-    reportMessage = '';
+    reportMessage = "";
     try {
       const res = await fetch(`${ingestUrl}/v1/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ api_slug: api.slug }),
       });
       const body = await res.json();
       if (res.ok) {
-        reportMessage = 'Report submitted. Thank you!';
+        reportMessage = "Report submitted. Thank you!";
       } else {
-        reportMessage = body.error || 'Failed to submit report.';
+        reportMessage = body.error || "Failed to submit report.";
       }
     } catch {
-      reportMessage = 'Network error. Try again later.';
+      reportMessage = "Network error. Try again later.";
     }
     reportSubmitting = false;
   }
 
   async function subscribe() {
     subSubmitting = true;
-    subMessage = '';
+    subMessage = "";
     try {
       const res = await fetch(`${ingestUrl}/v1/subscribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           api_slug: api.slug,
-          channel: 'email',
+          channel: "email",
           destination: subEmail,
         }),
       });
       const body = await res.json();
       if (res.ok) {
-        subMessage = body.status === 'already_subscribed'
-          ? 'You are already subscribed.'
-          : 'Subscribed! You will receive alerts for this API.';
-        subEmail = '';
+        subMessage =
+          body.status === "already_subscribed"
+            ? "You are already subscribed."
+            : "Subscribed! You will receive alerts for this API.";
+        subEmail = "";
       } else {
-        subMessage = body.error || 'Failed to subscribe.';
+        subMessage = body.error || "Failed to subscribe.";
       }
     } catch {
-      subMessage = 'Network error. Try again later.';
+      subMessage = "Network error. Try again later.";
     }
     subSubmitting = false;
   }
+  let seoTitle = $derived(
+    api.current_status === "down" || api.current_status === "degraded"
+      ? `🚨 ${api.current_status.toUpperCase()}: ${api.name} API Outage Active | Live Error Rates | APIDown`
+      : `${api.name} API Status | Real-Time Uptime & Latency | APIDown`,
+  );
+
+  let seoDescription = $derived(
+    api.current_status === "down" || api.current_status === "degraded"
+      ? `Live outage report for ${api.name}. Current error rates and latency from real production traffic. Is ${api.name} down right now?`
+      : `Real-time ${api.name} API status — uptime, latency, and incident history from crowd-sourced production traffic.`,
+  );
+
+  let jsonLdSchema = $derived({
+    "@context": "https://schema.org",
+    "@type":
+      api.current_status !== "operational" ? "LiveBlogPosting" : "Dataset",
+    name: `${api.name} API Status Data`,
+    description: seoDescription,
+    url: `https://apidown.net/api/${api.slug}`,
+    ...(api.current_status !== "operational"
+      ? {
+          coverageStartTime:
+            incidents.length > 0
+              ? incidents[0].started_at
+              : new Date().toISOString(),
+          liveBlogUpdate: incidents.slice(0, 5).map((inc) => ({
+            "@type": "BlogPosting",
+            headline: inc.title,
+            datePublished: inc.started_at,
+            dateModified: inc.started_at,
+            articleBody: `Status: ${inc.status}. Severity: ${inc.severity}.`,
+          })),
+        }
+      : {
+          license: "https://creativecommons.org/publicdomain/zero/1.0/",
+          isAccessibleForFree: true,
+          creator: {
+            "@type": "Organization",
+            name: "APIDown",
+          },
+        }),
+  });
 </script>
 
-<svelte:head>
-  <title>{api.name} Status — Is {api.name} Down Right Now? | APIdown.net</title>
-  <meta name="description" content="Real-time {api.name} API status — uptime, latency, and incident history from crowd-sourced production traffic." />
-</svelte:head>
+<SEO title={seoTitle} description={seoDescription} schema={jsonLdSchema} />
 
 <a href="/" class="back">&larr; All APIs</a>
 
 <div class="api-header">
   <div class="api-info">
     {#if api.logo_url && !logoFailed}
-      <img src={api.logo_url} alt="{api.name}" class="logo" onerror={() => logoFailed = true} />
+      <img
+        src={api.logo_url}
+        alt={api.name}
+        class="logo"
+        onerror={() => (logoFailed = true)}
+      />
     {:else}
       <div class="logo-placeholder">{api.name[0]}</div>
     {/if}
@@ -149,9 +211,23 @@
       <span class="category">{api.category}</span>
     </div>
   </div>
-  <div class="status-badge" style="background: {statusColors[api.current_status]}">
+  <div
+    class="status-badge"
+    style="background: {statusColors[api.current_status]}"
+  >
     {statusLabels[api.current_status]}
   </div>
+</div>
+
+<div class="conversion-cta">
+  <strong
+    >Don't let your customers find out about downtime before you do.</strong
+  >
+  <span
+    >Monitor your own internal APIs privately using the exact same real-traffic
+    telemetry.</span
+  >
+  <a href="/pricing" class="pro-btn">Get APIDown Pro</a>
 </div>
 
 <div class="metrics">
@@ -168,7 +244,7 @@
     <span class="metric-label">P95 latency</span>
   </div>
   <div class="metric">
-    <span class="metric-value">{regions.length || '—'}</span>
+    <span class="metric-value">{regions.length || "—"}</span>
     <span class="metric-label">Regions reporting</span>
   </div>
 </div>
@@ -183,19 +259,28 @@
 <RegionBreakdown data={latencyData} />
 
 {#if api.status_page}
-  <p class="vendor-link">Vendor status page: <a href={api.status_page} target="_blank" rel="noopener">{api.status_page}</a></p>
+  <p class="vendor-link">
+    Vendor status page: <a href={api.status_page} target="_blank" rel="noopener"
+      >{api.status_page}</a
+    >
+  </p>
 {/if}
 
 <p class="sla-link">
-  <a href="/api-status/{api.slug}/sla" target="_blank">Download SLA Report (JSON)</a>
+  <a href="/api-status/{api.slug}/sla" target="_blank"
+    >Download SLA Report (JSON)</a
+  >
 </p>
 
 <div class="actions-row">
   <div class="action-card">
     <h3>Report an Issue</h3>
-    <p>Seeing problems with {api.name}? Submit a manual report to help the community.</p>
+    <p>
+      Seeing problems with {api.name}? Submit a manual report to help the
+      community.
+    </p>
     <button onclick={reportIssue} disabled={reportSubmitting}>
-      {reportSubmitting ? 'Submitting...' : 'Report Issue'}
+      {reportSubmitting ? "Submitting..." : "Report Issue"}
     </button>
     {#if reportMessage}
       <p class="action-message">{reportMessage}</p>
@@ -206,9 +291,14 @@
     <h3>Get Alerts</h3>
     <p>Receive email notifications when {api.name} status changes.</p>
     {#if !showSubscribe}
-      <button onclick={() => showSubscribe = true}>Subscribe</button>
+      <button onclick={() => (showSubscribe = true)}>Subscribe</button>
     {:else}
-      <form onsubmit={(e) => { e.preventDefault(); subscribe(); }}>
+      <form
+        onsubmit={(e) => {
+          e.preventDefault();
+          subscribe();
+        }}
+      >
         <input
           type="email"
           placeholder="you@example.com"
@@ -216,7 +306,7 @@
           required
         />
         <button type="submit" disabled={subSubmitting}>
-          {subSubmitting ? 'Subscribing...' : 'Subscribe'}
+          {subSubmitting ? "Subscribing..." : "Subscribe"}
         </button>
       </form>
     {/if}
@@ -234,7 +324,9 @@
     {#each incidents as incident (incident.id)}
       <a href="/incidents/{incident.id}" class="incident-row">
         <div class="incident-meta">
-          <span class="severity severity-{incident.severity}">{incident.severity}</span>
+          <span class="severity severity-{incident.severity}"
+            >{incident.severity}</span
+          >
           <span class="incident-status">{incident.status}</span>
         </div>
         <span class="incident-title">{incident.title}</span>
@@ -260,6 +352,48 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
+  }
+
+  .conversion-cta {
+    background: linear-gradient(
+      135deg,
+      rgba(26, 86, 160, 0.1),
+      rgba(26, 86, 160, 0.05)
+    );
+    border: 1px solid var(--color-primary);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .conversion-cta strong {
+    font-size: 1.05rem;
+    color: var(--color-text);
+  }
+
+  .conversion-cta span {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .conversion-cta .pro-btn {
+    align-self: flex-start;
+    background: var(--color-primary);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: opacity 0.2s;
+  }
+
+  .conversion-cta .pro-btn:hover {
+    opacity: 0.9;
   }
 
   .api-info {
@@ -392,8 +526,13 @@
     transition: opacity 0.15s;
   }
 
-  .action-card button:hover { opacity: 0.85; }
-  .action-card button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .action-card button:hover {
+    opacity: 0.85;
+  }
+  .action-card button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
   .action-card form {
     display: flex;
@@ -422,7 +561,9 @@
   }
 
   @media (max-width: 640px) {
-    .actions-row { grid-template-columns: 1fr; }
+    .actions-row {
+      grid-template-columns: 1fr;
+    }
   }
 
   .incidents h2 {
@@ -467,9 +608,18 @@
     border-radius: 4px;
   }
 
-  .severity-minor { background: var(--color-degraded); color: #000; }
-  .severity-major { background: #f97316; color: #000; }
-  .severity-critical { background: var(--color-down); color: #fff; }
+  .severity-minor {
+    background: var(--color-degraded);
+    color: #000;
+  }
+  .severity-major {
+    background: #f97316;
+    color: #000;
+  }
+  .severity-critical {
+    background: var(--color-down);
+    color: #fff;
+  }
 
   .incident-status {
     font-size: 0.75rem;
