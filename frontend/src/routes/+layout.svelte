@@ -20,8 +20,8 @@
 
 <header>
   <nav>
-    <a href="/" class="logo">
-      <span class="logo-text">API<span class="logo-accent">down</span>.net</span>
+    <a href="/" class="logo" style="display: flex; align-items: center;">
+      <img src="/logo-primary.png" alt="APIdown.net" height="28" style="height: 28px; width: auto;" />
     </a>
     <button class="hamburger" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Toggle menu">
       <span class="hamburger-line" class:open={mobileMenuOpen}></span>
@@ -73,16 +73,6 @@
 
   .logo {
     text-decoration: none;
-  }
-
-  .logo-text {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--color-text);
-  }
-
-  .logo-accent {
-    color: var(--color-primary);
   }
 
   .hamburger {
