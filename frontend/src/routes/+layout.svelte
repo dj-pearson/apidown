@@ -1,9 +1,10 @@
 <script>
   import '../app.css';
   import { page } from '$app/state';
-  let { children } = $props();
+  let { children, data } = $props();
 
   let mobileMenuOpen = $state(false);
+  let user = $derived(data?.user);
 
   function isActive(href) {
     if (href === '/') return page.url.pathname === '/';
@@ -31,7 +32,11 @@
       <a href="/" class:active={isActive('/')} onclick={() => mobileMenuOpen = false}>Status</a>
       <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false}>Incidents</a>
       <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false}>Docs</a>
-      <a href="/get-key" class:active={isActive('/get-key')} onclick={() => mobileMenuOpen = false}>Get API Key</a>
+      {#if user}
+        <a href="/dashboard" class:active={isActive('/dashboard')} onclick={() => mobileMenuOpen = false}>Dashboard</a>
+      {:else}
+        <a href="/login" class:active={isActive('/login')} onclick={() => mobileMenuOpen = false}>Log In</a>
+      {/if}
     </div>
   </nav>
 </header>

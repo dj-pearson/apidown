@@ -1,6 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { getSupabase } from '$lib/supabase.js';
+  import LatencyChart from '$lib/components/LatencyChart.svelte';
+  import RegionBreakdown from '$lib/components/RegionBreakdown.svelte';
+  import UptimeBar from '$lib/components/UptimeBar.svelte';
 
   let { data } = $props();
   let api = $state(data.api);
@@ -164,9 +167,22 @@
   </div>
 </div>
 
+<UptimeBar data={data.dailyUptime} />
+
+<section class="latency-section">
+  <h2>24-Hour Latency</h2>
+  <LatencyChart data={latencyData} />
+</section>
+
+<RegionBreakdown data={latencyData} />
+
 {#if api.status_page}
   <p class="vendor-link">Vendor status page: <a href={api.status_page} target="_blank" rel="noopener">{api.status_page}</a></p>
 {/if}
+
+<p class="sla-link">
+  <a href="/api-status/{api.slug}/sla" target="_blank">Download SLA Report (JSON)</a>
+</p>
 
 <div class="actions-row">
   <div class="action-card">
@@ -216,6 +232,9 @@
           <span class="incident-status">{incident.status}</span>
         </div>
         <span class="incident-title">{incident.title}</span>
+        {#if incident.report_count > 0}
+          <span class="incident-reports">{incident.report_count} reports</span>
+        {/if}
         <span class="incident-date">{formatDate(incident.started_at)}</span>
       </a>
     {/each}
@@ -295,7 +314,22 @@
     color: var(--color-text-muted);
   }
 
+  .latency-section {
+    margin-bottom: 2rem;
+  }
+
+  .latency-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
   .vendor-link {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+  }
+
+  .sla-link {
     margin-bottom: 2rem;
     font-size: 0.85rem;
     color: var(--color-text-muted);

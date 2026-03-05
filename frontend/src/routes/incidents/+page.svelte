@@ -37,6 +37,9 @@
           {#if incident.resolved_at}
             <span>· Resolved {formatDate(incident.resolved_at)}</span>
           {/if}
+          {#if incident.report_count > 0}
+            <span>· {incident.report_count} report{incident.report_count !== 1 ? 's' : ''}</span>
+          {/if}
           {#if incident.regions?.length > 0}
             <span>· Regions: {incident.regions.join(', ')}</span>
           {/if}

@@ -13,5 +13,23 @@ export async function load({ params }) {
 
   if (!incident) throw error(404, 'Incident not found');
 
-  return { incident };
+  // Count manual reports during incident window
+  const { count } = await supabaseAdmin
+    .from('manual_reports')
+    .select('*', { count: 'exact', head: true })
+    .eq('api_id', incident.api_id)
+    .gte('created_at', incident.started_at)
+    .lte('created_at', incident.resolved_at || new Date().toISOString());
+
+  // Fetch timeline updates
+  const { data: updates } = await supabaseAdmin
+    .from('incident_updates')
+    .select('id, status, message, created_at')
+    .eq('incident_id', id)
+    .order('created_at', { ascending: true });
+
+  return {
+    incident: { ...incident, report_count: count || 0 },
+    updates: updates || [],
+  };
 }

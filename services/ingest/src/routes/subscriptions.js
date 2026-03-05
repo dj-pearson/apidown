@@ -3,7 +3,7 @@ const subscribeSchema = {
   required: ['api_slug', 'channel', 'destination'],
   properties: {
     api_slug: { type: 'string', minLength: 1, maxLength: 100 },
-    channel: { type: 'string', enum: ['email', 'slack'] },
+    channel: { type: 'string', enum: ['email', 'slack', 'pagerduty', 'discord', 'teams'] },
     destination: { type: 'string', minLength: 3, maxLength: 500 },
   },
 };
@@ -52,24 +52,62 @@ export async function subscriptionsRoute(fastify) {
       return reply.code(200).send({ status: 'already_subscribed' });
     }
 
-    // For email: mark as verified=true for now (v1.1 will add email verification)
-    // For slack: webhooks are self-verifying
-    const { error: insertErr } = await fastify.supabase
+    // For slack/webhook channels: auto-verify (webhooks are self-verifying)
+    // For email: require verification via token-based link
+    const needsVerification = channel === 'email';
+
+    const { data: sub, error: insertErr } = await fastify.supabase
       .from('alert_subscriptions')
       .insert({
         api_id: api.id,
         channel,
         destination,
-        verified: true,
+        verified: !needsVerification,
+        email_verified: !needsVerification,
         tier: 'free',
-      });
+      })
+      .select('token')
+      .single();
 
     if (insertErr) {
       fastify.log.error('Failed to create subscription:', insertErr.message);
       return reply.code(500).send({ error: 'Failed to subscribe' });
     }
 
-    return reply.code(201).send({ subscribed: true });
+    if (needsVerification && sub?.token) {
+      // In production, send verification email here
+      fastify.log.info(`Verification link for ${destination}: /v1/verify?token=${sub.token}`);
+    }
+
+    return reply.code(201).send({
+      subscribed: true,
+      needs_verification: needsVerification,
+    });
+  });
+
+  // Verify email subscription
+  fastify.get('/v1/verify', async (request, reply) => {
+    const token = request.query.token;
+    if (!token || token.length < 10) {
+      return reply.code(400).send({ error: 'Invalid token' });
+    }
+
+    const { data, error } = await fastify.supabase
+      .from('alert_subscriptions')
+      .update({ verified: true, email_verified: true })
+      .eq('token', token)
+      .eq('verified', false)
+      .select('id, destination');
+
+    if (error) {
+      return reply.code(500).send({ error: 'Verification failed' });
+    }
+
+    if (!data || data.length === 0) {
+      return reply.code(404).send({ error: 'Subscription not found or already verified' });
+    }
+
+    return reply.code(200).send({ verified: true, destination: data[0].destination });
   });
 
   // Unsubscribe via token

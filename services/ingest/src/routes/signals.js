@@ -34,10 +34,29 @@ export async function signalsRoute(fastify) {
     },
   }, async (request, reply) => {
     // Validate API key
-    const apiKey = request.headers['x-apidown-key'];
+    const apiKey = request.headers['x-apidown-key'] || request.body.api_key;
     if (!apiKey || apiKey.length < 8) {
       return reply.code(401).send({ error: 'Invalid or missing API key' });
     }
+
+    // Verify key against database
+    const keyHash = await hashKey(apiKey);
+    const { data: keyRecord } = await fastify.supabase
+      .from('api_keys')
+      .select('id, user_id, is_active')
+      .eq('key_hash', keyHash)
+      .single();
+
+    if (!keyRecord || !keyRecord.is_active) {
+      return reply.code(401).send({ error: 'Invalid or revoked API key' });
+    }
+
+    // Update last_used_at (fire and forget)
+    fastify.supabase
+      .from('api_keys')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('id', keyRecord.id)
+      .then(() => {});
 
     const { signals } = request.body;
 
@@ -46,8 +65,7 @@ export async function signalsRoute(fastify) {
       || request.headers['x-region']
       || 'unknown';
 
-    // Hash the reporter key for anonymization (SHA-256 not reversible to key)
-    const reporterHash = await hashKey(apiKey);
+    const reporterHash = keyHash.slice(0, 16);
 
     let queued = 0;
     const pipeline = fastify.redis.pipeline();

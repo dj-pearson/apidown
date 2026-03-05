@@ -1,6 +1,7 @@
 <script>
   let { data } = $props();
   let incident = $state(data.incident);
+  let updates = $state(data.updates);
 
   function formatDate(iso) {
     if (!iso) return '—';
@@ -45,6 +46,10 @@
     {/if}
     <span>·</span>
     <span>Duration: {duration}</span>
+    {#if incident.report_count > 0}
+      <span>·</span>
+      <span>{incident.report_count} user report{incident.report_count !== 1 ? 's' : ''}</span>
+    {/if}
   </div>
 
   {#if incident.regions?.length > 0}
@@ -55,6 +60,31 @@
       {/each}
     </div>
   {/if}
+
+  <section class="timeline">
+    <h2>Timeline</h2>
+    {#if updates.length === 0}
+      <p class="empty">No updates yet.</p>
+    {:else}
+      <div class="timeline-list">
+        {#each updates as update (update.id)}
+          <div class="timeline-entry">
+            <div class="timeline-dot-wrap">
+              <span class="timeline-dot timeline-{update.status}"></span>
+              <span class="timeline-line"></span>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <span class="timeline-status timeline-badge-{update.status}">{update.status}</span>
+                <span class="timeline-time">{formatDate(update.created_at)}</span>
+              </div>
+              <p class="timeline-message">{update.message}</p>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
 
   <div class="info-box">
     <p>This incident was {incident.auto_created ? 'automatically detected' : 'manually reported'} by APIdown.net based on {incident.auto_created ? 'anomalous signal data from real production traffic.' : 'user reports.'}</p>
@@ -133,6 +163,100 @@
     font-size: 0.8rem;
     font-family: var(--font-mono);
     margin-left: 0.25rem;
+  }
+
+  .timeline {
+    margin-bottom: 1.5rem;
+  }
+
+  .timeline h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .timeline .empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .timeline-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .timeline-entry {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .timeline-dot-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 16px;
+  }
+
+  .timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .timeline-line {
+    flex: 1;
+    width: 2px;
+    background: var(--color-border);
+    min-height: 20px;
+  }
+
+  .timeline-entry:last-child .timeline-line {
+    display: none;
+  }
+
+  .timeline-investigating { background: var(--color-degraded); }
+  .timeline-identified { background: #f97316; }
+  .timeline-monitoring { background: var(--color-primary); }
+  .timeline-resolved { background: var(--color-operational); }
+  .timeline-update { background: var(--color-text-muted); }
+
+  .timeline-content {
+    padding-bottom: 1.25rem;
+    flex: 1;
+  }
+
+  .timeline-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .timeline-status {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .timeline-badge-investigating { background: var(--color-degraded); color: #000; }
+  .timeline-badge-identified { background: #f97316; color: #000; }
+  .timeline-badge-monitoring { background: var(--color-primary); color: #fff; }
+  .timeline-badge-resolved { background: var(--color-operational); color: #000; }
+  .timeline-badge-update { background: var(--color-border); color: var(--color-text); }
+
+  .timeline-time {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .timeline-message {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    line-height: 1.4;
   }
 
   .info-box {

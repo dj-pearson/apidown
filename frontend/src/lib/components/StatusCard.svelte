@@ -1,5 +1,7 @@
 <script>
-  let { api } = $props();
+  import Sparkline from './Sparkline.svelte';
+
+  let { api, sparkline = [] } = $props();
 
   const statusColors = {
     operational: 'var(--color-operational)',
@@ -25,6 +27,9 @@
       <div class="logo-placeholder">{api.name[0]}</div>
     {/if}
     <span class="name">{api.name}</span>
+    <div class="sparkline-wrap">
+      <Sparkline data={sparkline} />
+    </div>
   </div>
   <div class="card-status">
     <span class="dot" style="background: {dotColor}"></span>
@@ -81,6 +86,11 @@
     font-weight: 600;
     color: var(--color-text);
     font-size: 0.95rem;
+    flex: 1;
+  }
+
+  .sparkline-wrap {
+    margin-left: auto;
   }
 
   .card-status {

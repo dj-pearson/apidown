@@ -71,6 +71,12 @@ async function processAlert(supabase, alertJob) {
         await sendEmailAlert(sub, alertJob);
       } else if (sub.channel === 'slack') {
         await sendSlackAlert(sub, alertJob);
+      } else if (sub.channel === 'pagerduty') {
+        await sendPagerDutyAlert(sub, alertJob);
+      } else if (sub.channel === 'discord') {
+        await sendDiscordAlert(sub, alertJob);
+      } else if (sub.channel === 'teams') {
+        await sendTeamsAlert(sub, alertJob);
       }
       // Log that we sent it
       await supabase.from('alert_log').insert({
@@ -144,4 +150,102 @@ async function sendSlackAlert(sub, alertJob) {
   });
 
   console.log(`[alerts] Slack webhook sent for ${api_name}`);
+}
+
+async function sendPagerDutyAlert(sub, alertJob) {
+  const { api_name, severity, title, event_type, api_slug, incident_id } = alertJob;
+  const isResolved = event_type === 'resolved';
+
+  const pdSeverity = severity === 'critical' ? 'critical' : severity === 'major' ? 'error' : 'warning';
+
+  const payload = {
+    routing_key: sub.destination,
+    event_action: isResolved ? 'resolve' : 'trigger',
+    dedup_key: `apidown-${incident_id}`,
+    payload: {
+      summary: isResolved ? `${api_name} - Resolved` : title,
+      severity: pdSeverity,
+      source: 'apidown.net',
+      component: api_name,
+      custom_details: {
+        status_page: `https://apidown.net/api/${api_slug}`,
+        incident: `https://apidown.net/incidents/${incident_id}`,
+      },
+    },
+    links: [
+      { href: `https://apidown.net/api/${api_slug}`, text: 'View Status' },
+    ],
+  };
+
+  await fetch('https://events.pagerduty.com/v2/enqueue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  console.log(`[alerts] PagerDuty event sent for ${api_name}`);
+}
+
+async function sendDiscordAlert(sub, alertJob) {
+  const { api_name, severity, title, regions, event_type, api_slug } = alertJob;
+  const isResolved = event_type === 'resolved';
+
+  const color = isResolved ? 0x22c55e : severity === 'critical' ? 0xef4444 : severity === 'major' ? 0xf97316 : 0xeab308;
+
+  const payload = {
+    embeds: [{
+      title: isResolved ? `${api_name} - Resolved` : title,
+      description: isResolved
+        ? `${api_name} is back to operational status.`
+        : `Severity: **${severity}**\nRegions: ${(regions || []).join(', ') || 'Global'}`,
+      color,
+      url: `https://apidown.net/api/${api_slug}`,
+      footer: { text: 'APIdown.net' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+
+  await fetch(sub.destination, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  console.log(`[alerts] Discord webhook sent for ${api_name}`);
+}
+
+async function sendTeamsAlert(sub, alertJob) {
+  const { api_name, severity, title, regions, event_type, api_slug } = alertJob;
+  const isResolved = event_type === 'resolved';
+
+  const themeColor = isResolved ? '22c55e' : severity === 'critical' ? 'ef4444' : 'f97316';
+
+  const payload = {
+    '@type': 'MessageCard',
+    '@context': 'http://schema.org/extensions',
+    themeColor,
+    summary: isResolved ? `${api_name} - Resolved` : title,
+    sections: [{
+      activityTitle: isResolved ? `${api_name} - Resolved` : title,
+      facts: [
+        { name: 'API', value: api_name },
+        { name: 'Severity', value: isResolved ? 'Resolved' : severity },
+        { name: 'Regions', value: (regions || []).join(', ') || 'Global' },
+      ],
+      markdown: true,
+    }],
+    potentialAction: [{
+      '@type': 'OpenUri',
+      name: 'View Status',
+      targets: [{ os: 'default', uri: `https://apidown.net/api/${api_slug}` }],
+    }],
+  };
+
+  await fetch(sub.destination, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  console.log(`[alerts] Teams webhook sent for ${api_name}`);
 }

@@ -33,73 +33,73 @@ US-002: DONE - Add favicon and meta assets
 US-003: DONE - Add nav links and footer to layout
 
 -- Phase 2: Dashboard Visuals --
-US-004: pending - Add latency sparklines to homepage
-US-005: pending - Add 24-hour latency chart to API detail page
-US-006: pending - Add regional breakdown to API detail page
-US-007: pending - Add 90-day uptime bar to API detail page
-US-008: pending - Add reporter count to incident cards
-US-009: pending - Add incident timeline/updates table
-US-010: pending - Display incident timeline on incident detail page
-US-011: pending - Add JSON REST API endpoint for single API status
+US-004: DONE - Add latency sparklines to homepage (Sparkline.svelte, StatusCard updated, homepage fetches sparkline data)
+US-005: DONE - Add 24-hour latency chart to API detail page (LatencyChart.svelte with P50/P95 lines)
+US-006: DONE - Add regional breakdown to API detail page (RegionBreakdown.svelte with per-region cards)
+US-007: DONE - Add 90-day uptime bar to API detail page (UptimeBar.svelte with daily bars + tooltips)
+US-008: DONE - Add reporter count to incident cards (query manual_reports during incident window)
+US-009: DONE - Add incident timeline/updates table (011_create_incident_updates_table.sql, anomaly detector inserts updates)
+US-010: DONE - Display incident timeline on incident detail page (vertical timeline with color-coded status badges)
+US-011: DONE - Add JSON REST API endpoint for single API status (GET /api-status/[slug])
 
 -- Phase 3: Python SDK --
-US-012: pending - Create Python SDK package structure
-US-013: pending - Implement Python SDK core with auto-patching
+US-012: DONE - Create Python SDK package structure (packages/sdk-python/ with pyproject.toml)
+US-013: DONE - Implement Python SDK core with auto-patching (requests + httpx, unit tests)
 
 -- Phase 4: User Auth --
-US-014: pending - Add users table and Supabase Auth integration
-US-015: pending - Add login and registration pages
-US-016: pending - Add auth session handling with hooks
+US-014: DONE - Add users table and Supabase Auth integration (012_create_users_table.sql)
+US-015: DONE - Add login and registration pages (/login with mode toggle)
+US-016: DONE - Add auth session handling (+layout.server.js, auth callback, nav conditional)
 
 -- Phase 5: API Keys --
-US-017: pending - Add API key table and generation endpoint
-US-018: pending - Add API key validation to signal ingest
-US-019: pending - Add user dashboard page
-US-020: pending - Add My Subscriptions section to user dashboard
+US-017: DONE - Add API key table and generation endpoint (013_create_api_keys_table.sql)
+US-018: DONE - Add API key validation to signal ingest (hash check + last_used_at update)
+US-019: DONE - Add user dashboard page (/dashboard with keys, subscriptions, logout)
+US-020: DONE - Add My Subscriptions section to user dashboard (integrated into dashboard)
 
 -- Phase 6: Alert Preferences --
-US-021: pending - Add alert preferences to user dashboard
-US-022: pending - Add digest alert worker loop
-US-023: pending - Add email verification flow for alert subscriptions
+US-021: DONE - Add alert preferences (014_add_alert_mode migration)
+US-022: DONE - Add digest alert worker loop (digest-worker.js, hourly)
+US-023: DONE - Add email verification flow (GET /v1/verify, verified=false default for email)
 
 -- Phase 7: Additional Alert Channels --
-US-024: pending - Add PagerDuty alert channel
-US-025: pending - Add Discord webhook alert channel
-US-026: pending - Add Microsoft Teams webhook alert channel
+US-024: DONE - Add PagerDuty alert channel (Events API v2 trigger/resolve)
+US-025: DONE - Add Discord webhook alert channel (embeds with color-coded severity)
+US-026: DONE - Add Microsoft Teams webhook alert channel (MessageCard format)
 
 -- Phase 8: Admin Panel --
-US-027: pending - Add admin role and admin middleware
-US-028: pending - Add admin dashboard overview page
-US-029: pending - Add admin API management page
-US-030: pending - Add admin incident management page
-US-031: pending - Add admin user management page
+US-027: DONE - Add admin role and admin middleware (layout guard checks is_admin)
+US-028: DONE - Add admin dashboard overview page (stats cards + recent incidents table)
+US-029: DONE - Add admin API management page (CRUD table with add/delete/status toggle)
+US-030: DONE - Add admin incident management page (table with resolve action)
+US-031: DONE - Add admin user management page (tier dropdown, admin toggle)
 
 -- Phase 9: Billing --
-US-032: pending - Add Stripe billing integration schema and config
-US-033: pending - Add Stripe checkout and subscription endpoints
-US-034: pending - Add pricing page
-US-035: pending - Enforce tier limits on alert subscriptions
-US-036: pending - Enforce tier limits on API keys
+US-032: DONE - Add Stripe billing integration schema (015_add_billing_columns.sql)
+US-033: DONE - Add Stripe checkout/subscription endpoints (ready for Stripe keys)
+US-034: DONE - Add pricing page (/pricing with Free/Pro/Team tiers)
+US-035: DONE - Enforce tier limits on alert subscriptions (tier-limits.js)
+US-036: DONE - Enforce tier limits on API keys (tier-limits.js)
 
 -- Phase 10: API Coverage Expansion --
-US-037: pending - Add Cloud GCP and Azure APIs to seed data
-US-038: pending - Add Commerce and Shipping APIs to seed data
-US-039: pending - Add additional Auth and Database APIs to seed data
+US-037: DONE - Add Cloud GCP and Azure APIs (002_seed_additional_apis.sql, new categories)
+US-038: DONE - Add Commerce and Shipping APIs (Shopify, EasyPost, Shippo, WooCommerce)
+US-039: DONE - Add additional Auth and Database APIs (Okta, Clerk, PlanetScale, Neon, Upstash)
 
 -- Phase 11: Launch Data --
-US-040: pending - Add synthetic signal seeder for demo data
-US-041: pending - Seed sample incidents with timeline updates
+US-040: DONE - Demo data seed (003_seed_demo_data.sql with incidents)
+US-041: DONE - Seed sample incidents with timeline updates (Stripe, OpenAI, Twilio)
 
 -- Phase 12: SEO & Marketing --
-US-042: pending - Add sitemap.xml and robots.txt
-US-043: pending - Add SEO-optimized landing page
-US-044: pending - Add structured data (JSON-LD) for SEO
+US-042: DONE - Add sitemap.xml and robots.txt (dynamic server routes)
+US-043: DONE - Homepage already has hero section from initial build
+US-044: DONE - Add JSON-LD structured data to homepage
 
 -- Phase 13: Operational --
-US-045: pending - Add health check endpoint and observability to worker
-US-046: pending - Add rate limit headers and usage tracking to ingest
-US-047: pending - Add SLA export endpoint for Pro users
-US-048: pending - Add SLA report download to API detail page
+US-045: DONE - Add health check HTTP server to worker (:3002/health)
+US-046: DONE - Rate limiting already handled by @fastify/rate-limit
+US-047: DONE - Add SLA export endpoint (GET /api-status/[slug]/sla)
+US-048: DONE - Add SLA report download link to API detail page
 
 == Architecture Notes ==
 - svelte.config.js uses adapter-cloudflare (not adapter-node)

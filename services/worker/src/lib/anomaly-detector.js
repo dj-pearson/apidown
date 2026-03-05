@@ -102,6 +102,15 @@ async function createIncident(supabase, api, severity, window, errorRate) {
     return;
   }
 
+  // Insert initial timeline entry
+  if (incident) {
+    await supabase.from('incident_updates').insert({
+      incident_id: incident.id,
+      status: 'investigating',
+      message: `Anomaly detected: ${(errorRate * 100).toFixed(1)}% error rate from ${window.total_signals} signals across ${(window.regions || []).length} region(s). Investigating.`,
+    });
+  }
+
   // Update API status
   await supabase
     .from('apis')
@@ -152,6 +161,13 @@ async function maybeUpgradeIncident(supabase, api, newSeverity) {
       .update({ current_status: newStatus })
       .eq('id', api.id);
 
+    // Insert timeline entry for upgrade
+    await supabase.from('incident_updates').insert({
+      incident_id: current.id,
+      status: 'identified',
+      message: `Severity upgraded from ${current.severity} to ${newSeverity}.`,
+    });
+
     console.log(`[anomaly] UPGRADED: ${api.slug} → ${newSeverity}`);
   }
 }
@@ -174,6 +190,13 @@ async function resolveIncident(supabase, api) {
         resolved_at: new Date().toISOString(),
       })
       .eq('id', incident.id);
+
+    // Insert resolution timeline entry
+    await supabase.from('incident_updates').insert({
+      incident_id: incident.id,
+      status: 'resolved',
+      message: 'All signals have returned to normal. Incident resolved.',
+    });
 
     // Queue resolution alert
     if (_redis) {

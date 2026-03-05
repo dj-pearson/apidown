@@ -47,11 +47,38 @@ export async function load({ params }) {
   const totalMs = 90 * 24 * 60 * 60 * 1000;
   const uptimePercent = ((1 - downtimeMs / totalMs) * 100).toFixed(3);
 
+  // Build 90-day daily uptime data from incidents
+  const dailyUptime = [];
+  const now = Date.now();
+  for (let i = 89; i >= 0; i--) {
+    const dayStart = new Date(now - i * 24 * 60 * 60 * 1000);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    let dayDownMs = 0;
+    for (const inc of (uptimeIncidents || [])) {
+      const incStart = new Date(inc.started_at).getTime();
+      const incEnd = inc.resolved_at ? new Date(inc.resolved_at).getTime() : now;
+      const overlapStart = Math.max(incStart, dayStart.getTime());
+      const overlapEnd = Math.min(incEnd, dayEnd.getTime());
+      if (overlapStart < overlapEnd) dayDownMs += overlapEnd - overlapStart;
+    }
+
+    const dayTotalMs = 24 * 60 * 60 * 1000;
+    const pct = ((1 - dayDownMs / dayTotalMs) * 100);
+    dailyUptime.push({
+      date: dayStart.toISOString().slice(0, 10),
+      uptime: Math.round(pct * 100) / 100,
+    });
+  }
+
   return {
     api,
     incidents: incidents || [],
     latencyData: latencyData || [],
     uptimePercent,
+    dailyUptime,
     ingestUrl: env.PUBLIC_INGEST_URL || 'https://ingest.apidown.net',
   };
 }

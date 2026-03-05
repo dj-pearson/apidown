@@ -6,6 +6,7 @@
   let { data } = $props();
   let apis = $state(data.apis);
   let activeIncidents = $state(data.activeIncidents);
+  let sparklineData = data.sparklineData || {};
   let searchQuery = $state('');
   let channel;
 
@@ -29,9 +30,12 @@
     ai: 'AI / LLM',
     communications: 'Communications',
     'cloud-aws': 'Cloud — AWS',
+    'cloud-gcp': 'Cloud — GCP',
+    'cloud-azure': 'Cloud — Azure',
     auth: 'Auth & Identity',
     database: 'Database / Storage',
     devtools: 'Dev Tools & Hosting',
+    commerce: 'Commerce & Shipping',
   };
 
   let operationalCount = $derived(apis.filter(a => a.current_status === 'operational').length);
@@ -60,6 +64,16 @@
 <svelte:head>
   <title>APIdown.net — Real API Status from Real Traffic</title>
   <meta name="description" content="Real-time API health status powered by crowd-sourced production traffic. Is the API actually down — or is it your code?" />
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "APIdown.net",
+    "url": "https://apidown.net",
+    "description": "Real-time API health status powered by crowd-sourced production traffic",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  })}</script>`}
 </svelte:head>
 
 <div class="hero">
@@ -87,7 +101,7 @@
     <h2>{categoryLabels[category] || category}</h2>
     <div class="grid">
       {#each categoryApis as api (api.id)}
-        <StatusCard {api} />
+        <StatusCard {api} sparkline={sparklineData[api.id] || []} />
       {/each}
     </div>
   </section>
