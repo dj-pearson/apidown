@@ -2,15 +2,18 @@
   import '../app.css';
   import { page } from '$app/state';
   import { initSupabase } from '$lib/supabase.js';
-  let { children, data } = $props();
+  let props = $props();
 
-  // Initialize Supabase client with server-provided config
-  if (data?.supabaseUrl && data?.supabaseAnonKey) {
-    initSupabase(data.supabaseUrl, data.supabaseAnonKey);
-  }
+  // Initialize Supabase client with server-provided config (reactive via $effect)
+  $effect(() => {
+    const d = props.data;
+    if (d?.supabaseUrl && d?.supabaseAnonKey) {
+      initSupabase(d.supabaseUrl, d.supabaseAnonKey);
+    }
+  });
 
   let mobileMenuOpen = $state(false);
-  let user = $derived(data?.user);
+  let user = $derived(props.data?.user);
 
   function isActive(href) {
     if (href === '/') return page.url.pathname === '/';
@@ -48,7 +51,7 @@
 </header>
 
 <main>
-  {@render children()}
+  {@render props.children()}
 </main>
 
 <footer>

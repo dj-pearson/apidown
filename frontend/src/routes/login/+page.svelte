@@ -13,7 +13,14 @@
     loading = true;
     errorMsg = '';
     successMsg = '';
-    const supabase = getSupabase();
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch {
+      errorMsg = 'Authentication service is loading. Please try again.';
+      loading = false;
+      return;
+    }
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
