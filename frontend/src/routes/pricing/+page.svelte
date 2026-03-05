@@ -1,7 +1,11 @@
 <script>
+  let { data } = $props();
+  let loading = $state(null);
+
   const plans = [
     {
       name: 'Free',
+      tier: 'free',
       price: '$0',
       period: 'forever',
       features: [
@@ -11,12 +15,11 @@
         'Immediate alerts',
         'Community support',
       ],
-      cta: 'Get Started',
-      href: '/login',
       highlighted: false,
     },
     {
       name: 'Pro',
+      tier: 'pro',
       price: '$19',
       period: '/month',
       features: [
@@ -27,12 +30,11 @@
         'SLA export reports',
         'Priority support',
       ],
-      cta: 'Upgrade to Pro',
-      href: '/login',
       highlighted: true,
     },
     {
       name: 'Team',
+      tier: 'team',
       price: '$49',
       period: '/month',
       features: [
@@ -44,11 +46,36 @@
         'Team management',
         'Dedicated support',
       ],
-      cta: 'Upgrade to Team',
-      href: '/login',
       highlighted: false,
     },
   ];
+
+  function getCta(plan) {
+    if (!data.user) return { label: plan.tier === 'free' ? 'Get Started' : `Upgrade to ${plan.name}`, action: 'login' };
+    if (plan.tier === 'free') return { label: 'Current Plan', action: 'none' };
+    return { label: `Upgrade to ${plan.name}`, action: 'checkout' };
+  }
+
+  async function startCheckout(tier) {
+    loading = tier;
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      });
+      const result = await res.json();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        alert(result.message || 'Failed to start checkout');
+        loading = null;
+      }
+    } catch {
+      alert('Something went wrong. Please try again.');
+      loading = null;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -62,6 +89,7 @@
 
   <div class="plans">
     {#each plans as plan}
+      {@const cta = getCta(plan)}
       <div class="plan-card" class:highlighted={plan.highlighted}>
         {#if plan.highlighted}
           <span class="popular">Most Popular</span>
@@ -76,7 +104,15 @@
             <li>{feature}</li>
           {/each}
         </ul>
-        <a href={plan.href} class="cta" class:cta-primary={plan.highlighted}>{plan.cta}</a>
+        {#if cta.action === 'login'}
+          <a href="/login" class="cta" class:cta-primary={plan.highlighted}>{cta.label}</a>
+        {:else if cta.action === 'checkout'}
+          <button class="cta" class:cta-primary={plan.highlighted} disabled={loading === plan.tier} onclick={() => startCheckout(plan.tier)}>
+            {loading === plan.tier ? 'Redirecting…' : cta.label}
+          </button>
+        {:else}
+          <span class="cta cta-current">{cta.label}</span>
+        {/if}
       </div>
     {/each}
   </div>
@@ -177,4 +213,19 @@
   }
 
   .cta-primary:hover { opacity: 0.9; background: var(--color-primary); }
+
+  button.cta {
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  button.cta:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .cta-current {
+    opacity: 0.5;
+    cursor: default;
+  }
 </style>

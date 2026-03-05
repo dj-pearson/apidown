@@ -10,6 +10,7 @@
   let newKeyLabel = $state('');
   let creatingKey = $state(false);
   let newKeyValue = $state('');
+  let openingPortal = $state(false);
 
   function getAuthClient() {
     const url = data.supabaseUrl;
@@ -70,6 +71,23 @@
     goto('/');
   }
 
+  async function openBillingPortal() {
+    openingPortal = true;
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      const result = await res.json();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        alert('Could not open billing portal.');
+        openingPortal = false;
+      }
+    } catch {
+      alert('Something went wrong.');
+      openingPortal = false;
+    }
+  }
+
   function formatDate(iso) {
     if (!iso) return 'Never';
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -90,6 +108,29 @@
     <button class="btn-secondary" onclick={logout}>Log Out</button>
   </div>
 </div>
+
+<section class="section">
+  <h2>Subscription</h2>
+  <p class="section-desc">Your current plan and billing details.</p>
+
+  <div class="billing-card">
+    <div class="billing-info">
+      <span class="tier-label">{profile.tier} plan</span>
+      {#if profile.billing_period_end}
+        <span class="billing-date">Renews {formatDate(profile.billing_period_end)}</span>
+      {/if}
+    </div>
+    <div class="billing-actions">
+      {#if profile.stripe_customer_id}
+        <button class="btn-secondary" onclick={openBillingPortal} disabled={openingPortal}>
+          {openingPortal ? 'Opening…' : 'Manage Billing'}
+        </button>
+      {:else if profile.tier === 'free'}
+        <a href="/pricing" class="btn-primary">Upgrade</a>
+      {/if}
+    </div>
+  </div>
+</section>
 
 <section class="section">
   <h2>API Keys</h2>
@@ -327,6 +368,42 @@
   }
 
   .btn-secondary:hover { border-color: var(--color-text-muted); }
+
+  .billing-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .billing-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .tier-label {
+    font-weight: 600;
+    text-transform: capitalize;
+    font-size: 0.95rem;
+  }
+
+  .billing-date {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  .billing-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .billing-actions .btn-primary {
+    text-decoration: none;
+  }
 
   .btn-danger-sm {
     background: none;

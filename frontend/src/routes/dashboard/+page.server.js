@@ -12,7 +12,7 @@ export async function load({ cookies }) {
   // Get user profile
   const { data: profile } = await supabase
     .from('users')
-    .select('*')
+    .select('*, stripe_customer_id, stripe_subscription_id, billing_period_end')
     .eq('id', user.id)
     .single();
 
