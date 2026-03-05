@@ -1,0 +1,8 @@
+-- Migration 003c: (No longer needed)
+-- Refresh and retention are handled by the worker service.
+--
+-- The worker runs:
+--   REFRESH MATERIALIZED VIEW CONCURRENTLY signals_1min  (every 60s)
+--   DELETE FROM signals WHERE time < now() - INTERVAL '90 days' (daily)
+--
+-- Nothing to execute in this file.
