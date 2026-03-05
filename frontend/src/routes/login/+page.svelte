@@ -23,10 +23,19 @@
     }
 
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: session, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         errorMsg = error.message;
       } else {
+        // Set cookies via server endpoint so server-side auth works
+        await fetch('/auth/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.session.access_token,
+            refresh_token: session.session.refresh_token,
+          }),
+        });
         goto('/dashboard');
       }
     } else {
