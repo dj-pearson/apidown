@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { signalsRoute } from './routes/signals.js';
 import { healthRoute } from './routes/health.js';
+import { reportsRoute } from './routes/reports.js';
+import { subscriptionsRoute } from './routes/subscriptions.js';
 import { createRedisClient } from './lib/redis.js';
 import { createSupabaseClient } from './lib/supabase.js';
 import { buildDomainMap } from './lib/domain-map.js';
@@ -20,7 +22,7 @@ async function start() {
   // CORS — SDK sends from various origins
   await fastify.register(cors, {
     origin: true,
-    methods: ['POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'OPTIONS'],
   });
 
   // Global rate limit per IP
@@ -53,6 +55,8 @@ async function start() {
   // Routes
   await fastify.register(signalsRoute);
   await fastify.register(healthRoute);
+  await fastify.register(reportsRoute);
+  await fastify.register(subscriptionsRoute);
 
   // Graceful shutdown
   const shutdown = async () => {

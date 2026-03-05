@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '$lib/supabase-server.js';
 import { error } from '@sveltejs/kit';
+import { env } from '$env/dynamic/public';
 
 export async function load({ params }) {
   const { slug } = params;
@@ -50,5 +51,6 @@ export async function load({ params }) {
     incidents: incidents || [],
     latencyData: latencyData || [],
     uptimePercent,
+    ingestUrl: env.PUBLIC_INGEST_URL || 'https://ingest.apidown.net',
   };
 }

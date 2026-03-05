@@ -1,7 +1,7 @@
 import { createRedisClient } from './lib/redis.js';
 import { createSupabaseClient } from './lib/supabase.js';
 import { drainSignals } from './lib/signal-drain.js';
-import { runAnomalyDetection } from './lib/anomaly-detector.js';
+import { runAnomalyDetection, setRedis } from './lib/anomaly-detector.js';
 import { drainAlerts } from './lib/alert-worker.js';
 import { refreshMaterializedView, runRetention } from './lib/maintenance.js';
 
@@ -16,6 +16,9 @@ async function start() {
 
   const redis = createRedisClient();
   const supabase = createSupabaseClient();
+
+  // Wire Redis into anomaly detector for alert queueing
+  setRedis(redis);
 
   // Signal drain loop: Redis → Supabase
   async function signalLoop() {

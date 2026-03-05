@@ -1,5 +1,14 @@
 const ALERTS_QUEUE = 'alerts:pending';
 
+let _redis = null;
+
+/**
+ * Set the Redis client for alert queueing.
+ */
+export function setRedis(redis) {
+  _redis = redis;
+}
+
 /**
  * Anomaly detection engine.
  * Runs every 60s, evaluates the last 5-minute window against 30-day baselines.
@@ -99,6 +108,20 @@ async function createIncident(supabase, api, severity, window, errorRate) {
     .update({ current_status: newStatus })
     .eq('id', api.id);
 
+  // Queue alert jobs for subscribers
+  if (_redis && incident) {
+    await _redis.rpush(ALERTS_QUEUE, JSON.stringify({
+      incident_id: incident.id,
+      api_id: api.id,
+      api_slug: api.slug,
+      api_name: api.name,
+      severity,
+      title,
+      regions: window.regions || [],
+      event_type: 'incident',
+    }));
+  }
+
   console.log(`[anomaly] INCIDENT CREATED: ${api.slug} → ${severity} (error rate: ${(errorRate * 100).toFixed(1)}%)`);
 }
 
@@ -151,6 +174,20 @@ async function resolveIncident(supabase, api) {
         resolved_at: new Date().toISOString(),
       })
       .eq('id', incident.id);
+
+    // Queue resolution alert
+    if (_redis) {
+      await _redis.rpush(ALERTS_QUEUE, JSON.stringify({
+        incident_id: incident.id,
+        api_id: api.id,
+        api_slug: api.slug,
+        api_name: api.name,
+        severity: 'resolved',
+        title: `${api.name} - Resolved`,
+        regions: [],
+        event_type: 'resolved',
+      }));
+    }
   }
 
   // Restore API status
