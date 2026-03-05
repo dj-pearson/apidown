@@ -1,7 +1,13 @@
 <script>
   import '../app.css';
   import { page } from '$app/state';
+  import { initSupabase } from '$lib/supabase.js';
   let { children, data } = $props();
+
+  // Initialize Supabase client with server-provided config
+  if (data?.supabaseUrl && data?.supabaseAnonKey) {
+    initSupabase(data.supabaseUrl, data.supabaseAnonKey);
+  }
 
   let mobileMenuOpen = $state(false);
   let user = $derived(data?.user);

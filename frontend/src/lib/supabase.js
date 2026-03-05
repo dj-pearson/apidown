@@ -1,14 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/public';
 
 let _supabase;
+let _url;
+let _key;
+
+/** Call this once from +layout.svelte to set the config from server data */
+export function initSupabase(url, anonKey) {
+  _url = url;
+  _key = anonKey;
+  _supabase = null; // reset if re-init
+}
 
 export function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(
-      env.PUBLIC_SUPABASE_URL,
-      env.PUBLIC_SUPABASE_ANON_KEY
-    );
+    if (!_url || !_key) {
+      throw new Error(
+        'Supabase not initialized. Ensure initSupabase() is called from +layout.svelte'
+      );
+    }
+    _supabase = createClient(_url, _key);
   }
   return _supabase;
 }

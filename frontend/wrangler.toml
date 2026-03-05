@@ -2,3 +2,7 @@ name = "apidown-frontend"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PUBLIC_SUPABASE_URL = "https://api.apidown.net"
+PUBLIC_INGEST_URL = "https://ingest.apidown.net"
