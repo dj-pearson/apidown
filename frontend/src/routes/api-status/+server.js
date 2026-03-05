@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
-import { supabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin } from '$lib/supabase-server.js';
 
 export async function GET() {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: apis, error } = await supabaseAdmin
     .from('apis')
     .select('slug, name, category, current_status')

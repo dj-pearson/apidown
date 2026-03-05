@@ -1,8 +1,9 @@
-import { supabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin } from '$lib/supabase-server.js';
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 
 export async function load({ params }) {
+  const supabaseAdmin = getSupabaseAdmin();
   const { slug } = params;
 
   const { data: api } = await supabaseAdmin

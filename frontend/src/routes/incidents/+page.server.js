@@ -1,6 +1,7 @@
-import { supabaseAdmin } from '$lib/supabase-server.js';
+import { getSupabaseAdmin } from '$lib/supabase-server.js';
 
 export async function load() {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: incidents } = await supabaseAdmin
     .from('incidents')
     .select('*, apis!inner(slug, name)')

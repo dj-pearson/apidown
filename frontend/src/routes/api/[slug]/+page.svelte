@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { supabase } from '$lib/supabase.js';
+  import { getSupabase } from '$lib/supabase.js';
 
   let { data } = $props();
   let api = $state(data.api);
@@ -48,6 +48,7 @@
   let regions = $derived([...new Set(latencyData.map(d => d.region).filter(Boolean))]);
 
   onMount(() => {
+    const supabase = getSupabase();
     channel = supabase
       .channel(`api-detail-${api.slug}`)
       .on('postgres_changes', {
@@ -62,7 +63,7 @@
   });
 
   onDestroy(() => {
-    if (channel) supabase.removeChannel(channel);
+    if (channel) getSupabase().removeChannel(channel);
   });
 
   function formatDate(iso) {

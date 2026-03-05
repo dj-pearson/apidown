@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { supabase } from '$lib/supabase.js';
+  import { getSupabase } from '$lib/supabase.js';
   import StatusCard from '$lib/components/StatusCard.svelte';
 
   let { data } = $props();
@@ -37,6 +37,7 @@
   let operationalCount = $derived(apis.filter(a => a.current_status === 'operational').length);
 
   onMount(() => {
+    const supabase = getSupabase();
     channel = supabase
       .channel('api-status-changes')
       .on('postgres_changes', {
@@ -52,7 +53,7 @@
   });
 
   onDestroy(() => {
-    if (channel) supabase.removeChannel(channel);
+    if (channel) getSupabase().removeChannel(channel);
   });
 </script>
 
