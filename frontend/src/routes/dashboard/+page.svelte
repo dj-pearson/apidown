@@ -21,17 +21,33 @@
   async function createApiKey() {
     creatingKey = true;
     try {
+      // Get current session token for auth
+      const supabase = getAuthClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : {};
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        alert('Please log in again to create an API key.');
+        creatingKey = false;
+        return;
+      }
+
       const res = await fetch(`${data.ingestUrl}/v1/api-keys`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ label: newKeyLabel || 'Default' }),
-        credentials: 'include',
       });
       if (res.ok) {
         const body = await res.json();
         newKeyValue = body.key;
         newKeyLabel = '';
         location.reload();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to create API key');
       }
     } catch {
       // ignore

@@ -5,6 +5,7 @@ import { signalsRoute } from './routes/signals.js';
 import { healthRoute } from './routes/health.js';
 import { reportsRoute } from './routes/reports.js';
 import { subscriptionsRoute } from './routes/subscriptions.js';
+import { apiKeysRoute } from './routes/api-keys.js';
 import { createRedisClient } from './lib/redis.js';
 import { createSupabaseClient } from './lib/supabase.js';
 import { buildDomainMap } from './lib/domain-map.js';
@@ -57,6 +58,7 @@ async function start() {
   await fastify.register(healthRoute);
   await fastify.register(reportsRoute);
   await fastify.register(subscriptionsRoute);
+  await fastify.register(apiKeysRoute);
 
   // Graceful shutdown
   const shutdown = async () => {
