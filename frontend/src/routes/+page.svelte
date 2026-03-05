@@ -1,6 +1,7 @@
 <script>
   import { createClient } from '@supabase/supabase-js';
   import StatusCard from '$lib/components/StatusCard.svelte';
+  import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 
   let { data } = $props();
   let apis = $state(data.apis);
@@ -96,19 +97,33 @@
     type="text"
     placeholder="Search APIs..."
     bind:value={searchQuery}
+    aria-label="Search APIs by name"
   />
 </div>
 
-{#each Object.entries(groupedApis) as [category, categoryApis]}
-  <section class="category">
-    <h2>{categoryLabels[category] || category}</h2>
-    <div class="grid">
-      {#each categoryApis as api (api.id)}
-        <StatusCard {api} sparkline={sparklineData[api.id] || []} />
-      {/each}
-    </div>
-  </section>
-{/each}
+{#if apis.length === 0}
+  <div class="loading-grid">
+    {#each { length: 8 } as _}
+      <SkeletonCard />
+    {/each}
+  </div>
+{:else if searchQuery && Object.keys(groupedApis).length === 0}
+  <div class="empty-search">
+    <p>No APIs match "<strong>{searchQuery}</strong>"</p>
+    <button class="clear-search" onclick={() => searchQuery = ''}>Clear search</button>
+  </div>
+{:else}
+  {#each Object.entries(groupedApis) as [category, categoryApis]}
+    <section class="category">
+      <h2>{categoryLabels[category] || category}</h2>
+      <div class="grid">
+        {#each categoryApis as api (api.id)}
+          <StatusCard {api} sparkline={sparklineData[api.id] || []} />
+        {/each}
+      </div>
+    </section>
+  {/each}
+{/if}
 
 <style>
   .hero {
@@ -175,9 +190,36 @@
     margin-bottom: 0.75rem;
   }
 
-  .grid {
+  .grid, .loading-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 0.75rem;
+  }
+
+  .empty-search {
+    text-align: center;
+    padding: 3rem;
+    color: var(--color-text-muted);
+    background: var(--color-surface);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+  }
+
+  .empty-search p {
+    margin-bottom: 1rem;
+  }
+
+  .clear-search {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-primary);
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .clear-search:hover {
+    border-color: var(--color-primary);
   }
 </style>

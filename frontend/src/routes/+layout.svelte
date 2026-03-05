@@ -27,17 +27,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </svelte:head>
 
+<a href="#main-content" class="skip-to-content">Skip to content</a>
+
 <header>
-  <nav>
+  <nav aria-label="Main navigation">
     <a href="/" class="logo" style="display: flex; align-items: center;">
-      <img src="/logo-primary.png" alt="APIdown.net" height="28" style="height: 28px; width: auto;" />
+      <img src="/logo-primary.png" alt="APIdown.net - Home" height="28" style="height: 28px; width: auto;" />
     </a>
-    <button class="hamburger" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Toggle menu">
+    <button
+      class="hamburger"
+      onclick={() => mobileMenuOpen = !mobileMenuOpen}
+      aria-label="Toggle navigation menu"
+      aria-expanded={mobileMenuOpen}
+      aria-controls="nav-links"
+    >
       <span class="hamburger-line" class:open={mobileMenuOpen}></span>
       <span class="hamburger-line" class:open={mobileMenuOpen}></span>
       <span class="hamburger-line" class:open={mobileMenuOpen}></span>
     </button>
-    <div class="nav-links" class:mobile-open={mobileMenuOpen}>
+    <div id="nav-links" class="nav-links" class:mobile-open={mobileMenuOpen}>
       <a href="/" class:active={isActive('/')} onclick={() => mobileMenuOpen = false}>Status</a>
       <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false}>Incidents</a>
       <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false}>Docs</a>
@@ -54,7 +62,7 @@
   </nav>
 </header>
 
-<main>
+<main id="main-content">
   {@render props.children()}
 </main>
 
