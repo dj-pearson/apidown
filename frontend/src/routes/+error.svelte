@@ -1,14 +1,14 @@
 <script>
-  let { error } = $props();
+  import { page } from '$app/state';
 </script>
 
 <svelte:head>
-  <title>{error.status} — APIdown.net</title>
+  <title>{page.error?.status || 'Error'} — APIdown.net</title>
 </svelte:head>
 
 <div class="error-page">
-  <h1>{error.status}</h1>
-  <p>{error.message || 'Something went wrong.'}</p>
+  <h1>{page.error?.status || 'Error'}</h1>
+  <p>{page.error?.message || 'Something went wrong.'}</p>
   <a href="/">&larr; Back to dashboard</a>
 </div>
 
