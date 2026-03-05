@@ -1,6 +1,6 @@
 <script>
-  import { getSupabase } from '$lib/supabase.js';
-  import { goto } from '$app/navigation';
+  import { createClient } from '@supabase/supabase-js';
+  import { page } from '$app/state';
 
   let mode = $state('login'); // 'login' or 'register'
   let email = $state('');
@@ -9,21 +9,27 @@
   let errorMsg = $state('');
   let successMsg = $state('');
 
+  function getAuthClient() {
+    const url = page.data?.supabaseUrl;
+    const key = page.data?.supabaseAnonKey;
+    if (!url || !key) return null;
+    return createClient(url, key);
+  }
+
   async function handleSubmit() {
     loading = true;
     errorMsg = '';
     successMsg = '';
-    let supabase;
-    try {
-      supabase = getSupabase();
-    } catch {
-      errorMsg = 'Authentication service is loading. Please try again.';
+
+    const supabase = getAuthClient();
+    if (!supabase) {
+      errorMsg = 'Authentication service unavailable. Please refresh the page.';
       loading = false;
       return;
     }
 
     if (mode === 'login') {
-      const { data: session, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         errorMsg = error.message;
       } else {
@@ -32,11 +38,13 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            access_token: session.session.access_token,
-            refresh_token: session.session.refresh_token,
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
           }),
         });
-        goto('/dashboard');
+        // Full page navigation to ensure cookies are sent
+        window.location.href = '/dashboard';
+        return;
       }
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
