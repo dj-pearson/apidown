@@ -8,6 +8,7 @@
   let api = $state(data.api);
   let incidents = $state(data.incidents);
   let latencyData = $state(data.latencyData);
+  let logoFailed = $state(false);
 
   // Report button state
   let reportSubmitting = $state(false);
@@ -138,8 +139,10 @@
 
 <div class="api-header">
   <div class="api-info">
-    {#if api.logo_url}
-      <img src={api.logo_url} alt="{api.name}" class="logo" />
+    {#if api.logo_url && !logoFailed}
+      <img src={api.logo_url} alt="{api.name}" class="logo" onerror={() => logoFailed = true} />
+    {:else}
+      <div class="logo-placeholder">{api.name[0]}</div>
     {/if}
     <div>
       <h1>{api.name}</h1>
@@ -269,6 +272,19 @@
     width: 48px;
     height: 48px;
     border-radius: 8px;
+  }
+
+  .logo-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
   }
 
   h1 {

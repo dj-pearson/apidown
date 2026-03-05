@@ -2,6 +2,7 @@
   import Sparkline from './Sparkline.svelte';
 
   let { api, sparkline = [] } = $props();
+  let logoFailed = $state(false);
 
   const statusColors = {
     operational: 'var(--color-operational)',
@@ -21,8 +22,8 @@
 
 <a href="/api/{api.slug}" class="card">
   <div class="card-header">
-    {#if api.logo_url}
-      <img src={api.logo_url} alt="{api.name} logo" class="logo" />
+    {#if api.logo_url && !logoFailed}
+      <img src={api.logo_url} alt="{api.name} logo" class="logo" onerror={() => logoFailed = true} />
     {:else}
       <div class="logo-placeholder">{api.name[0]}</div>
     {/if}
