@@ -1,0 +1,113 @@
+== Ralph Progress Log ==
+Project: APIdown.net
+Branch: ralph/platform-buildout
+Started: 2026-03-05
+
+== Current Status ==
+MVP core is deployed and running:
+- Frontend on Cloudflare Pages (apidown.net)
+- Ingest + Worker + Redis on Coolify/Contabo (ingest.apidown.net)
+- Database on self-hosted Supabase (api.apidown.net)
+- JavaScript SDK complete (packages/sdk-js/)
+- 30 APIs seeded across 7 categories
+- Real-time updates via Supabase Realtime
+- Email + Slack alert channels working
+- Anomaly detection with 5-reporter threshold
+- Signal aggregation (1-min materialized views)
+- RLS security policies enabled
+
+== Completed (Pre-Ralph) ==
+[x] Database schema: apis, signals, signals_1min, incidents, manual_reports, alert_subscriptions, alert_log
+[x] RPC functions: get_api_window, get_api_baseline, refresh_signals_1min, cleanup_old_signals
+[x] Ingest service: /health, /v1/signals, /v1/reports, /v1/subscribe, /v1/unsubscribe
+[x] Worker: signal drain, anomaly detection, alert sending, view refresh, retention cleanup
+[x] Frontend: homepage dashboard, API detail page, incidents list, incident detail, docs page, unsubscribe page, error page
+[x] JS SDK: auto-patch fetch/axios, manual record(), batching, flush
+[x] Docker: redis, ingest, worker containers
+[x] Deployment: Cloudflare Pages (frontend), Coolify (backend services)
+
+== Story Status ==
+-- Phase 1: MVP Polish --
+US-001: pending - Remove temporary error handling from homepage
+US-002: pending - Add favicon and meta assets
+US-003: pending - Add nav links and footer to layout
+
+-- Phase 2: Dashboard Visuals --
+US-004: pending - Add latency sparklines to homepage
+US-005: pending - Add 24-hour latency chart to API detail page
+US-006: pending - Add regional breakdown to API detail page
+US-007: pending - Add 90-day uptime bar to API detail page
+US-008: pending - Add reporter count to incident cards
+US-009: pending - Add incident timeline/updates table
+US-010: pending - Display incident timeline on incident detail page
+US-011: pending - Add JSON REST API endpoint for single API status
+
+-- Phase 3: Python SDK --
+US-012: pending - Create Python SDK package structure
+US-013: pending - Implement Python SDK core with auto-patching
+
+-- Phase 4: User Auth --
+US-014: pending - Add users table and Supabase Auth integration
+US-015: pending - Add login and registration pages
+US-016: pending - Add auth session handling with hooks
+
+-- Phase 5: API Keys --
+US-017: pending - Add API key table and generation endpoint
+US-018: pending - Add API key validation to signal ingest
+US-019: pending - Add user dashboard page
+US-020: pending - Add My Subscriptions section to user dashboard
+
+-- Phase 6: Alert Preferences --
+US-021: pending - Add alert preferences to user dashboard
+US-022: pending - Add digest alert worker loop
+US-023: pending - Add email verification flow for alert subscriptions
+
+-- Phase 7: Additional Alert Channels --
+US-024: pending - Add PagerDuty alert channel
+US-025: pending - Add Discord webhook alert channel
+US-026: pending - Add Microsoft Teams webhook alert channel
+
+-- Phase 8: Admin Panel --
+US-027: pending - Add admin role and admin middleware
+US-028: pending - Add admin dashboard overview page
+US-029: pending - Add admin API management page
+US-030: pending - Add admin incident management page
+US-031: pending - Add admin user management page
+
+-- Phase 9: Billing --
+US-032: pending - Add Stripe billing integration schema and config
+US-033: pending - Add Stripe checkout and subscription endpoints
+US-034: pending - Add pricing page
+US-035: pending - Enforce tier limits on alert subscriptions
+US-036: pending - Enforce tier limits on API keys
+
+-- Phase 10: API Coverage Expansion --
+US-037: pending - Add Cloud GCP and Azure APIs to seed data
+US-038: pending - Add Commerce and Shipping APIs to seed data
+US-039: pending - Add additional Auth and Database APIs to seed data
+
+-- Phase 11: Launch Data --
+US-040: pending - Add synthetic signal seeder for demo data
+US-041: pending - Seed sample incidents with timeline updates
+
+-- Phase 12: SEO & Marketing --
+US-042: pending - Add sitemap.xml and robots.txt
+US-043: pending - Add SEO-optimized landing page
+US-044: pending - Add structured data (JSON-LD) for SEO
+
+-- Phase 13: Operational --
+US-045: pending - Add health check endpoint and observability to worker
+US-046: pending - Add rate limit headers and usage tracking to ingest
+US-047: pending - Add SLA export endpoint for Pro users
+US-048: pending - Add SLA report download to API detail page
+
+== Architecture Notes ==
+- svelte.config.js uses adapter-cloudflare (not adapter-node)
+- Supabase clients use lazy initialization (getSupabase/getSupabaseAdmin) to avoid build-time crashes
+- wrangler.toml must include pages_build_output_dir and nodejs_compat flag
+- Frontend env vars: PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, PRIVATE_SUPABASE_SERVICE_KEY
+- Ingest env vars: SUPABASE_URL, SUPABASE_SERVICE_KEY, REDIS_URL
+- signals_1min is a materialized view refreshed by worker (not TimescaleDB continuous aggregate)
+- Auth uses Supabase Auth with @supabase/ssr for cookie-based sessions on Cloudflare Pages
+- Stripe billing: Pro ($19/mo), Team ($49/mo) - products created in Stripe dashboard
+- Admin access: is_admin flag on users table, no role-based system

@@ -1,0 +1,779 @@
+{
+  "project": "APIdown.net",
+  "branchName": "ralph/platform-buildout",
+  "description": "Complete the APIdown.net platform end-to-end: MVP polish, dashboard visuals, SDKs, auth, admin, billing, alerting, SEO, and operational readiness",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Remove temporary error handling from homepage load function",
+      "description": "As a developer, I want the homepage load function to use proper error handling instead of the debug try/catch that returns empty arrays, so that SvelteKit error pages work correctly.",
+      "acceptanceCriteria": [
+        "Remove try/catch wrapper from +page.server.js load function",
+        "Supabase query errors throw properly so SvelteKit +error.svelte renders",
+        "Page still loads successfully when Supabase is reachable",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add favicon and meta assets",
+      "description": "As a user, I want to see a proper favicon and Open Graph meta tags so the site looks professional in browser tabs and social shares.",
+      "acceptanceCriteria": [
+        "Add favicon.svg or favicon.png to frontend/static/",
+        "Add OG image (1200x630) to frontend/static/",
+        "Update app.html or +layout.svelte with og:image, og:title, og:description meta tags",
+        "favicon.ico request no longer returns 500",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add nav links and footer to layout",
+      "description": "As a user, I want persistent navigation and a footer so I can easily navigate the site.",
+      "acceptanceCriteria": [
+        "Update +layout.svelte to include a header with nav links: Home, Incidents, Docs, Get API Key",
+        "Add footer with: 'Built by Pearson Media LLC', links to GitHub, API status endpoint",
+        "Nav highlights current route using $page.url.pathname",
+        "Mobile-responsive: hamburger menu on small screens",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add latency sparklines to homepage status cards",
+      "description": "As a user, I want to see a small 24-hour latency sparkline on each API card on the homepage so I can spot trends at a glance.",
+      "acceptanceCriteria": [
+        "Homepage load function fetches last 24h of signals_1min data per API (grouped into ~24 hourly buckets)",
+        "StatusCard component renders a small inline SVG sparkline (avg latency per hour)",
+        "Sparkline is ~80px wide, fits inside the card without layout changes",
+        "APIs with no data show a flat gray line or placeholder",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add 24-hour latency chart to API detail page",
+      "description": "As a user, I want to see a full-width latency chart on the API detail page showing P50 and P95 latency over the last 24 hours.",
+      "acceptanceCriteria": [
+        "New LatencyChart.svelte component in frontend/src/lib/components/",
+        "Renders P50 line (blue) and P95 line (orange) on the same chart",
+        "X-axis shows time labels (every 4 hours), Y-axis shows milliseconds",
+        "Chart is pure SVG, no external chart library",
+        "Renders on the API detail page between metrics row and incident history",
+        "Empty state shows 'No latency data yet' message",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add regional breakdown to API detail page",
+      "description": "As a user, I want to see a per-region status breakdown on the API detail page so I can tell if degradation is regional or global.",
+      "acceptanceCriteria": [
+        "API detail page load function groups signals_1min data by region for last 1 hour",
+        "New RegionBreakdown.svelte component shows each region with its own error rate and avg latency",
+        "Regions displayed as a small grid of cards below the latency chart",
+        "Each region card shows: region name, signal count, error rate %, avg latency ms",
+        "Color-coded: green (<5% errors), yellow (5-20%), red (>20%)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add 90-day uptime bar to API detail page",
+      "description": "As a user, I want to see a visual 90-day uptime bar (like GitHub status) on the API detail page showing daily status.",
+      "acceptanceCriteria": [
+        "API detail page load function fetches incidents for last 90 days",
+        "New UptimeBar.svelte component renders 90 thin vertical bars (one per day)",
+        "Green = no incidents, yellow = minor/major incident, red = critical or down",
+        "Hover on a bar shows tooltip with date and incident count",
+        "Shows overall uptime percentage label (already calculated, reuse uptimePercent)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Add reporter count to incident cards and detail pages",
+      "description": "As a user, I want to see how many independent reporters confirmed an incident so I can gauge its credibility.",
+      "acceptanceCriteria": [
+        "Add reporter_count INTEGER column to incidents table via migration",
+        "Anomaly detector stores unique_reporters count when creating/updating incidents",
+        "Incident list and detail pages display 'X reporters' badge",
+        "Badge helps users distinguish between low-confidence and high-confidence incidents",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Add incident timeline/updates table",
+      "description": "As a platform operator, I want incidents to have timeline entries so users can see investigation progress.",
+      "acceptanceCriteria": [
+        "Create database migration: incident_updates table with id, incident_id (FK), status, message, created_at",
+        "When anomaly detector changes incident status, insert an incident_update row",
+        "When incident is auto-resolved, insert a resolution update",
+        "RLS: public read, service_role write",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Display incident timeline on incident detail page",
+      "description": "As a user, I want to see a timeline of status updates on the incident detail page.",
+      "acceptanceCriteria": [
+        "Incident detail page load function fetches incident_updates ordered by created_at",
+        "Timeline rendered as a vertical list with timestamp, status badge, and message",
+        "Status badges color-coded: investigating=yellow, identified=orange, monitoring=blue, resolved=green",
+        "Empty state: 'No updates yet'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add JSON REST API endpoint for single API status",
+      "description": "As a developer, I want a public REST API that returns a single API's current status with metrics.",
+      "acceptanceCriteria": [
+        "Add GET /api-status/[slug] server endpoint returning single API detail",
+        "Response includes: slug, name, status, uptime_90d, p50_ms, p95_ms, active_incidents count",
+        "Returns 404 JSON for unknown slugs",
+        "Cache-Control: public, max-age=60",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Create Python SDK package structure",
+      "description": "As a developer, I want a Python SDK (apidown) that can be pip-installed so Python apps can contribute signal data.",
+      "acceptanceCriteria": [
+        "Create packages/sdk-python/ with pyproject.toml, README.md, src/apidown/__init__.py",
+        "Package name: apidown, version 1.0.0",
+        "Zero external dependencies (uses stdlib only: urllib, json, threading, time, atexit)",
+        "Exports: init(), shutdown(), record()",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Implement Python SDK core with auto-patching",
+      "description": "As a Python developer, I want the apidown SDK to auto-patch requests and httpx libraries so my HTTP calls are automatically monitored.",
+      "acceptanceCriteria": [
+        "init() patches requests.Session.send if requests is installed",
+        "init() patches httpx.Client.send if httpx is installed",
+        "record(domain, status_code, duration_ms) works for manual recording",
+        "Signals batched and flushed every 30s via daemon thread",
+        "Flush on atexit (clean shutdown)",
+        "allowlist/denylist domain filtering works",
+        "Never monitors the ingest endpoint itself",
+        "Status code 0 recorded for network errors (exceptions)",
+        "Unit tests pass for init, record, flush, domain filtering",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "Implementation spec is in PRD section 10. Follow the exact API surface defined there."
+    },
+    {
+      "id": "US-014",
+      "title": "Add users table and Supabase Auth integration",
+      "description": "As a platform operator, I need a users table linked to Supabase Auth so users can register and log in.",
+      "acceptanceCriteria": [
+        "Create database migration: users table with id (UUID, FK to auth.users), email, display_name, tier (free/pro/team default free), created_at",
+        "RLS: users can read their own row, service_role full access",
+        "Add trigger: on auth.users insert, auto-create matching users row",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Uses Supabase built-in Auth - no custom auth system needed."
+    },
+    {
+      "id": "US-015",
+      "title": "Add login and registration pages",
+      "description": "As a user, I want to register and log in to APIdown so I can manage my subscriptions and API keys.",
+      "acceptanceCriteria": [
+        "New route: /login with email + password form",
+        "New route: /register with email + password + display name form",
+        "Both use Supabase Auth client (supabase.auth.signInWithPassword, supabase.auth.signUp)",
+        "Redirect to /dashboard on successful auth",
+        "Show inline error messages on failure",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Add auth session handling with hooks",
+      "description": "As a developer, I need server-side session handling so protected routes can check auth state.",
+      "acceptanceCriteria": [
+        "Create frontend/src/hooks.server.js that reads Supabase auth session from cookies",
+        "Attach user object to event.locals.user for all server load functions",
+        "Create frontend/src/lib/auth.js helper: getUser() returns current user or null",
+        "Update +layout.server.js to pass user to all pages via data.user",
+        "Update nav: show Login/Register when logged out, show user email + Logout when logged in",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "Use @supabase/ssr for cookie-based auth on Cloudflare Pages."
+    },
+    {
+      "id": "US-017",
+      "title": "Add API key table and generation endpoint",
+      "description": "As a developer, I want to generate an API key for the SDK so I can authenticate my signal submissions.",
+      "acceptanceCriteria": [
+        "Create database migration: api_keys table with id, user_id (FK to users), key_hash, label, created_at, last_used_at, is_active",
+        "Key format: adn_live_<32 random hex chars>",
+        "Key stored as SHA-256 hash (never store plaintext after generation)",
+        "Add POST /v1/keys endpoint to ingest service that generates a key and returns it once",
+        "Endpoint requires valid auth token or rate-limits by IP (10 per hour)",
+        "RLS: users can read/delete their own keys, service_role full access",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Add API key validation to signal ingest",
+      "description": "As a platform operator, I want the signal ingest endpoint to validate API keys so only registered users can submit data.",
+      "acceptanceCriteria": [
+        "Signal ingest endpoint hashes the X-APIdown-Key header and checks against api_keys table",
+        "Invalid or missing key returns 401",
+        "Valid key updates last_used_at timestamp (debounced, not on every request)",
+        "Inactive keys (is_active=false) are rejected with 403",
+        "Existing signals route logic unchanged for valid keys",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Add user dashboard page",
+      "description": "As a logged-in user, I want a /dashboard page where I can see my API keys and alert subscriptions.",
+      "acceptanceCriteria": [
+        "New route: /dashboard (protected - redirects to /login if not authenticated)",
+        "Shows list of user's API keys: label, created_at, last_used_at, active status",
+        "Shows 'Generate New Key' button that calls POST /v1/keys and displays result",
+        "Copy button for each key hash prefix (show first 8 chars only, rest masked)",
+        "Deactivate/delete key buttons",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Add My Subscriptions section to user dashboard",
+      "description": "As a logged-in user, I want to see and manage all my alert subscriptions from the dashboard.",
+      "acceptanceCriteria": [
+        "Add user_id column to alert_subscriptions table (nullable, for backward compat with anonymous subs)",
+        "Dashboard shows list of user's subscriptions: API name, channel, destination, created_at",
+        "Unsubscribe button per subscription (calls DELETE or uses existing token-based unsubscribe)",
+        "Link to subscribe to more APIs",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Add alert preferences to user dashboard",
+      "description": "As a user, I want to choose between immediate alerts and hourly digest mode.",
+      "acceptanceCriteria": [
+        "Add alert_mode column to alert_subscriptions: 'immediate' (default) or 'digest'",
+        "Dashboard shows toggle per subscription for immediate vs digest",
+        "Toggle updates the subscription record in Supabase",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Add digest alert worker loop",
+      "description": "As a user on digest mode, I want to receive a single hourly summary email instead of individual alerts.",
+      "acceptanceCriteria": [
+        "New worker loop runs every 60 minutes",
+        "Queries alert_subscriptions where alert_mode='digest'",
+        "For each subscription, collects all undelivered incidents since last digest",
+        "Sends single email with summary of all incidents (API name, severity, status, time)",
+        "Marks alerts as delivered in alert_log to prevent re-sending",
+        "Skips if no new incidents since last digest",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Add email verification flow for alert subscriptions",
+      "description": "As a platform operator, I want email subscriptions to be verified before sending alerts to prevent abuse.",
+      "acceptanceCriteria": [
+        "When creating an email subscription, set verified=false (change current default from true)",
+        "Generate a verification token and send a verification email with a confirm link",
+        "Add GET /v1/verify?token=xxx endpoint to ingest service that sets verified=true",
+        "Alert worker only sends to verified=true subscriptions (already the case)",
+        "Frontend subscribe form shows 'Check your email to confirm' message",
+        "Typecheck passes"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Add PagerDuty alert channel",
+      "description": "As an SRE, I want to receive PagerDuty alerts when an API I subscribe to has an incident.",
+      "acceptanceCriteria": [
+        "Alert worker handles channel='pagerduty' subscriptions",
+        "Sends PagerDuty Events API v2 trigger/resolve events",
+        "Includes severity mapping: critical->critical, major->error, minor->warning",
+        "Resolution events sent when incident resolves",
+        "Subscription route validates PagerDuty routing key format",
+        "Typecheck passes"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Add Discord webhook alert channel",
+      "description": "As a team, I want to receive Discord alerts when an API we depend on has an incident.",
+      "acceptanceCriteria": [
+        "Alert worker handles channel='discord' subscriptions",
+        "Posts Discord webhook with embed: color-coded by severity, API name, regions, links",
+        "Subscription route validates Discord webhook URL format (discord.com/api/webhooks/)",
+        "Resolution messages posted when incident resolves",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Add Microsoft Teams webhook alert channel",
+      "description": "As a team using Teams, I want to receive Teams alerts when an API we depend on has an incident.",
+      "acceptanceCriteria": [
+        "Alert worker handles channel='teams' subscriptions",
+        "Posts Teams incoming webhook with Adaptive Card format",
+        "Card includes: API name, severity, status, regions, link to status page",
+        "Resolution cards posted when incident resolves",
+        "Subscription route validates Teams webhook URL format",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Add admin role and admin middleware",
+      "description": "As a platform operator, I need an admin role so I can restrict admin pages to authorized users only.",
+      "acceptanceCriteria": [
+        "Add is_admin BOOLEAN column to users table (default false)",
+        "Create frontend/src/lib/admin-guard.js helper that checks event.locals.user.is_admin",
+        "Protected admin routes redirect to / with a flash message if not admin",
+        "Set your own user as admin via SQL: UPDATE users SET is_admin = true WHERE email = 'YOUR_EMAIL'",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "Add admin dashboard overview page",
+      "description": "As an admin, I want a /admin page showing platform health metrics at a glance.",
+      "acceptanceCriteria": [
+        "New route: /admin (protected by admin guard)",
+        "Shows: total APIs count, total signals last 24h, active incidents count, total subscribers count",
+        "Shows: signals per hour chart (last 24h) using simple SVG bar chart",
+        "Links to /admin/apis, /admin/incidents, /admin/users",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Add admin API management page",
+      "description": "As an admin, I want to add, edit, and remove monitored APIs from a management page.",
+      "acceptanceCriteria": [
+        "New route: /admin/apis (protected by admin guard)",
+        "Table listing all APIs with: name, slug, category, status, domain count, actions",
+        "Add API button opens a form: name, slug, category (dropdown), base_domains (comma-separated), logo_url, status_page",
+        "Edit button populates same form for updating",
+        "Delete button with confirmation dialog",
+        "All CRUD operations via Supabase admin client",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "Add admin incident management page",
+      "description": "As an admin, I want to manually create, update, and resolve incidents.",
+      "acceptanceCriteria": [
+        "New route: /admin/incidents (protected by admin guard)",
+        "Table listing recent incidents: API name, severity, status, started_at, reporter_count",
+        "Create Incident button: select API, severity, title, regions",
+        "Update status dropdown: investigating/identified/monitoring/resolved (adds incident_update row)",
+        "Add manual update message text field when changing status",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-031",
+      "title": "Add admin user management page",
+      "description": "As an admin, I want to view registered users and manage their tiers.",
+      "acceptanceCriteria": [
+        "New route: /admin/users (protected by admin guard)",
+        "Table listing users: email, display_name, tier, created_at, API key count, subscription count",
+        "Dropdown to change user tier: free/pro/team",
+        "Toggle admin status (with confirmation)",
+        "No delete - only deactivate (set a disabled flag)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-032",
+      "title": "Add Stripe billing integration - schema and config",
+      "description": "As a platform operator, I need Stripe integration to handle Pro/Team tier subscriptions.",
+      "acceptanceCriteria": [
+        "Add stripe_customer_id and stripe_subscription_id columns to users table",
+        "Add @stripe/stripe-js to frontend dependencies",
+        "Add stripe to ingest service dependencies",
+        "Create ingest service lib/stripe.js with Stripe client initialization",
+        "Environment variables: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, PUBLIC_STRIPE_PUBLISHABLE_KEY",
+        "Typecheck passes"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-033",
+      "title": "Add Stripe checkout and subscription endpoints",
+      "description": "As a user, I want to upgrade to Pro via Stripe Checkout.",
+      "acceptanceCriteria": [
+        "Add POST /v1/billing/checkout endpoint: creates Stripe Checkout Session for Pro plan",
+        "Add POST /v1/billing/portal endpoint: creates Stripe Customer Portal session for managing subscription",
+        "Add POST /v1/billing/webhook endpoint: handles checkout.session.completed, customer.subscription.updated, customer.subscription.deleted",
+        "Webhook updates user tier in database based on subscription status",
+        "Typecheck passes"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": "Create two Stripe products: Pro ($19/mo) and Team ($49/mo)."
+    },
+    {
+      "id": "US-034",
+      "title": "Add pricing page",
+      "description": "As a visitor, I want to see pricing tiers so I can decide whether to upgrade.",
+      "acceptanceCriteria": [
+        "New route: /pricing",
+        "Three columns: Free, Pro ($19/mo), Team ($49/mo)",
+        "Free: 3 email alerts, 1 API key, public dashboard access",
+        "Pro: unlimited alerts (all channels), 10 API keys, REST API access, SLA reports",
+        "Team: everything in Pro + 10 seats, SSO, priority support",
+        "CTA buttons: Free='Get Started', Pro/Team='Subscribe' (links to Stripe Checkout)",
+        "Current tier highlighted if user is logged in",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-035",
+      "title": "Enforce tier limits on alert subscriptions",
+      "description": "As a platform operator, I want tier limits enforced so free users can't exceed their quota.",
+      "acceptanceCriteria": [
+        "Free tier: max 3 email-only subscriptions per user",
+        "Pro tier: unlimited subscriptions, all channels (email, slack, pagerduty, discord, teams)",
+        "Team tier: same as Pro",
+        "Anonymous (no account): max 3 email subscriptions per email address",
+        "Subscription endpoint returns 403 with clear message when limit exceeded",
+        "Typecheck passes"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-036",
+      "title": "Enforce tier limits on API keys",
+      "description": "As a platform operator, I want API key limits enforced per tier.",
+      "acceptanceCriteria": [
+        "Free tier: max 1 active API key",
+        "Pro tier: max 10 active API keys",
+        "Team tier: max 50 active API keys",
+        "Key generation endpoint returns 403 with clear message when limit exceeded",
+        "Dashboard shows 'X of Y keys used' indicator",
+        "Typecheck passes"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "Add Cloud GCP and Azure APIs to seed data",
+      "description": "As a user, I want to see GCP and Azure APIs on the dashboard alongside AWS.",
+      "acceptanceCriteria": [
+        "Add database migration/seed inserting: Cloud Run, Cloud SQL, Azure Functions, Azure Blob Storage",
+        "Each API has correct base_domains, category, logo_url, and status_page",
+        "Category 'cloud-gcp' for GCP services, 'cloud-azure' for Azure services",
+        "Existing category labels in frontend updated to include 'Cloud - GCP' and 'Cloud - Azure'",
+        "Typecheck passes"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-038",
+      "title": "Add Commerce and Shipping APIs to seed data",
+      "description": "As a user, I want to see commerce and shipping APIs on the dashboard.",
+      "acceptanceCriteria": [
+        "Add database migration/seed inserting: Shopify, Stripe Billing, ShipBob, EasyPost",
+        "Each API has correct base_domains, category, logo_url, and status_page",
+        "Category 'commerce' for all four",
+        "Frontend categoryLabels updated to include 'Commerce & Shipping'",
+        "Typecheck passes"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-039",
+      "title": "Add additional Auth and Database APIs to seed data",
+      "description": "As a user, I want to see Okta, Supabase Auth, and Airtable on the dashboard.",
+      "acceptanceCriteria": [
+        "Add database migration/seed inserting: Okta, Supabase Auth, Airtable",
+        "Each API has correct base_domains, category, logo_url, and status_page",
+        "No duplicate entries with existing APIs",
+        "Typecheck passes"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-040",
+      "title": "Add synthetic signal seeder for demo data",
+      "description": "As a platform operator, I want to seed realistic signal and incident data so the dashboard looks useful at launch.",
+      "acceptanceCriteria": [
+        "Create scripts/seed-signals.js that generates 7 days of synthetic signal data for all APIs",
+        "Each API gets ~1000 signals/day with realistic latency distributions (normal curve around 100-500ms)",
+        "Inject 2-3 simulated incidents: elevated error rates for specific APIs during specific windows",
+        "Insert directly to Supabase signals table (bypass Redis)",
+        "After seeding signals, run refresh_signals_1min() to populate materialized view",
+        "Script is idempotent (checks for existing data before inserting)",
+        "Typecheck passes"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": "This is critical for proving the product works on launch day."
+    },
+    {
+      "id": "US-041",
+      "title": "Seed sample incidents with timeline updates",
+      "description": "As a platform operator, I want pre-populated incidents so the incident history looks credible at launch.",
+      "acceptanceCriteria": [
+        "Create scripts/seed-incidents.js that creates 5-8 realistic incidents across different APIs",
+        "Mix of severities: 2 critical, 3 major, 2 minor, all resolved",
+        "Each incident has 2-4 incident_updates showing progression (investigating -> identified -> resolved)",
+        "Incidents spread over last 30 days with realistic durations (30min to 4hrs)",
+        "Affected regions vary (us-east-1, eu-west-1, ap-southeast-1)",
+        "Typecheck passes"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-042",
+      "title": "Add sitemap.xml and robots.txt",
+      "description": "As a platform operator, I want search engines to properly index all API status pages for SEO.",
+      "acceptanceCriteria": [
+        "Add frontend/static/robots.txt allowing all crawlers, pointing to /sitemap.xml",
+        "Create /sitemap.xml server route that dynamically generates sitemap from all API slugs",
+        "Includes: /, /incidents, /docs, /pricing, and /api/[slug] for every API",
+        "Priority: homepage=1.0, API detail pages=0.8, incidents=0.6, docs=0.5",
+        "changefreq: hourly for homepage and API pages, daily for others",
+        "Typecheck passes"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-043",
+      "title": "Add SEO-optimized landing page",
+      "description": "As a visitor, I want a marketing-oriented landing page that explains what APIdown does before showing the dashboard.",
+      "acceptanceCriteria": [
+        "Update homepage to include a hero section above the dashboard: tagline, value prop, CTA buttons",
+        "Hero: 'Is the API actually down - or is it your code?' headline",
+        "Three value prop cards: Real Traffic Data, Crowd-Sourced Neutrality, Instant Alerts",
+        "CTA: 'View Dashboard' (scrolls to grid), 'Get SDK Key' (links to /get-key or /register)",
+        "Show API count and signal count stats",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-044",
+      "title": "Add structured data (JSON-LD) for SEO",
+      "description": "As a platform operator, I want rich search results for API status pages.",
+      "acceptanceCriteria": [
+        "Add JSON-LD WebApplication schema to homepage",
+        "Add JSON-LD FAQPage schema to /docs page",
+        "Add JSON-LD WebPage schema to each /api/[slug] page with API name in title",
+        "All schema validates with Google Rich Results Test format",
+        "Typecheck passes"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-045",
+      "title": "Add health check endpoint and basic observability to worker",
+      "description": "As a platform operator, I want to know if the worker service is healthy and processing signals.",
+      "acceptanceCriteria": [
+        "Add minimal HTTP server to worker on port 3002 with GET /health endpoint",
+        "Health response includes: uptime, last_drain_at, last_anomaly_check_at, signals_drained_total, redis_queue_length",
+        "Worker logs structured JSON for each loop iteration (count, duration, errors)",
+        "Docker healthcheck added to worker service in docker-compose.yml",
+        "Typecheck passes"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-046",
+      "title": "Add rate limit headers and usage tracking to ingest",
+      "description": "As a developer using the SDK, I want to see rate limit headers so I know my usage.",
+      "acceptanceCriteria": [
+        "All ingest responses include: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers",
+        "Track total signals per API key per day in Redis (INCR with TTL)",
+        "Free tier: 10,000 signals/day per key",
+        "Pro tier: 100,000 signals/day per key",
+        "Return 429 with clear message when limit exceeded",
+        "Typecheck passes"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-047",
+      "title": "Add SLA export endpoint for Pro users",
+      "description": "As a Pro user, I want to export uptime/SLA reports for any API as CSV.",
+      "acceptanceCriteria": [
+        "Add GET /v1/reports/sla?api_slug=xxx&from=date&to=date endpoint to ingest",
+        "Requires valid auth token for Pro or Team tier user",
+        "Returns CSV with columns: date, total_signals, error_count, error_rate, p50_ms, p95_ms, uptime_pct",
+        "One row per day in the date range",
+        "Returns 403 for free tier users with upgrade message",
+        "Typecheck passes"
+      ],
+      "priority": 47,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-048",
+      "title": "Add SLA report download to API detail page",
+      "description": "As a Pro user, I want a download button on the API detail page to get SLA reports.",
+      "acceptanceCriteria": [
+        "API detail page shows 'Download SLA Report' button for logged-in Pro/Team users",
+        "Date range picker: last 30/60/90 days or custom range",
+        "Button triggers CSV download from /v1/reports/sla endpoint",
+        "Hidden or shows 'Upgrade to Pro' for free users",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 48,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
