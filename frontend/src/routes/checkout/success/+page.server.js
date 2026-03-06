@@ -21,19 +21,39 @@ export async function load({ url, cookies, platform }) {
       expand: ['subscription'],
     });
 
-    // Verify this session belongs to the logged-in user
     const sub = session.subscription;
     const subObj = typeof sub === 'string' ? await stripe.subscriptions.retrieve(sub) : sub;
     const tier = subObj?.metadata?.tier || session.metadata?.tier || 'pro';
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+
+    console.log(`[checkout-success] Session ${sessionId}: tier=${tier}, customer=${customerId}, subscription=${subObj?.id}, user=${user.id}`);
 
     // Update the user's tier directly (don't rely solely on webhook)
     if (subObj) {
-      await supabase.from('users').update({
+      const updateData = {
         tier,
-        stripe_customer_id: session.customer,
+        stripe_customer_id: customerId,
         stripe_subscription_id: subObj.id,
         billing_period_end: new Date(subObj.current_period_end * 1000).toISOString(),
-      }).eq('id', user.id);
+      };
+      const { error: updateErr } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id);
+
+      if (updateErr) {
+        console.error('[checkout-success] DB update failed:', updateErr.message, updateErr.code, updateErr.details);
+        // If columns don't exist, try updating just the tier
+        const { error: tierErr } = await supabase
+          .from('users')
+          .update({ tier })
+          .eq('id', user.id);
+        if (tierErr) {
+          console.error('[checkout-success] Tier-only update also failed:', tierErr.message);
+        }
+      } else {
+        console.log(`[checkout-success] User ${user.id} upgraded to ${tier}`);
+      }
     }
 
     return { success: true, tier };

@@ -1,7 +1,10 @@
 import { getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
 import { redirect } from '@sveltejs/kit';
 
-export async function load({ cookies }) {
+export async function load({ cookies, platform }) {
+  const { setPlatform } = await import('$lib/supabase-server.js');
+  setPlatform(platform);
+
   const accessToken = cookies.get('sb-access-token');
   if (!accessToken) throw redirect(303, '/login');
 
@@ -12,9 +15,37 @@ export async function load({ cookies }) {
   // Get user profile
   const { data: profile } = await supabase
     .from('users')
-    .select('*, stripe_customer_id, stripe_subscription_id, billing_period_end')
+    .select('*')
     .eq('id', user.id)
     .single();
+
+  // If user has a stripe_customer_id but shows free tier, sync from Stripe
+  let syncedProfile = profile;
+  if (profile?.stripe_customer_id && profile.tier === 'free') {
+    try {
+      const { getStripe } = await import('$lib/stripe-server.js');
+      const stripe = getStripe();
+      const subscriptions = await stripe.subscriptions.list({
+        customer: profile.stripe_customer_id,
+        status: 'active',
+        limit: 1,
+      });
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0];
+        const tier = sub.metadata?.tier || 'pro';
+        const updateData = {
+          tier,
+          stripe_subscription_id: sub.id,
+          billing_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        };
+        await supabase.from('users').update(updateData).eq('id', user.id);
+        syncedProfile = { ...profile, ...updateData };
+        console.log(`[dashboard] Synced user ${user.id} tier to ${tier} from Stripe`);
+      }
+    } catch (err) {
+      console.error('[dashboard] Stripe sync error:', err.message);
+    }
+  }
 
   // Get user's API keys
   const { data: apiKeys } = await supabase
@@ -31,7 +62,7 @@ export async function load({ cookies }) {
     .order('created_at', { ascending: false });
 
   return {
-    profile: profile || { email: user.email, tier: 'free' },
+    profile: syncedProfile || { email: user.email, tier: 'free' },
     apiKeys: apiKeys || [],
     subscriptions: subscriptions || [],
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
