@@ -47,21 +47,17 @@ export async function POST({ request, cookies, platform, url }) {
         .eq('id', user.id);
     }
 
-    // Check for existing active subscription — upgrade/downgrade in place
-    if (customerId) {
-      const existingSubs = await stripe.subscriptions.list({
-        customer: customerId,
-        status: 'active',
-        expand: ['data.items'],
-        limit: 10,
-      });
+    // Only do inline upgrade if user has a tracked subscription in our DB
+    // This prevents orphaned Stripe subscriptions from bypassing payment
+    if (profile?.stripe_subscription_id) {
+      try {
+        const activeSub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
+          expand: ['items'],
+        });
 
-      if (existingSubs.data.length > 0) {
-        // Find the subscription to update (use the first active one)
-        const activeSub = existingSubs.data[0];
-        const currentItem = activeSub.items.data[0];
+        if (activeSub.status === 'active' && activeSub.items.data[0]) {
+          const currentItem = activeSub.items.data[0];
 
-        if (currentItem) {
           // Update the subscription's price (immediate proration)
           const updated = await stripe.subscriptions.update(activeSub.id, {
             items: [{
@@ -72,22 +68,20 @@ export async function POST({ request, cookies, platform, url }) {
             metadata: { supabase_user_id: user.id, tier },
           });
 
-          // Cancel any other active subscriptions (cleanup duplicates)
-          for (let i = 1; i < existingSubs.data.length; i++) {
-            await stripe.subscriptions.cancel(existingSubs.data[i].id);
-          }
-
           // Update the user's tier immediately
           const updateData = {
             tier,
             stripe_subscription_id: updated.id,
+            billing_period_end: stripePeriodEnd(updated),
           };
-          updateData.billing_period_end = stripePeriodEnd(updated);
           await supabase.from('users').update(updateData).eq('id', user.id);
 
           console.log(`[checkout] Upgraded user ${user.id} to ${tier} via subscription update`);
           return json({ upgraded: true, tier });
         }
+      } catch (err) {
+        // Subscription not found or invalid — fall through to new checkout
+        console.log(`[checkout] Existing subscription ${profile.stripe_subscription_id} invalid: ${err.message}, creating new checkout`);
       }
     }
 
