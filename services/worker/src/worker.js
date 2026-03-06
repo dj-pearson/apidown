@@ -7,6 +7,7 @@ import { refreshMaterializedView, runRetention } from './lib/maintenance.js';
 import { runDigestAlerts } from './lib/digest-worker.js';
 import { runSyntheticProbes } from './lib/synthetic-probe.js';
 import { runStatusPageScraper } from './lib/statuspage-scraper.js';
+import { runWeeklyDigest } from './lib/weekly-digest-worker.js';
 
 const SIGNAL_INTERVAL = 10_000;   // Drain signals every 10s
 const ANOMALY_INTERVAL = 60_000;  // Run anomaly detection every 60s
@@ -16,6 +17,7 @@ const DIGEST_INTERVAL  = 60 * 60 * 1000; // Digest alerts every hour
 const RETENTION_INTERVAL = 24 * 60 * 60 * 1000; // Retention cleanup daily
 const PROBE_INTERVAL   = 60_000;  // Synthetic probes every 60s
 const SCRAPE_INTERVAL  = 5 * 60 * 1000; // Status page scraping every 5min
+const WEEKLY_DIGEST_INTERVAL = 60 * 60 * 1000; // Check hourly (only fires at 9am UTC)
 
 async function start() {
   console.log('[worker] Starting APIdown worker...');
@@ -98,6 +100,15 @@ async function start() {
     }
   }
 
+  // Weekly/daily digest loop
+  async function weeklyDigestLoop() {
+    try {
+      await runWeeklyDigest(supabase);
+    } catch (err) {
+      console.error('[worker] Weekly digest error:', err.message);
+    }
+  }
+
   // Run initial drain and first probe
   await signalLoop();
   probeLoop();   // Fire-and-forget first probe
@@ -112,6 +123,7 @@ async function start() {
   setInterval(retentionLoop, RETENTION_INTERVAL);
   setInterval(probeLoop, PROBE_INTERVAL);
   setInterval(scrapeLoop, SCRAPE_INTERVAL);
+  setInterval(weeklyDigestLoop, WEEKLY_DIGEST_INTERVAL);
 
   // Simple health HTTP server for container probes
   const http = await import('http');

@@ -69,6 +69,13 @@ export async function load({ cookies, platform }) {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
+  // Get user's pinned APIs (My Stack)
+  const { data: pinnedApis } = await supabase
+    .from('pinned_apis')
+    .select('api_id, created_at, cost_per_minute_cents, apis!inner(slug, name, current_status, logo_url)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true });
+
   // Get user's alert subscriptions
   const { data: subscriptions } = await supabase
     .from('alert_subscriptions')
@@ -79,6 +86,7 @@ export async function load({ cookies, platform }) {
   return {
     profile: syncedProfile || { email: user.email, tier: 'free' },
     apiKeys: apiKeys || [],
+    pinnedApis: pinnedApis || [],
     subscriptions: subscriptions || [],
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
     supabaseUrl: getEnv('PUBLIC_SUPABASE_URL') || getEnv('SUPABASE_URL'),

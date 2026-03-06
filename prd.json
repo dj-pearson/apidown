@@ -981,6 +981,188 @@
       "priority": 61,
       "passes": true,
       "notes": "auth-errors.js maps Supabase errors to friendly messages, used in login page"
+    },
+    {
+      "id": "US-062",
+      "title": "Personal API latency tracking per user API key",
+      "description": "As a Pro user, I want to see my app's own error rate and latency to each API (correlated by my API key), so I can compare my performance vs the global average.",
+      "acceptanceCriteria": [
+        "Add RPC function get_api_window_for_user(api_id, user_id, minutes) that filters signals by reporter_hash linked to user's API keys",
+        "Add /api/[slug]/my-stats endpoint returning user-specific P50, P95, error rate alongside global stats",
+        "API detail page shows 'My App' tab/toggle (Pro+) next to global metrics with personal latency and error rate",
+        "Free users see the toggle grayed out with a Pro badge and upgrade prompt on click",
+        "Dashboard 'My Stack' summary card shows personal vs global latency for pinned APIs",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 62,
+      "passes": true,
+      "notes": "RPC get_api_stats_for_user in migration 016, /api/[slug]/my-stats endpoint, Global/My App toggle on detail page"
+    },
+    {
+      "id": "US-063",
+      "title": "Multi-API dependency dashboard (My Stack)",
+      "description": "As a user, I want to pin my critical API dependencies and see a combined health overview so I can monitor my entire stack at a glance.",
+      "acceptanceCriteria": [
+        "Add pinned_apis table (user_id, api_id, created_at) with unique constraint",
+        "Add POST/DELETE /v1/pinned-apis endpoints for pin/unpin",
+        "Dashboard shows 'My Stack' section with pinned APIs, each showing current status and P95",
+        "Combined health score: 'All Operational' / 'N APIs Degraded' / 'N APIs Down'",
+        "Pin button on API detail page (star/pin icon)",
+        "Free users can pin up to 3 APIs, Pro up to 20, Team unlimited",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 63,
+      "passes": true,
+      "notes": "pinned_apis table in migration 016, /v1/pinned-apis endpoints, My Stack section on dashboard, star pin button on detail page"
+    },
+    {
+      "id": "US-064",
+      "title": "Downtime cost estimator on incidents",
+      "description": "As a Pro user, I want to set a $/minute cost per API dependency so incidents show estimated revenue impact.",
+      "acceptanceCriteria": [
+        "Add cost_per_minute_cents column to pinned_apis or a new api_cost_config table",
+        "Settings UI on dashboard to set $/min per pinned API",
+        "Incident detail page shows 'Estimated Impact: $X' based on duration * cost_per_minute",
+        "Alert notifications (Pro+) include cost estimate in payload",
+        "Free users see the feature teased but locked behind Pro badge",
+        "Typecheck passes"
+      ],
+      "priority": 64,
+      "passes": true,
+      "notes": "cost_per_minute_cents on pinned_apis in migration 017, dashboard cost config UI, incident detail shows estimated impact"
+    },
+    {
+      "id": "US-065",
+      "title": "Locked channel indicators on alert subscription form",
+      "description": "As a free user, I want to see all available alert channels with Pro-locked ones visually indicated so I understand what I'm missing and am motivated to upgrade.",
+      "acceptanceCriteria": [
+        "Alert subscription form on API detail page shows all channels (email, Slack, Discord, PagerDuty, Teams, Webhook)",
+        "Free-tier channels beyond email show a lock icon and 'Pro' badge",
+        "Clicking a locked channel opens the UpgradeModal instead of the subscription form",
+        "Pro/Team users see all channels unlocked as before",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 65,
+      "passes": true,
+      "notes": "Channel chip selector with lock badges and inline upgrade prompt on API detail page"
+    },
+    {
+      "id": "US-066",
+      "title": "Historical latency comparison with date range picker",
+      "description": "As a Pro user, I want to compare latency across different time periods so I can identify trends and regressions.",
+      "acceptanceCriteria": [
+        "Add date range picker component on API detail page (Pro+)",
+        "Support preset ranges: Last 24h, Last 7d, Last 30d, Custom range",
+        "Add compare mode: overlay two date ranges on the latency chart",
+        "Add RPC function get_latency_history(api_id, from, to, bucket_interval) returning time-series P50/P95",
+        "Free users see 24h only with a 'Pro' badge on the date picker",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 66,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-067",
+      "title": "Scheduled maintenance awareness from vendor status pages",
+      "description": "As a user, I want to see upcoming scheduled maintenance windows for APIs so I can prepare for expected downtime.",
+      "acceptanceCriteria": [
+        "Extend statuspage-scraper.js to fetch /api/v2/scheduled-maintenances/upcoming.json",
+        "Add scheduled_maintenances table (api_id, title, scheduled_for, scheduled_until, status, vendor_id)",
+        "API detail page shows 'Upcoming Maintenance' banner when maintenance is scheduled",
+        "Pro users receive advance maintenance alerts 24h before scheduled time",
+        "Maintenance windows excluded from uptime/SLA calculations",
+        "Typecheck passes"
+      ],
+      "priority": 67,
+      "passes": true,
+      "notes": "scheduled_maintenances table in migration 017, scraper extended with scrapeScheduledMaintenances, amber banner on API detail page"
+    },
+    {
+      "id": "US-068",
+      "title": "Custom anomaly detection thresholds per subscription",
+      "description": "As a Pro user, I want to customize alert thresholds per API so I only get notified for conditions I care about.",
+      "acceptanceCriteria": [
+        "Add threshold_config JSONB column to alert_subscriptions table",
+        "Subscription settings UI with sliders/inputs for: min severity (minor/major/critical), max P95 latency, min error rate %",
+        "anomaly-detector.js checks per-subscription thresholds before dispatching alerts",
+        "Default thresholds match current behavior when no custom config is set",
+        "Free users see threshold controls locked with Pro badge",
+        "Typecheck passes"
+      ],
+      "priority": 68,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-069",
+      "title": "Team incident annotations",
+      "description": "As a Team user, I want team members to add internal notes to incidents for postmortem documentation.",
+      "acceptanceCriteria": [
+        "Add incident_notes table (id, incident_id, user_id, content, created_at)",
+        "Incident detail page shows 'Internal Notes' section for Team tier users",
+        "Team members can add timestamped notes with markdown support",
+        "Notes are only visible to users on the same team",
+        "Add team_id column to users table and team membership validation",
+        "Typecheck passes"
+      ],
+      "priority": 69,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-070",
+      "title": "Weekly email digest for free users",
+      "description": "As a free user, I want a weekly summary email of my subscribed APIs' health so I stay engaged with the platform.",
+      "acceptanceCriteria": [
+        "Add weekly-digest-worker.js running every Monday 9am UTC",
+        "Email includes: uptime % per subscribed API, incident count, notable latency changes",
+        "Free users get weekly digest, Pro users get daily digest option",
+        "Unsubscribe link in every digest email",
+        "Add digest_frequency column to users table (weekly/daily/none)",
+        "Typecheck passes"
+      ],
+      "priority": 70,
+      "passes": true,
+      "notes": "weekly-digest-worker.js with daily/weekly logic, digest_frequency column in migration 017, dashboard toggle UI with Pro-gated daily option"
+    },
+    {
+      "id": "US-071",
+      "title": "Public embeddable status page for Pro users",
+      "description": "As a Pro user, I want to generate a public status page showing my pinned APIs so I can share dependency status with my own customers.",
+      "acceptanceCriteria": [
+        "Add /status/[username] public route showing pinned APIs with status indicators",
+        "Customizable title and description via dashboard settings",
+        "Embeddable iframe snippet and direct link provided in dashboard",
+        "Shows real-time status updates via Supabase subscription",
+        "Rate limited and cached (1 min) for public access",
+        "Only available for Pro+ users; free users see upgrade prompt",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 71,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-072",
+      "title": "SLA target tracking with pass/fail reporting",
+      "description": "As a Pro user, I want to set SLA targets per API and see monthly pass/fail against those targets for reporting.",
+      "acceptanceCriteria": [
+        "Add sla_targets table (user_id, api_id, uptime_target_pct, latency_p95_target_ms)",
+        "SLA report page shows target vs actual per month with pass/fail badge",
+        "Dashboard summary shows 'N/M SLA targets met this month'",
+        "Export SLA report as CSV (Pro+)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 72,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

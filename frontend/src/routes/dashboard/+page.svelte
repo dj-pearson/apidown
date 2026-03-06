@@ -7,6 +7,10 @@
   let { data } = $props();
   let profile = $state(data.profile);
   let apiKeys = $state(data.apiKeys);
+  let pinnedApis = $state(data.pinnedApis);
+  let editingCostId = $state(null);
+  let costInput = $state('');
+  let digestFrequency = $state(data.profile.digest_frequency || 'none');
   let subscriptions = $state(data.subscriptions);
 
   let newKeyLabel = $state('');
@@ -39,6 +43,28 @@
     if (pct >= 1) return 'var(--color-down, #ef4444)';
     if (pct >= 0.5) return 'var(--color-degraded, #f59e0b)';
     return 'var(--color-operational, #4ade80)';
+  }
+
+  async function updateDigestFrequency(freq) {
+    digestFrequency = freq;
+    const supabase = getAuthClient();
+    if (!supabase) return;
+    await supabase.from('users').update({ digest_frequency: freq }).eq('id', data.profile.id || '');
+  }
+
+  async function saveCost(apiId) {
+    const supabase = getAuthClient();
+    if (!supabase) return;
+    const cents = Math.round(parseFloat(costInput || '0') * 100);
+    await supabase
+      .from('pinned_apis')
+      .update({ cost_per_minute_cents: cents })
+      .eq('user_id', data.profile.id || '')
+      .eq('api_id', apiId);
+    pinnedApis = pinnedApis.map(p =>
+      p.api_id === apiId ? { ...p, cost_per_minute_cents: cents } : p
+    );
+    editingCostId = null;
   }
 
   function getAuthClient() {
@@ -183,6 +209,89 @@
       {/if}
     </div>
   </div>
+
+  <div class="digest-setting">
+    <span class="digest-label">Status digest emails</span>
+    <div class="digest-options">
+      {#each [
+        { value: 'none', label: 'Off' },
+        { value: 'weekly', label: 'Weekly' },
+        { value: 'daily', label: 'Daily', pro: true },
+      ] as opt (opt.value)}
+        {@const locked = opt.pro && tier === 'free'}
+        <button
+          class="digest-btn"
+          class:active={digestFrequency === opt.value}
+          class:locked
+          disabled={locked}
+          onclick={() => !locked && updateDigestFrequency(opt.value)}
+        >
+          {opt.label}
+          {#if locked}
+            <span class="digest-pro-badge">Pro</span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>My Stack</h2>
+  <p class="section-desc">Your pinned API dependencies. Pin APIs from their detail pages.</p>
+
+  {#if pinnedApis.length > 0}
+    <div class="stack-grid">
+      {#each pinnedApis as pin (pin.api_id)}
+        {@const api = pin.apis}
+        <div class="stack-card">
+          <a href="/api/{api.slug}" class="stack-card-link">
+            <div class="stack-card-header">
+              {#if api.logo_url}
+                <img src={api.logo_url} alt={api.name} class="stack-logo" />
+              {:else}
+                <div class="stack-logo-placeholder">{api.name[0]}</div>
+              {/if}
+              <span class="stack-name">{api.name}</span>
+            </div>
+            <span class="stack-status stack-status-{api.current_status}">
+              {api.current_status}
+            </span>
+          </a>
+          <div class="stack-cost">
+            {#if editingCostId === pin.api_id}
+              <div class="cost-edit">
+                <span class="cost-prefix">$</span>
+                <input type="number" step="0.01" min="0" bind:value={costInput} placeholder="0.00" class="cost-input" />
+                <span class="cost-suffix">/min</span>
+                <button class="btn-cost-save" onclick={() => saveCost(pin.api_id)}>Save</button>
+              </div>
+            {:else}
+              <button class="cost-toggle" onclick={() => { editingCostId = pin.api_id; costInput = ((pin.cost_per_minute_cents || 0) / 100).toFixed(2); }}>
+                {pin.cost_per_minute_cents > 0 ? `$${(pin.cost_per_minute_cents / 100).toFixed(2)}/min` : 'Set cost'}
+              </button>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <p class="empty">No pinned APIs. Visit an API's detail page and click the star to pin it.</p>
+  {/if}
+
+  {#if pinnedApis.length > 0}
+    {@const downCount = pinnedApis.filter(p => p.apis.current_status === 'down').length}
+    {@const degradedCount = pinnedApis.filter(p => p.apis.current_status === 'degraded').length}
+    <p class="stack-summary">
+      {#if downCount > 0}
+        <span class="stack-alert">{downCount} API{downCount > 1 ? 's' : ''} down</span>
+      {:else if degradedCount > 0}
+        <span class="stack-warn">{degradedCount} API{degradedCount > 1 ? 's' : ''} degraded</span>
+      {:else}
+        <span class="stack-ok">All operational</span>
+      {/if}
+    </p>
+  {/if}
 </section>
 
 <section class="section">
@@ -378,6 +487,131 @@
     50% { opacity: 0.5; }
   }
 
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .stack-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    transition: border-color 0.15s;
+  }
+
+  .stack-card:hover { border-color: var(--color-primary); }
+
+  .stack-card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .stack-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .stack-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+  }
+
+  .stack-logo-placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .stack-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--color-text);
+  }
+
+  .stack-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .stack-status-operational { color: var(--color-operational); }
+  .stack-status-degraded { color: var(--color-degraded); }
+  .stack-status-down { color: var(--color-down); }
+
+  .stack-summary {
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .stack-ok { color: var(--color-operational); }
+  .stack-warn { color: var(--color-degraded); }
+  .stack-alert { color: var(--color-down); }
+
+  .stack-cost {
+    border-top: 1px solid var(--color-border);
+    padding-top: 0.4rem;
+  }
+
+  .cost-toggle {
+    background: none;
+    border: none;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .cost-toggle:hover { color: var(--color-primary); }
+
+  .cost-edit {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+  }
+
+  .cost-prefix, .cost-suffix {
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+  }
+
+  .cost-input {
+    width: 50px;
+    padding: 0.15rem 0.3rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.7rem;
+  }
+
+  .btn-cost-save {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    cursor: pointer;
+  }
+
   .key-list, .sub-list {
     display: flex;
     flex-direction: column;
@@ -531,6 +765,61 @@
 
   .billing-actions .btn-primary {
     text-decoration: none;
+  }
+
+  .digest-setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .digest-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  .digest-options {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.15rem;
+  }
+
+  .digest-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .digest-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .digest-btn.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .digest-pro-badge {
+    font-size: 0.55rem;
+    background: var(--color-degraded);
+    color: #000;
+    padding: 0.05rem 0.2rem;
+    border-radius: 2px;
+    font-weight: 700;
   }
 
   .btn-danger-sm {

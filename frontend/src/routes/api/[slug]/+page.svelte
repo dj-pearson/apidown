@@ -18,10 +18,70 @@
   // Subscribe form state
   let showSubscribe = $state(false);
   let subEmail = $state("");
+  let subChannel = $state("email");
   let subSubmitting = $state(false);
   let subMessage = $state("");
+  let showChannelUpgrade = $state(false);
+
+  // My App stats (Pro+)
+  let myStats = $state(null);
+  let myStatsLoading = $state(false);
+  let showMyStats = $state(false);
+  let pinned = $state(data.isPinned);
+  let pinLoading = $state(false);
 
   const ingestUrl = data.ingestUrl;
+
+  async function loadMyStats() {
+    if (myStats !== null || myStatsLoading) return;
+    myStatsLoading = true;
+    try {
+      const res = await fetch(`/api/${api.slug}/my-stats`);
+      const body = await res.json();
+      if (body.locked) {
+        myStats = { locked: true };
+      } else {
+        myStats = body.stats;
+      }
+    } catch {
+      myStats = { locked: true };
+    }
+    myStatsLoading = false;
+  }
+
+  function toggleMyStats() {
+    showMyStats = !showMyStats;
+    if (showMyStats && myStats === null) {
+      loadMyStats();
+    }
+  }
+
+  async function togglePin() {
+    pinLoading = true;
+    try {
+      const supabaseModule = await import("@supabase/supabase-js");
+      const supabase = supabaseModule.createClient(data.supabaseUrl, data.supabaseAnonKey);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) { pinLoading = false; return; }
+
+      if (pinned) {
+        await fetch(`${ingestUrl}/v1/pinned-apis/${api.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        pinned = false;
+      } else {
+        const res = await fetch(`${ingestUrl}/v1/pinned-apis`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ api_id: api.id }),
+        });
+        if (res.ok) pinned = true;
+      }
+    } catch { /* ignore */ }
+    pinLoading = false;
+  }
 
   const statusColors = {
     operational: "var(--color-operational)",
@@ -127,7 +187,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           api_slug: api.slug,
-          channel: "email",
+          channel: subChannel,
           destination: subEmail,
         }),
       });
@@ -353,26 +413,97 @@
   <a href="/pricing" class="pro-btn">Get APIDown Pro</a>
 </div>
 
-<div class="metrics">
-  <div class="metric">
-    <span class="metric-value">{data.uptimePercent}%</span>
-    <span class="metric-label">90-day uptime</span>
+<div class="metrics-header">
+  <div class="metrics-tabs">
+    <button class="metrics-tab" class:active={!showMyStats} onclick={() => showMyStats = false}>Global</button>
+    <button class="metrics-tab" class:active={showMyStats} onclick={toggleMyStats}>
+      My App
+      {#if !data.userTier || data.userTier === 'free'}
+        <span class="pro-badge">Pro</span>
+      {/if}
+    </button>
   </div>
-  <div class="metric">
-    <span class="metric-value">{avgP50}ms</span>
-    <span class="metric-label">P50 latency</span>
-  </div>
-  <div class="metric">
-    <span class="metric-value">{avgP95}ms</span>
-    <span class="metric-label">P95 latency</span>
-  </div>
-  <div class="metric">
-    <span class="metric-value">{regions.length || "—"}</span>
-    <span class="metric-label">Regions reporting</span>
-  </div>
+  {#if data.userTier}
+    <button class="pin-btn" class:pinned onclick={togglePin} disabled={pinLoading} title={pinned ? 'Unpin from My Stack' : 'Pin to My Stack'}>
+      {pinned ? '\u2605' : '\u2606'}
+    </button>
+  {/if}
 </div>
 
+{#if showMyStats}
+  <div class="metrics">
+    {#if myStatsLoading}
+      <div class="metric"><span class="metric-value">...</span><span class="metric-label">Loading</span></div>
+    {:else if myStats?.locked}
+      <div class="my-stats-locked">
+        <p>See your app's own latency and error rates for {api.name}.</p>
+        <a href="/pricing" class="pro-btn-sm">Upgrade to Pro</a>
+      </div>
+    {:else if myStats && myStats.total_signals > 0}
+      <div class="metric">
+        <span class="metric-value">{Math.round(((myStats.error_count || 0) / myStats.total_signals) * 100)}%</span>
+        <span class="metric-label">Your error rate</span>
+      </div>
+      <div class="metric">
+        <span class="metric-value">{Math.round(myStats.p50_ms)}ms</span>
+        <span class="metric-label">Your P50</span>
+      </div>
+      <div class="metric">
+        <span class="metric-value">{Math.round(myStats.p95_ms)}ms</span>
+        <span class="metric-label">Your P95</span>
+      </div>
+      <div class="metric">
+        <span class="metric-value">{myStats.total_signals}</span>
+        <span class="metric-label">Your signals (1h)</span>
+      </div>
+    {:else}
+      <div class="my-stats-locked">
+        <p>No signals from your API keys in the last hour. Integrate the SDK to see your app's metrics here.</p>
+      </div>
+    {/if}
+  </div>
+{:else}
+  <div class="metrics">
+    <div class="metric">
+      <span class="metric-value">{data.uptimePercent}%</span>
+      <span class="metric-label">90-day uptime</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value">{avgP50}ms</span>
+      <span class="metric-label">P50 latency</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value">{avgP95}ms</span>
+      <span class="metric-label">P95 latency</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value">{regions.length || "—"}</span>
+      <span class="metric-label">Regions reporting</span>
+    </div>
+  </div>
+{/if}
+
 <UptimeBar data={data.dailyUptime} />
+
+{#if data.maintenances.length > 0}
+  <div class="maintenance-banner">
+    <h3>Upcoming Maintenance</h3>
+    {#each data.maintenances as maint}
+      <div class="maint-item">
+        <span class="maint-title">{maint.title}</span>
+        <span class="maint-time">
+          {new Date(maint.scheduled_for).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+          {#if maint.scheduled_until}
+            — {new Date(maint.scheduled_until).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+          {/if}
+        </span>
+        {#if maint.status === 'in_progress'}
+          <span class="maint-active">In Progress</span>
+        {/if}
+      </div>
+    {/each}
+  </div>
+{/if}
 
 <section class="latency-section">
   <h2>24-Hour Latency</h2>
@@ -412,10 +543,48 @@
 
   <div class="action-card">
     <h3>Get Alerts</h3>
-    <p>Receive email notifications when {api.name} status changes.</p>
-    {#if !showSubscribe}
-      <button onclick={() => (showSubscribe = true)}>Subscribe</button>
-    {:else}
+    <p>Receive notifications when {api.name} status changes.</p>
+
+    <div class="channel-selector">
+      {#each [
+        { id: 'email', label: 'Email', free: true },
+        { id: 'slack', label: 'Slack', free: false },
+        { id: 'discord', label: 'Discord', free: false },
+        { id: 'pagerduty', label: 'PagerDuty', free: false },
+        { id: 'teams', label: 'Teams', free: false },
+        { id: 'webhook', label: 'Webhook', free: false },
+      ] as ch (ch.id)}
+        {@const locked = !ch.free && (!data.userTier || data.userTier === 'free')}
+        <button
+          class="channel-chip"
+          class:active={subChannel === ch.id && !locked}
+          class:locked
+          onclick={() => {
+            if (locked) {
+              showChannelUpgrade = true;
+            } else {
+              subChannel = ch.id;
+              showSubscribe = true;
+            }
+          }}
+        >
+          {ch.label}
+          {#if locked}
+            <span class="lock-badge">Pro</span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+
+    {#if showChannelUpgrade}
+      <div class="channel-upgrade-msg">
+        <p>Slack, Discord, PagerDuty, Teams, and Webhook alerts are available on <strong>Pro</strong>.</p>
+        <a href="/pricing" class="pro-btn-sm">Upgrade to Pro</a>
+        <button class="dismiss-link" onclick={() => showChannelUpgrade = false}>Dismiss</button>
+      </div>
+    {/if}
+
+    {#if showSubscribe && !showChannelUpgrade}
       <form
         onsubmit={(e) => {
           e.preventDefault();
@@ -423,8 +592,8 @@
         }}
       >
         <input
-          type="email"
-          placeholder="you@example.com"
+          type={subChannel === 'email' ? 'email' : 'url'}
+          placeholder={subChannel === 'email' ? 'you@example.com' : subChannel === 'slack' ? 'https://hooks.slack.com/...' : 'https://...'}
           bind:value={subEmail}
           required
         />
@@ -608,6 +777,88 @@
     color: #000;
   }
 
+  .metrics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .metrics-tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.2rem;
+  }
+
+  .metrics-tab {
+    background: none;
+    border: none;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .metrics-tab.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .pro-badge {
+    font-size: 0.6rem;
+    background: var(--color-degraded);
+    color: #000;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .pin-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all 0.15s;
+  }
+
+  .pin-btn:hover { border-color: var(--color-primary); }
+  .pin-btn.pinned { color: var(--color-degraded); border-color: var(--color-degraded); }
+  .pin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .my-stats-locked {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .pro-btn-sm {
+    display: inline-block;
+    margin-top: 0.75rem;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .pro-btn-sm:hover { opacity: 0.9; }
+
   .metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -633,6 +884,55 @@
   .metric-label {
     font-size: 0.8rem;
     color: var(--color-text-muted);
+  }
+
+  .maintenance-banner {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid var(--color-degraded);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .maintenance-banner h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--color-degraded);
+  }
+
+  .maint-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    font-size: 0.85rem;
+  }
+
+  .maint-item:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .maint-title {
+    font-weight: 500;
+    color: var(--color-text);
+    flex: 1;
+  }
+
+  .maint-time {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .maint-active {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--color-degraded);
+    color: #000;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
   }
 
   .latency-section {
@@ -720,6 +1020,74 @@
 
   .action-card input[type="email"]:focus {
     border-color: var(--color-primary);
+  }
+
+  .channel-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .channel-chip {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s;
+  }
+
+  .channel-chip:hover { border-color: var(--color-primary); }
+  .channel-chip.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .channel-chip.locked { opacity: 0.6; }
+  .channel-chip.locked:hover { border-color: var(--color-degraded); }
+
+  .lock-badge {
+    font-size: 0.55rem;
+    background: var(--color-degraded);
+    color: #000;
+    padding: 0.05rem 0.25rem;
+    border-radius: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .channel-upgrade-msg {
+    padding: 0.75rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .channel-upgrade-msg .pro-btn-sm {
+    display: inline-block;
+    margin-top: 0.5rem;
+    margin-right: 0.5rem;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 0.3rem 0.75rem;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .dismiss-link {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline;
   }
 
   .action-message {

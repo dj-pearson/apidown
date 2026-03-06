@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '$lib/supabase-server.js';
 import { error } from '@sveltejs/kit';
 
-export async function load({ params }) {
+export async function load({ params, cookies }) {
   const supabaseAdmin = getSupabaseAdmin();
   const { id } = params;
 
@@ -28,8 +28,29 @@ export async function load({ params }) {
     .eq('incident_id', id)
     .order('created_at', { ascending: true });
 
+  // Check if logged-in user has a cost estimate configured for this API
+  let costPerMinuteCents = 0;
+  const accessToken = cookies.get('sb-access-token');
+  if (accessToken) {
+    try {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+      if (user) {
+        const { data: pin } = await supabaseAdmin
+          .from('pinned_apis')
+          .select('cost_per_minute_cents')
+          .eq('user_id', user.id)
+          .eq('api_id', incident.api_id)
+          .maybeSingle();
+        costPerMinuteCents = pin?.cost_per_minute_cents || 0;
+      }
+    } catch {
+      // Not logged in — fine
+    }
+  }
+
   return {
     incident: { ...incident, report_count: count || 0 },
     updates: updates || [],
+    costPerMinuteCents,
   };
 }

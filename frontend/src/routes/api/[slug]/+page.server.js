@@ -1,7 +1,7 @@
 import { getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
 import { error } from '@sveltejs/kit';
 
-export async function load({ params }) {
+export async function load({ params, cookies }) {
   const supabaseAdmin = getSupabaseAdmin();
   const { slug } = params;
 
@@ -72,12 +72,53 @@ export async function load({ params }) {
     });
   }
 
+  // Fetch upcoming scheduled maintenances
+  const { data: maintenances } = await supabaseAdmin
+    .from('scheduled_maintenances')
+    .select('title, description, scheduled_for, scheduled_until, status')
+    .eq('api_id', api.id)
+    .in('status', ['scheduled', 'in_progress'])
+    .gte('scheduled_until', new Date().toISOString())
+    .order('scheduled_for', { ascending: true })
+    .limit(5);
+
+  // Check if user is logged in and has this API pinned
+  let userTier = null;
+  let isPinned = false;
+  const accessToken = cookies.get('sb-access-token');
+  if (accessToken) {
+    try {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+      if (user) {
+        const { data: profile } = await supabaseAdmin
+          .from('users')
+          .select('tier')
+          .eq('id', user.id)
+          .single();
+        userTier = profile?.tier || 'free';
+
+        const { data: pin } = await supabaseAdmin
+          .from('pinned_apis')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('api_id', api.id)
+          .maybeSingle();
+        isPinned = !!pin;
+      }
+    } catch {
+      // Not logged in or error — that's fine
+    }
+  }
+
   return {
     api,
     incidents: incidents || [],
     latencyData: latencyData || [],
     uptimePercent,
     dailyUptime,
+    userTier,
+    isPinned,
+    maintenances: maintenances || [],
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
   };
 }

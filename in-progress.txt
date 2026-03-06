@@ -1,0 +1,5 @@
+US-066 - Historical latency comparison with date range picker
+US-068 - Custom anomaly detection thresholds per subscription
+US-069 - Team incident annotations
+US-071 - Public embeddable status page for Pro users
+US-072 - SLA target tracking with pass/fail reporting

@@ -69,6 +69,81 @@ export async function runStatusPageScraper(supabase) {
       console.log(`[scrape] Inserted ${signals.length} status-page-derived signals`);
     }
   }
+
+  // Scrape upcoming scheduled maintenances
+  await scrapeScheduledMaintenances(supabase, apisWithStatusPage);
+}
+
+/**
+ * Scrape upcoming scheduled maintenances from vendor Atlassian Statuspage APIs.
+ */
+async function scrapeScheduledMaintenances(supabase, apis) {
+  let upsertCount = 0;
+
+  const results = await Promise.allSettled(
+    apis.map(api => fetchScheduledMaintenances(api))
+  );
+
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    const api = apis[i];
+    if (result.status !== 'fulfilled' || !result.value) continue;
+
+    for (const maint of result.value) {
+      const { error: upsertErr } = await supabase
+        .from('scheduled_maintenances')
+        .upsert({
+          api_id: api.id,
+          vendor_id: maint.id,
+          title: maint.name || 'Scheduled Maintenance',
+          description: maint.incident_updates?.[0]?.body || '',
+          scheduled_for: maint.scheduled_for,
+          scheduled_until: maint.scheduled_until,
+          status: maint.status || 'scheduled',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'api_id,vendor_id' });
+
+      if (!upsertErr) upsertCount++;
+    }
+  }
+
+  if (upsertCount > 0) {
+    console.log(`[scrape] Upserted ${upsertCount} scheduled maintenance windows`);
+  }
+}
+
+async function fetchScheduledMaintenances(api) {
+  const statusPageUrl = api.status_page.replace(/\/+$/, '');
+  if (statusPageUrl.includes('health.aws.amazon.com') || statusPageUrl.includes('azure.status.microsoft')) {
+    return null;
+  }
+
+  const apiUrl = `${statusPageUrl}/api/v2/scheduled-maintenances/upcoming.json`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SCRAPE_TIMEOUT);
+
+    let response;
+    try {
+      response = await fetch(apiUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'APIdown-StatusScraper/1.0',
+          'Accept': 'application/json',
+        },
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data?.scheduled_maintenances || null;
+  } catch {
+    return null;
+  }
 }
 
 /**

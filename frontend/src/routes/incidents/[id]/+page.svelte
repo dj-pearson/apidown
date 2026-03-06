@@ -11,13 +11,22 @@
     });
   }
 
-  let duration = $derived.by(() => {
+  let durationMinutes = $derived.by(() => {
     const start = new Date(incident.started_at).getTime();
     const end = incident.resolved_at ? new Date(incident.resolved_at).getTime() : Date.now();
-    const mins = Math.round((end - start) / 60000);
-    if (mins < 60) return `${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    return `${hrs}h ${mins % 60}m`;
+    return Math.round((end - start) / 60000);
+  });
+
+  let duration = $derived.by(() => {
+    if (durationMinutes < 60) return `${durationMinutes}m`;
+    const hrs = Math.floor(durationMinutes / 60);
+    return `${hrs}h ${durationMinutes % 60}m`;
+  });
+
+  let estimatedCost = $derived.by(() => {
+    if (!data.costPerMinuteCents || data.costPerMinuteCents <= 0) return null;
+    const totalCents = durationMinutes * data.costPerMinuteCents;
+    return (totalCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   });
 </script>
 
@@ -51,6 +60,14 @@
       <span>{incident.report_count} user report{incident.report_count !== 1 ? 's' : ''}</span>
     {/if}
   </div>
+
+  {#if estimatedCost}
+    <div class="cost-estimate">
+      <span class="cost-label">Estimated Impact</span>
+      <span class="cost-value">{estimatedCost}</span>
+      <span class="cost-detail">Based on {durationMinutes} min downtime at ${(data.costPerMinuteCents / 100).toFixed(2)}/min</span>
+    </div>
+  {/if}
 
   {#if incident.regions?.length > 0}
     <div class="regions">
@@ -147,6 +164,34 @@
 
   .api-link {
     font-weight: 600;
+  }
+
+  .cost-estimate {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid var(--color-down);
+    border-radius: 8px;
+  }
+
+  .cost-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-down);
+  }
+
+  .cost-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .cost-detail {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
   }
 
   .regions {
