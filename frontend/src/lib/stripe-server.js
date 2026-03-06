@@ -24,10 +24,7 @@ export function getPriceId(tier) {
 
 /** Determine tier from a Stripe subscription's price ID */
 export function getTierFromSubscription(subscription) {
-  // Check metadata first
-  if (subscription?.metadata?.tier) return subscription.metadata.tier;
-
-  // Fall back to matching the price ID against env vars
+  // Match the price ID against env vars first (most reliable — metadata can be stale after plan changes)
   const proPriceId = getEnv('STRIPE_PRO_PRICE_ID');
   const teamPriceId = getEnv('STRIPE_TEAM_PRICE_ID');
 
@@ -37,6 +34,9 @@ export function getTierFromSubscription(subscription) {
     if (priceId === teamPriceId) return 'team';
     if (priceId === proPriceId) return 'pro';
   }
+
+  // Fall back to metadata (may be stale if plan was changed via billing portal)
+  if (subscription?.metadata?.tier) return subscription.metadata.tier;
 
   return 'pro'; // final fallback
 }
