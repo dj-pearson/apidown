@@ -1,5 +1,6 @@
 <svelte:head>
   <title>Subscription Active — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="success-page">

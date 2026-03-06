@@ -95,16 +95,43 @@
 <svelte:head>
   <title>APIdown.net — Real API Status from Real Traffic</title>
   <meta name="description" content="Real-time API health status powered by crowd-sourced production traffic. Is the API actually down — or is it your code?" />
-  {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "APIdown.net",
-    "url": "https://apidown.net",
-    "description": "Real-time API health status powered by crowd-sourced production traffic",
-    "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Web",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-  })}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "APIdown.net",
+      "url": "https://apidown.net",
+      "description": "Real-time API health status powered by crowd-sourced production traffic. Monitor Stripe, OpenAI, AWS, Twilio, and 40+ APIs from real user data.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript",
+      "offers": {
+        "@type": "AggregateOffer",
+        "lowPrice": "0",
+        "highPrice": "49",
+        "priceCurrency": "USD",
+        "offerCount": "3"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "Pearson Media LLC",
+        "url": "https://apidown.net"
+      },
+      "featureList": "Real-time API monitoring, Crowd-sourced health signals, Incident tracking, Latency analytics, Email and webhook alerts, SDK integration"
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "APIdown.net",
+      "url": "https://apidown.net",
+      "description": "Is the API actually down — or is it your code? Real-time, crowd-sourced API health monitoring.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://apidown.net/api/{search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+  ])}</script>`}
 </svelte:head>
 
 <div class="hero">

@@ -21,7 +21,10 @@
   }
 </script>
 
-<svelte:head><title>Manage Users — Admin — APIdown.net</title></svelte:head>
+<svelte:head>
+  <title>Manage Users — Admin — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
+</svelte:head>
 
 <h1>Manage Users</h1>
 <nav class="admin-nav">

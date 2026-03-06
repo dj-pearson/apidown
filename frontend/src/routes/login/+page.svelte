@@ -40,6 +40,8 @@
 
 <svelte:head>
   <title>{mode === 'login' ? 'Log In' : 'Sign Up'} — APIdown.net</title>
+  <meta name="description" content="Sign in or create a free APIdown.net account to manage API keys, set up alerts, and monitor your API dependencies." />
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="auth-page">

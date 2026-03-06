@@ -4,6 +4,7 @@
 
 <svelte:head>
   <title>{page.error?.status || 'Error'} — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="error-page">

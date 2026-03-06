@@ -32,7 +32,31 @@
 
 <svelte:head>
   <title>{incident.title} — APIdown.net</title>
-  <meta name="description" content="{incident.title} — Incident details from APIdown.net" />
+  <meta name="description" content="{incident.severity.toUpperCase()} incident: {incident.title} affecting {incident.apis?.name || 'API'}. Status: {incident.status}. Duration: {duration}. View full timeline and resolution details." />
+  {@html `<script type="application/ld+json">${JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      "headline": incident.title,
+      "description": `${incident.severity} incident affecting ${incident.apis?.name || 'API'} — ${incident.status}`,
+      "datePublished": incident.started_at,
+      "dateModified": incident.resolved_at || incident.started_at,
+      "author": { "@type": "Organization", "name": "APIdown.net", "url": "https://apidown.net" },
+      "publisher": { "@type": "Organization", "name": "APIdown.net", "url": "https://apidown.net", "logo": { "@type": "ImageObject", "url": "https://apidown.net/logo-primary.png" } },
+      "mainEntityOfPage": `https://apidown.net/incidents/${incident.id}`,
+      "articleSection": "API Incidents",
+      "keywords": [incident.apis?.name, "API outage", "API incident", incident.severity, incident.status].filter(Boolean)
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://apidown.net" },
+        { "@type": "ListItem", "position": 2, "name": "Incidents", "item": "https://apidown.net/incidents" },
+        { "@type": "ListItem", "position": 3, "name": incident.title, "item": `https://apidown.net/incidents/${incident.id}` }
+      ]
+    }
+  ])}</script>`}
 </svelte:head>
 
 <a href="/incidents" class="back">&larr; All Incidents</a>

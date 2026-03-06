@@ -175,6 +175,7 @@
 
 <svelte:head>
   <title>Dashboard — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="dashboard-header">

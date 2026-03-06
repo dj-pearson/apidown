@@ -46,7 +46,25 @@
 
 <svelte:head>
   <title>API Incidents — APIdown.net</title>
-  <meta name="description" content="Active and recent API incidents detected from real production traffic." />
+  <meta name="description" content="Active and recent API incidents detected from real production traffic. View outage timelines, affected regions, and resolution status for {totalCount} tracked incidents." />
+  {@html `<script type="application/ld+json">${JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "API Incidents — APIdown.net",
+      "description": "Active and recent API incidents detected from real production traffic",
+      "url": "https://apidown.net/incidents",
+      "isPartOf": { "@type": "WebSite", "name": "APIdown.net", "url": "https://apidown.net" }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://apidown.net" },
+        { "@type": "ListItem", "position": 2, "name": "Incidents", "item": "https://apidown.net/incidents" }
+      ]
+    }
+  ])}</script>`}
 </svelte:head>
 
 <h1>Incidents</h1>

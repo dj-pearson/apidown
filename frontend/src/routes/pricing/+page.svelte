@@ -108,7 +108,46 @@
 
 <svelte:head>
   <title>Pricing — APIdown.net</title>
-  <meta name="description" content="Simple, transparent pricing for API health monitoring. Free forever for individual developers." />
+  <meta name="description" content="Simple, transparent pricing for API health monitoring. Free forever for individual developers. Pro $19/mo, Team $49/mo." />
+  {@html `<script type="application/ld+json">${JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "APIdown.net Pricing",
+      "description": "Simple, transparent pricing for real-time API health monitoring",
+      "url": "https://apidown.net/pricing",
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://apidown.net" },
+          { "@type": "ListItem", "position": 2, "name": "Pricing", "item": "https://apidown.net/pricing" }
+        ]
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "APIdown.net",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "offers": [
+        { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "1 API key, 5 alert subscriptions, email alerts, community support" },
+        { "@type": "Offer", "name": "Pro", "price": "19", "priceCurrency": "USD", "billingIncrement": "P1M", "description": "10 API keys, 50 alert subscriptions, all alert channels, SLA export reports, priority support" },
+        { "@type": "Offer", "name": "Team", "price": "49", "priceCurrency": "USD", "billingIncrement": "P1M", "description": "Unlimited API keys, unlimited alert subscriptions, all alert channels, team management, dedicated support" }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Can I downgrade my plan?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. You can downgrade at any time from your dashboard. Your current plan benefits will remain active until the end of your billing period, then you'll switch to the lower tier." } },
+        { "@type": "Question", "name": "What payment methods do you accept?", "acceptedAnswer": { "@type": "Answer", "text": "We accept all major credit and debit cards (Visa, Mastercard, American Express) via Stripe. We also support bank transfers for annual Team plans." } },
+        { "@type": "Question", "name": "Is there a free trial for paid plans?", "acceptedAnswer": { "@type": "Answer", "text": "We don't offer a traditional free trial, but our Free tier is fully functional and never expires. You can monitor APIs, receive email alerts, and evaluate the platform before upgrading." } },
+        { "@type": "Question", "name": "What happens when I exceed my plan limits?", "acceptedAnswer": { "@type": "Answer", "text": "You won't lose any data. If you exceed your API key or subscription limits, you'll be prompted to upgrade or remove existing keys/subscriptions before creating new ones. Existing monitoring continues uninterrupted." } },
+        { "@type": "Question", "name": "Can I get a refund?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. If you're not satisfied within the first 14 days of a paid plan, contact us for a full refund. After 14 days, you can cancel anytime and your plan will remain active until the end of the billing period." } }
+      ]
+    }
+  ])}</script>`}
 </svelte:head>
 
 <div class="pricing-page">

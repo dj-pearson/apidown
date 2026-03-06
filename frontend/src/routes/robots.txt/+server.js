@@ -3,6 +3,9 @@ export function GET() {
 Allow: /
 Disallow: /admin
 Disallow: /dashboard
+Disallow: /login
+Disallow: /checkout
+Disallow: /unsubscribe
 
 Sitemap: https://apidown.net/sitemap.xml
 
