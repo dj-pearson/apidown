@@ -79,7 +79,7 @@ export async function load({ cookies, platform }) {
   // Get user's custom APIs
   const { data: customApis } = await supabase
     .from('apis')
-    .select('id, slug, name, base_domains, probe_url, expected_status, current_status, created_at')
+    .select('id, slug, name, base_domains, probe_url, expected_status, current_status, probe_auth_hint, created_at')
     .eq('owner_id', user.id)
     .eq('is_custom', true)
     .order('created_at', { ascending: false });

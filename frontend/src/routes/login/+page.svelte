@@ -1,5 +1,6 @@
 <script>
   import { friendlyAuthError } from '$lib/auth-errors.js';
+  import { createClient } from '@supabase/supabase-js';
 
   let mode = $state('login'); // 'login' or 'register'
   let email = $state('');
@@ -8,6 +9,14 @@
   let loading = $state(false);
   let errorMsg = $state('');
   let successMsg = $state('');
+
+  // MFA challenge state
+  let mfaRequired = $state(false);
+  let mfaCode = $state('');
+  let mfaFactorId = $state('');
+  let mfaChallengeId = $state('');
+  let mfaVerifying = $state(false);
+  let supabaseClient = $state(null);
 
   async function handleSubmit() {
     loading = true;
@@ -23,6 +32,46 @@
       const result = await res.json();
 
       if (!res.ok) {
+        // Check if MFA is required — Supabase returns a specific error
+        if (result.mfa_required) {
+          // We need a client-side Supabase instance for MFA
+          supabaseClient = createClient(result.supabase_url, result.supabase_anon_key);
+          // Sign in client-side to get the MFA session
+          const { data: signInData, error: signInErr } = await supabaseClient.auth.signInWithPassword({
+            email, password,
+          });
+
+          if (signInErr) {
+            errorMsg = friendlyAuthError(signInErr.message);
+            loading = false;
+            return;
+          }
+
+          // Get the TOTP factor to challenge
+          const { data: factorsData } = await supabaseClient.auth.mfa.listFactors();
+          const totpFactor = factorsData?.totp?.[0];
+          if (!totpFactor) {
+            errorMsg = 'MFA factor not found. Contact support.';
+            loading = false;
+            return;
+          }
+          mfaFactorId = totpFactor.id;
+
+          // Create a challenge
+          const { data: challengeData, error: challengeErr } = await supabaseClient.auth.mfa.challenge({
+            factorId: mfaFactorId,
+          });
+          if (challengeErr) {
+            errorMsg = challengeErr.message;
+            loading = false;
+            return;
+          }
+          mfaChallengeId = challengeData.id;
+          mfaRequired = true;
+          loading = false;
+          return;
+        }
+
         errorMsg = friendlyAuthError(result.error || 'Something went wrong.');
       } else if (mode === 'register') {
         successMsg = result.message || 'Check your email for a confirmation link.';
@@ -36,54 +85,122 @@
     }
     loading = false;
   }
+
+  async function handleMfaVerify() {
+    mfaVerifying = true;
+    errorMsg = '';
+    try {
+      const { data: verifyData, error: verifyErr } = await supabaseClient.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: mfaChallengeId,
+        code: mfaCode,
+      });
+      if (verifyErr) {
+        errorMsg = 'Invalid code. Please try again.';
+        mfaVerifying = false;
+        return;
+      }
+
+      // MFA verified — send the new session tokens to the server to set cookies
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const session = sessionData?.session;
+      if (session) {
+        await fetch('/auth/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }),
+        });
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      errorMsg = 'Session error after MFA. Please try again.';
+    } catch {
+      errorMsg = 'Verification failed. Please try again.';
+    }
+    mfaVerifying = false;
+  }
 </script>
 
 <svelte:head>
-  <title>{mode === 'login' ? 'Log In' : 'Sign Up'} — APIdown.net</title>
+  <title>{mfaRequired ? 'Verify 2FA' : mode === 'login' ? 'Log In' : 'Sign Up'} — APIdown.net</title>
   <meta name="description" content="Sign in or create a free APIdown.net account to manage API keys, set up alerts, and monitor your API dependencies." />
   <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="auth-page">
   <div class="auth-card">
-    <h1>{mode === 'login' ? 'Log In' : 'Create Account'}</h1>
-    <p class="subtitle">
-      {mode === 'login' ? 'Sign in to manage your API keys and alerts.' : 'Create a free account to get started.'}
-    </p>
+    {#if mfaRequired}
+      <h1>Two-Factor Authentication</h1>
+      <p class="subtitle">Enter the 6-digit code from your authenticator app.</p>
 
-    <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <label>
-        Email
-        <input type="email" bind:value={email} required placeholder="you@example.com" autocomplete="email" />
-      </label>
-      <label>
-        Password
-        <div class="password-field">
-          <input type={showPassword ? 'text' : 'password'} bind:value={password} required minlength="6" placeholder="Min 6 characters" autocomplete={mode === 'login' ? 'current-password' : 'new-password'} />
-          <button type="button" class="toggle-password" onclick={() => showPassword = !showPassword} aria-label={showPassword ? 'Hide password' : 'Show password'}>
-            {showPassword ? 'Hide' : 'Show'}
-          </button>
-        </div>
-      </label>
-      <button type="submit" disabled={loading}>
-        {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Sign Up'}
-      </button>
-    </form>
+      <form onsubmit={(e) => { e.preventDefault(); handleMfaVerify(); }}>
+        <input
+          type="text"
+          bind:value={mfaCode}
+          placeholder="000000"
+          maxlength="6"
+          pattern="[0-9]*"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          class="mfa-input"
+          required
+        />
+        <button type="submit" disabled={mfaVerifying || mfaCode.length !== 6}>
+          {mfaVerifying ? 'Verifying...' : 'Verify'}
+        </button>
+      </form>
 
-    {#if errorMsg}
-      <p class="error">{errorMsg}</p>
-    {/if}
-    {#if successMsg}
-      <p class="success">{successMsg}</p>
-    {/if}
-
-    <p class="toggle">
-      {#if mode === 'login'}
-        Don't have an account? <button class="link-btn" onclick={() => { mode = 'register'; errorMsg = ''; successMsg = ''; }}>Sign Up</button>
-      {:else}
-        Already have an account? <button class="link-btn" onclick={() => { mode = 'login'; errorMsg = ''; successMsg = ''; }}>Log In</button>
+      {#if errorMsg}
+        <p class="error">{errorMsg}</p>
       {/if}
-    </p>
+
+      <p class="toggle">
+        <button class="link-btn" onclick={() => { mfaRequired = false; mfaCode = ''; errorMsg = ''; }}>Back to login</button>
+      </p>
+    {:else}
+      <h1>{mode === 'login' ? 'Log In' : 'Create Account'}</h1>
+      <p class="subtitle">
+        {mode === 'login' ? 'Sign in to manage your API keys and alerts.' : 'Create a free account to get started.'}
+      </p>
+
+      <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+        <label>
+          Email
+          <input type="email" bind:value={email} required placeholder="you@example.com" autocomplete="email" />
+        </label>
+        <label>
+          Password
+          <div class="password-field">
+            <input type={showPassword ? 'text' : 'password'} bind:value={password} required minlength="6" placeholder="Min 6 characters" autocomplete={mode === 'login' ? 'current-password' : 'new-password'} />
+            <button type="button" class="toggle-password" onclick={() => showPassword = !showPassword} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </label>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Sign Up'}
+        </button>
+      </form>
+
+      {#if errorMsg}
+        <p class="error">{errorMsg}</p>
+      {/if}
+      {#if successMsg}
+        <p class="success">{successMsg}</p>
+      {/if}
+
+      <p class="toggle">
+        {#if mode === 'login'}
+          Don't have an account? <button class="link-btn" onclick={() => { mode = 'register'; errorMsg = ''; successMsg = ''; }}>Sign Up</button>
+        {:else}
+          Already have an account? <button class="link-btn" onclick={() => { mode = 'login'; errorMsg = ''; successMsg = ''; }}>Log In</button>
+        {/if}
+      </p>
+    {/if}
   </div>
 </div>
 
@@ -141,6 +258,14 @@
 
   input:focus {
     border-color: var(--color-primary);
+  }
+
+  .mfa-input {
+    font-size: 1.5rem;
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.3em;
+    text-align: center;
+    padding: 0.75rem;
   }
 
   button[type="submit"] {

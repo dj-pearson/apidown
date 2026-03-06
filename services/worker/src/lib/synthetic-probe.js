@@ -1,3 +1,5 @@
+import { decryptProbeAuth } from './probe-crypto.js';
+
 const REGIONS = ['us-east', 'eu-west', 'ap-south'];
 const PROBE_TIMEOUT = 10_000;
 const CONCURRENCY_LIMIT = 10;
@@ -67,7 +69,7 @@ async function refreshApiList(supabase) {
 
   const { data, error } = await supabase
     .from('apis')
-    .select('id, slug, name, base_domains, probe_url, expected_status');
+    .select('id, slug, name, base_domains, probe_url, expected_status, probe_auth_encrypted');
 
   if (error) {
     console.error('[probe] Failed to refresh API list:', error.message);
@@ -159,11 +161,24 @@ async function probeApi(api, region) {
   const expectedStatus = api.expected_status || 200;
   const reporterHash = `synth-${region}`;
 
+  // Build headers — include decrypted auth if present
+  const headers = { 'User-Agent': 'APIdown-Probe/1.0' };
+
+  if (api.probe_auth_encrypted) {
+    const decrypted = decryptProbeAuth(api.probe_auth_encrypted);
+    if (decrypted) {
+      const colonIdx = decrypted.indexOf(': ');
+      if (colonIdx > 0) {
+        headers[decrypted.slice(0, colonIdx)] = decrypted.slice(colonIdx + 2);
+      }
+    }
+  }
+
   const start = Date.now();
   let statusCode;
 
   try {
-    // Try HEAD first (skip for custom APIs with probe_url — use GET to get a real status)
+    // Use GET for custom APIs with probe_url (need real status), HEAD for system APIs
     const useGet = !!api.probe_url;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
@@ -174,7 +189,7 @@ async function probeApi(api, region) {
         method: useGet ? 'GET' : 'HEAD',
         signal: controller.signal,
         redirect: 'follow',
-        headers: { 'User-Agent': 'APIdown-Probe/1.0' },
+        headers,
       });
     } finally {
       clearTimeout(timeout);
@@ -189,7 +204,7 @@ async function probeApi(api, region) {
           method: 'GET',
           signal: controller2.signal,
           redirect: 'follow',
-          headers: { 'User-Agent': 'APIdown-Probe/1.0' },
+          headers,
         });
       } finally {
         clearTimeout(timeout2);

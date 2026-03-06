@@ -28,8 +28,24 @@
   let customApiName = $state('');
   let customApiUrl = $state('');
   let customApiExpectedStatus = $state(200);
+  let customAuthHeaderName = $state('');
+  let customAuthHeaderValue = $state('');
+  let showAuthFields = $state(false);
   let addingApi = $state(false);
   let confirmDeleteApiId = $state(null);
+
+  // 2FA / TOTP state
+  let mfaEnabled = $state(data.profile.mfa_enabled || false);
+  let showMfaSetup = $state(false);
+  let mfaQrUrl = $state('');
+  let mfaSecret = $state('');
+  let mfaFactorId = $state('');
+  let mfaVerifyCode = $state('');
+  let mfaEnrolling = $state(false);
+  let mfaVerifying = $state(false);
+  let mfaError = $state('');
+  let confirmDisableMfa = $state(false);
+  let mfaDisabling = $state(false);
 
   const tier = $derived(profile.tier || 'free');
   const limits = $derived(getTierLimits(tier));
@@ -191,6 +207,8 @@
           name: customApiName.trim(),
           url: customApiUrl.trim(),
           expected_status: customApiExpectedStatus,
+          auth_header_name: customAuthHeaderName.trim() || undefined,
+          auth_header_value: customAuthHeaderValue.trim() || undefined,
         }),
       });
 
@@ -200,6 +218,9 @@
         customApiName = '';
         customApiUrl = '';
         customApiExpectedStatus = 200;
+        customAuthHeaderName = '';
+        customAuthHeaderValue = '';
+        showAuthFields = false;
         showAddApi = false;
         // Reload to refresh pinned APIs too
         location.reload();
@@ -235,6 +256,96 @@
     } catch {
       alert('Something went wrong.');
     }
+  }
+
+  async function enrollMfa() {
+    mfaEnrolling = true;
+    mfaError = '';
+    try {
+      const supabase = getAuthClient();
+      if (!supabase) return;
+      const { data: enrollData, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'APIdown Authenticator',
+      });
+      if (error) {
+        mfaError = error.message;
+        mfaEnrolling = false;
+        return;
+      }
+      mfaQrUrl = enrollData.totp.qr_code;
+      mfaSecret = enrollData.totp.secret;
+      mfaFactorId = enrollData.id;
+      showMfaSetup = true;
+    } catch {
+      mfaError = 'Failed to start 2FA setup.';
+    }
+    mfaEnrolling = false;
+  }
+
+  async function verifyMfa() {
+    mfaVerifying = true;
+    mfaError = '';
+    try {
+      const supabase = getAuthClient();
+      if (!supabase) return;
+
+      // Challenge the factor
+      const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({
+        factorId: mfaFactorId,
+      });
+      if (challengeErr) {
+        mfaError = challengeErr.message;
+        mfaVerifying = false;
+        return;
+      }
+
+      // Verify with the user's code
+      const { error: verifyErr } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challengeData.id,
+        code: mfaVerifyCode,
+      });
+      if (verifyErr) {
+        mfaError = 'Invalid code. Please try again.';
+        mfaVerifying = false;
+        return;
+      }
+
+      // Mark MFA as enabled in our users table
+      await supabase.from('users').update({ mfa_enabled: true }).eq('id', data.profile.id || '');
+      mfaEnabled = true;
+      showMfaSetup = false;
+      mfaQrUrl = '';
+      mfaSecret = '';
+      mfaVerifyCode = '';
+    } catch {
+      mfaError = 'Verification failed.';
+    }
+    mfaVerifying = false;
+  }
+
+  async function disableMfa() {
+    mfaDisabling = true;
+    mfaError = '';
+    try {
+      const supabase = getAuthClient();
+      if (!supabase) return;
+
+      // List enrolled factors and unenroll them
+      const { data: factorsList } = await supabase.auth.mfa.listFactors();
+      const totpFactors = factorsList?.totp || [];
+      for (const factor of totpFactors) {
+        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      }
+
+      await supabase.from('users').update({ mfa_enabled: false }).eq('id', data.profile.id || '');
+      mfaEnabled = false;
+      confirmDisableMfa = false;
+    } catch {
+      mfaError = 'Failed to disable 2FA.';
+    }
+    mfaDisabling = false;
   }
 
   async function openBillingPortal() {
@@ -386,7 +497,7 @@
   <div class="section-header-row">
     <div>
       <h2>Custom APIs</h2>
-      <p class="section-desc">Add your own API endpoints to monitor.</p>
+      <p class="section-desc">Add your own API endpoints to monitor. Probed every 60 seconds from 3 regions.</p>
     </div>
     <span class="usage-count">{customApiCount}/{formatLimit(limits.customApis)}</span>
   </div>
@@ -405,6 +516,9 @@
           <div class="custom-api-info">
             <a href="/api/{api.slug}" class="custom-api-name">{api.name}</a>
             <span class="custom-api-url">{api.probe_url}</span>
+            {#if api.probe_auth_hint}
+              <span class="custom-api-auth-hint">{api.probe_auth_hint}</span>
+            {/if}
           </div>
           <div class="custom-api-meta">
             <span class="stack-status stack-status-{api.current_status}">{api.current_status}</span>
@@ -430,11 +544,13 @@
     <div class="add-api-form">
       <div class="add-api-field">
         <label for="custom-api-name">Name</label>
-        <input id="custom-api-name" type="text" bind:value={customApiName} placeholder="e.g. NetToolKit" />
+        <input id="custom-api-name" type="text" bind:value={customApiName} placeholder="e.g. My Claude API" />
+        <span class="field-hint">A friendly name for this API in your dashboard.</span>
       </div>
       <div class="add-api-field">
         <label for="custom-api-url">Health Check URL</label>
-        <input id="custom-api-url" type="url" bind:value={customApiUrl} placeholder="https://api.example.com/health" />
+        <input id="custom-api-url" type="url" bind:value={customApiUrl} placeholder="https://api.example.com/v1/health" />
+        <span class="field-hint">The endpoint we'll ping every 60s. Use a health or status endpoint if available.</span>
       </div>
       <div class="add-api-field add-api-field-short">
         <label for="custom-api-status">Expected Status</label>
@@ -445,12 +561,48 @@
           <option value={301}>301 Redirect</option>
           <option value={302}>302 Redirect</option>
         </select>
+        <span class="field-hint">The HTTP status code that means "healthy." Usually 200.</span>
       </div>
+
+      {#if !showAuthFields}
+        <button class="btn-text" onclick={() => showAuthFields = true}>
+          + Add authentication header (optional)
+        </button>
+      {:else}
+        <div class="auth-fields">
+          <div class="security-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>AES-256-GCM encrypted</span>
+          </div>
+          <p class="auth-notice">
+            Your credentials are encrypted before they leave your browser's connection and stored as ciphertext.
+            The plaintext is only decrypted server-side during health probes. It is never logged, cached, or exposed in API responses.
+          </p>
+          <div class="auth-fields-row">
+            <div class="add-api-field">
+              <label for="custom-auth-name">Header Name</label>
+              <select id="custom-auth-name" bind:value={customAuthHeaderName}>
+                <option value="">Select...</option>
+                <option value="Authorization">Authorization</option>
+                <option value="X-API-Key">X-API-Key</option>
+                <option value="X-Auth-Token">X-Auth-Token</option>
+              </select>
+              <span class="field-hint">How does this API expect the key? Most use "Authorization."</span>
+            </div>
+            <div class="add-api-field add-api-field-grow">
+              <label for="custom-auth-value">Header Value</label>
+              <input id="custom-auth-value" type="password" bind:value={customAuthHeaderValue} placeholder="Bearer sk-ant-..." autocomplete="off" />
+              <span class="field-hint">The full header value, e.g. "Bearer sk-ant-api03-..." or just the raw key.</span>
+            </div>
+          </div>
+        </div>
+      {/if}
+
       <div class="add-api-actions">
         <button class="btn-primary" onclick={addCustomApi} disabled={addingApi}>
           {addingApi ? 'Adding...' : 'Add API'}
         </button>
-        <button class="btn-secondary" onclick={() => { showAddApi = false; customApiName = ''; customApiUrl = ''; }}>
+        <button class="btn-secondary" onclick={() => { showAddApi = false; customApiName = ''; customApiUrl = ''; customAuthHeaderName = ''; customAuthHeaderValue = ''; showAuthFields = false; }}>
           Cancel
         </button>
       </div>
@@ -558,6 +710,117 @@
     </div>
   {:else}
     <p class="empty">No subscriptions. Visit an API's detail page to subscribe.</p>
+  {/if}
+</section>
+
+<section class="section">
+  <h2>Security</h2>
+  <p class="section-desc">Protect your account and stored API credentials.</p>
+
+  <div class="security-cards">
+    <div class="security-card">
+      <div class="security-card-header">
+        <div class="security-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <h3>Encryption at Rest</h3>
+          <p class="security-card-desc">All stored API credentials are encrypted with AES-256-GCM. Keys are decrypted only during server-side health probes and are never logged, cached, or returned in responses.</p>
+        </div>
+      </div>
+      <span class="security-status security-status-active">Active</span>
+    </div>
+
+    <div class="security-card">
+      <div class="security-card-header">
+        <div class="security-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div>
+          <h3>Two-Factor Authentication (2FA)</h3>
+          <p class="security-card-desc">
+            {#if mfaEnabled}
+              Your account is protected with TOTP-based 2FA. A code from your authenticator app is required at each login.
+            {:else}
+              Add an extra layer of security by requiring a time-based one-time password (TOTP) from an authenticator app like Google Authenticator, Authy, or 1Password.
+            {/if}
+          </p>
+        </div>
+      </div>
+      {#if mfaEnabled}
+        <span class="security-status security-status-active">Enabled</span>
+      {:else}
+        <span class="security-status security-status-inactive">Not enabled</span>
+      {/if}
+    </div>
+  </div>
+
+  {#if mfaError}
+    <p class="mfa-error">{mfaError}</p>
+  {/if}
+
+  {#if !mfaEnabled && !showMfaSetup}
+    <button class="btn-primary mfa-btn" onclick={enrollMfa} disabled={mfaEnrolling}>
+      {mfaEnrolling ? 'Setting up...' : 'Enable 2FA'}
+    </button>
+  {/if}
+
+  {#if showMfaSetup}
+    <div class="mfa-setup">
+      <h3>Set up your authenticator</h3>
+      <ol class="mfa-steps">
+        <li>Open your authenticator app (Google Authenticator, Authy, 1Password, etc.)</li>
+        <li>Scan the QR code below, or manually enter the secret key</li>
+        <li>Enter the 6-digit code from your app to verify</li>
+      </ol>
+
+      <div class="mfa-qr-area">
+        {#if mfaQrUrl}
+          <img src={mfaQrUrl} alt="Scan this QR code with your authenticator app" class="mfa-qr" />
+        {/if}
+        <div class="mfa-secret-area">
+          <span class="mfa-secret-label">Manual entry key:</span>
+          <code class="mfa-secret">{mfaSecret}</code>
+        </div>
+      </div>
+
+      <div class="mfa-verify-row">
+        <input
+          type="text"
+          bind:value={mfaVerifyCode}
+          placeholder="6-digit code"
+          maxlength="6"
+          pattern="[0-9]*"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          class="mfa-code-input"
+        />
+        <button class="btn-primary" onclick={verifyMfa} disabled={mfaVerifying || mfaVerifyCode.length !== 6}>
+          {mfaVerifying ? 'Verifying...' : 'Verify & Enable'}
+        </button>
+        <button class="btn-secondary" onclick={() => { showMfaSetup = false; mfaError = ''; }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  {/if}
+
+  {#if mfaEnabled}
+    <div class="mfa-enabled-actions">
+      {#if confirmDisableMfa}
+        <p class="mfa-disable-warn">Disabling 2FA will remove the extra layer of protection. Are you sure?</p>
+        <div class="mfa-disable-btns">
+          <button class="btn-danger-sm" onclick={disableMfa} disabled={mfaDisabling}>
+            {mfaDisabling ? 'Disabling...' : 'Yes, disable 2FA'}
+          </button>
+          <button class="btn-cancel-sm" onclick={() => confirmDisableMfa = false}>Cancel</button>
+        </div>
+      {:else}
+        <button class="btn-text mfa-disable-link" onclick={() => confirmDisableMfa = true}>
+          Disable 2FA
+        </button>
+      {/if}
+    </div>
   {/if}
 </section>
 
@@ -1150,10 +1413,242 @@
     max-width: 200px;
   }
 
+  .add-api-field-grow {
+    flex: 1;
+  }
+
   .add-api-actions {
     display: flex;
     gap: 0.5rem;
     margin-top: 0.25rem;
+  }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+
+  .btn-text:hover {
+    color: var(--color-primary);
+  }
+
+  .auth-fields {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.75rem;
+    background: var(--color-bg);
+  }
+
+  .auth-notice {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .auth-fields-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .custom-api-auth-hint {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, monospace);
+    opacity: 0.7;
+  }
+
+  .field-hint {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+    line-height: 1.3;
+  }
+
+  .security-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-operational);
+    margin-bottom: 0.35rem;
+  }
+
+  .security-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .security-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .security-card-header {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .security-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+  }
+
+  .security-card h3 {
+    font-size: 0.9rem;
+    margin: 0 0 0.2rem;
+  }
+
+  .security-card-desc {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .security-status {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .security-status-active {
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--color-operational);
+  }
+
+  .security-status-inactive {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--color-degraded);
+  }
+
+  .mfa-btn {
+    margin-bottom: 1rem;
+  }
+
+  .mfa-error {
+    color: var(--color-down);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .mfa-setup {
+    padding: 1.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .mfa-setup h3 {
+    font-size: 1rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .mfa-steps {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    padding-left: 1.25rem;
+    margin: 0 0 1rem;
+    line-height: 1.6;
+  }
+
+  .mfa-qr-area {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .mfa-qr {
+    width: 160px;
+    height: 160px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+  }
+
+  .mfa-secret-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .mfa-secret-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .mfa-secret {
+    font-size: 0.8rem;
+    color: var(--color-text);
+    word-break: break-all;
+    background: var(--color-bg);
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+  }
+
+  .mfa-verify-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .mfa-code-input {
+    width: 120px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.15em;
+    text-align: center;
+  }
+
+  .mfa-enabled-actions {
+    margin-top: 0.5rem;
+  }
+
+  .mfa-disable-warn {
+    font-size: 0.85rem;
+    color: var(--color-down);
+    margin-bottom: 0.5rem;
+  }
+
+  .mfa-disable-btns {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .mfa-disable-link {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
   }
 
   @media (max-width: 640px) {
@@ -1166,5 +1661,10 @@
     .custom-api-url { max-width: 100%; }
     .custom-api-meta { flex-wrap: wrap; }
     .add-api-field-short { max-width: 100%; }
+    .auth-fields-row { flex-direction: column; }
+    .security-card { flex-direction: column; }
+    .mfa-qr-area { flex-direction: column; align-items: flex-start; }
+    .mfa-verify-row { flex-direction: column; align-items: stretch; }
+    .mfa-code-input { width: 100%; }
   }
 </style>

@@ -61,6 +61,24 @@ export async function POST({ request, cookies, platform }) {
     return json({ error: error.message }, { status: 401 });
   }
 
+  // Check if user has MFA enrolled — if so, the session is not fully authenticated yet.
+  // Supabase returns AAL1 for password-only, AAL2 for password+MFA.
+  // We check if the user has TOTP factors enrolled and the session is only AAL1.
+  const { data: factorsData } = await supabase.auth.mfa.listFactors();
+  const totpFactors = factorsData?.totp || [];
+  const hasVerifiedTOTP = totpFactors.some(f => f.status === 'verified');
+
+  if (hasVerifiedTOTP) {
+    // Don't set auth cookies yet — client needs to complete MFA challenge first
+    // Sign out server-side session so incomplete auth isn't usable
+    await supabase.auth.signOut();
+    return json({
+      mfa_required: true,
+      supabase_url: url,
+      supabase_anon_key: anonKey,
+    }, { status: 401 });
+  }
+
   setAuthCookies(cookies, data.session.access_token, data.session.refresh_token);
   return json({ ok: true });
 }

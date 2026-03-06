@@ -3,6 +3,8 @@
  * POST /v1/custom-apis — create a custom API to monitor
  * DELETE /v1/custom-apis/:id — remove a custom API
  */
+import { encryptProbeAuth, maskAuthValue } from '../lib/probe-crypto.js';
+
 const CUSTOM_API_LIMITS = { free: 1, pro: 5, team: Infinity };
 
 export async function customApisRoute(fastify) {
@@ -26,7 +28,7 @@ export async function customApisRoute(fastify) {
     const user = await authenticateUser(request, reply);
     if (!user) return;
 
-    const { name, url, expected_status } = request.body || {};
+    const { name, url, expected_status, auth_header_name, auth_header_value } = request.body || {};
 
     if (!name || !url) {
       return reply.code(400).send({ error: 'name and url are required' });
@@ -73,6 +75,24 @@ export async function customApisRoute(fastify) {
       });
     }
 
+    // Encrypt auth header if provided
+    let probe_auth_encrypted = null;
+    let probe_auth_hint = null;
+
+    if (auth_header_name && auth_header_value) {
+      const headerName = auth_header_name.trim();
+      const headerVal = auth_header_value.trim();
+      // Store as "HeaderName: value" so the prober can split on first ": "
+      const fullHeader = `${headerName}: ${headerVal}`;
+      try {
+        probe_auth_encrypted = encryptProbeAuth(fullHeader);
+      } catch (err) {
+        fastify.log.error('Encryption failed:', err.message);
+        return reply.code(500).send({ error: 'Server encryption configuration error. Contact support.' });
+      }
+      probe_auth_hint = `${headerName}: ${maskAuthValue(headerVal)}`;
+    }
+
     // Insert the custom API
     const { data: api, error: insertErr } = await fastify.supabase
       .from('apis')
@@ -86,8 +106,10 @@ export async function customApisRoute(fastify) {
         owner_id: user.id,
         is_custom: true,
         current_status: 'operational',
+        probe_auth_encrypted,
+        probe_auth_hint,
       })
-      .select('id, slug, name, base_domains, probe_url, expected_status, current_status, created_at')
+      .select('id, slug, name, base_domains, probe_url, expected_status, current_status, probe_auth_hint, created_at')
       .single();
 
     if (insertErr) {
