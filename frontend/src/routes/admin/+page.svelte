@@ -12,6 +12,7 @@
 
 <svelte:head>
   <title>Admin Dashboard — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <h1>Admin Dashboard</h1>

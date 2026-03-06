@@ -4,6 +4,7 @@
 
 <svelte:head>
   <title>Unsubscribe — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="container">

@@ -60,7 +60,29 @@
 
 <svelte:head>
   <title>SDK Documentation — APIdown.net</title>
-  <meta name="description" content="Integrate the APIdown SDK into your application to contribute real-time API health signals." />
+  <meta name="description" content="Integrate the APIdown SDK into your JavaScript, Node.js, or Python application to contribute real-time API health signals. One-line setup for Express, Next.js, SvelteKit, Django, and FastAPI." />
+  {@html `<script type="application/ld+json">${JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "APIdown SDK Integration Guide",
+      "description": "Integrate the APIdown SDK into your application to contribute real-time API health signals",
+      "url": "https://apidown.net/docs",
+      "author": { "@type": "Organization", "name": "APIdown.net", "url": "https://apidown.net" },
+      "publisher": { "@type": "Organization", "name": "APIdown.net", "url": "https://apidown.net" },
+      "proficiencyLevel": "Beginner",
+      "programmingLanguage": ["JavaScript", "Python"],
+      "dependencies": "apidown-monitor (npm), apidown (pip)"
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://apidown.net" },
+        { "@type": "ListItem", "position": 2, "name": "Documentation", "item": "https://apidown.net/docs" }
+      ]
+    }
+  ])}</script>`}
 </svelte:head>
 
 <!-- Mobile TOC dropdown -->
