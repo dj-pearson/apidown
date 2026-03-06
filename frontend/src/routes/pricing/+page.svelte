@@ -50,10 +50,15 @@
     },
   ];
 
+  const tierRank = { free: 0, pro: 1, team: 2 };
+
   function getCta(plan) {
     if (!data.user) return { label: plan.tier === 'free' ? 'Get Started' : `Upgrade to ${plan.name}`, action: 'login' };
-    if (plan.tier === 'free') return { label: 'Current Plan', action: 'none' };
-    return { label: `Upgrade to ${plan.name}`, action: 'checkout' };
+    const currentTier = data.tier || 'free';
+    if (plan.tier === currentTier) return { label: 'Current Plan', action: 'none' };
+    if (tierRank[plan.tier] > tierRank[currentTier]) return { label: `Upgrade to ${plan.name}`, action: 'checkout' };
+    // Downgrade — send to billing portal
+    return { label: 'Manage Billing', action: 'portal' };
   }
 
   async function startCheckout(tier) {
@@ -68,7 +73,24 @@
       if (result.url) {
         window.location.href = result.url;
       } else {
-        alert(result.message || 'Failed to start checkout');
+        alert(result.error || 'Failed to start checkout');
+        loading = null;
+      }
+    } catch {
+      alert('Something went wrong. Please try again.');
+      loading = null;
+    }
+  }
+
+  async function openBillingPortal() {
+    loading = 'portal';
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      const result = await res.json();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        alert(result.error || 'Could not open billing portal.');
         loading = null;
       }
     } catch {
@@ -109,6 +131,10 @@
         {:else if cta.action === 'checkout'}
           <button class="cta" class:cta-primary={plan.highlighted} disabled={loading === plan.tier} onclick={() => startCheckout(plan.tier)}>
             {loading === plan.tier ? 'Redirecting…' : cta.label}
+          </button>
+        {:else if cta.action === 'portal'}
+          <button class="cta" disabled={loading === 'portal'} onclick={openBillingPortal}>
+            {loading === 'portal' ? 'Redirecting…' : cta.label}
           </button>
         {:else}
           <span class="cta cta-current">{cta.label}</span>

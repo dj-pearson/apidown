@@ -2,12 +2,15 @@ import Stripe from 'stripe';
 import { getEnv } from '$lib/supabase-server.js';
 
 let _stripe;
+let _stripeKey;
 
 export function getStripe() {
-  if (!_stripe) {
-    const key = getEnv('STRIPE_SECRET_KEY');
-    if (!key) throw new Error('Missing STRIPE_SECRET_KEY env var');
-    _stripe = new Stripe(key, { apiVersion: '2024-06-20' });
+  const key = getEnv('STRIPE_SECRET_KEY');
+  if (!key) throw new Error('Missing STRIPE_SECRET_KEY env var');
+  // Recreate if key changed (e.g. different platform context)
+  if (!_stripe || _stripeKey !== key) {
+    _stripeKey = key;
+    _stripe = new Stripe(key);
   }
   return _stripe;
 }

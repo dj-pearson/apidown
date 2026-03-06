@@ -1,6 +1,4 @@
 <script>
-  import { createClient } from '@supabase/supabase-js';
-  import { page } from '$app/state';
   import { friendlyAuthError } from '$lib/auth-errors.js';
 
   let mode = $state('login'); // 'login' or 'register'
@@ -11,50 +9,30 @@
   let errorMsg = $state('');
   let successMsg = $state('');
 
-  function getAuthClient() {
-    const url = page.data?.supabaseUrl;
-    const key = page.data?.supabaseAnonKey;
-    if (!url || !key) return null;
-    return createClient(url, key);
-  }
-
   async function handleSubmit() {
     loading = true;
     errorMsg = '';
     successMsg = '';
 
-    const supabase = getAuthClient();
-    if (!supabase) {
-      errorMsg = 'Authentication service unavailable. Please refresh the page.';
-      loading = false;
-      return;
-    }
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, mode }),
+      });
+      const result = await res.json();
 
-    if (mode === 'login') {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        errorMsg = friendlyAuthError(error.message);
+      if (!res.ok) {
+        errorMsg = friendlyAuthError(result.error || 'Something went wrong.');
+      } else if (mode === 'register') {
+        successMsg = result.message || 'Check your email for a confirmation link.';
       } else {
-        // Set cookies via server endpoint so server-side auth works
-        await fetch('/auth/callback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          }),
-        });
-        // Full page navigation to ensure cookies are sent
+        // Login succeeded — cookies set server-side, navigate to dashboard
         window.location.href = '/dashboard';
         return;
       }
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        errorMsg = friendlyAuthError(error.message);
-      } else {
-        successMsg = 'Check your email for a confirmation link.';
-      }
+    } catch {
+      errorMsg = 'Something went wrong. Please try again.';
     }
     loading = false;
   }

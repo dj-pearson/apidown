@@ -6,7 +6,8 @@
       "Bash(ls:*)",
       "Bash(node:*)",
       "Bash(xargs:*)",
-      "Bash(npx svelte-kit:*)"
+      "Bash(npx svelte-kit:*)",
+      "Bash(npx svelte-check:*)"
     ]
   }
 }
