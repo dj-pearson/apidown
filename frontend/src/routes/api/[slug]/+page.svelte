@@ -148,52 +148,175 @@
   }
   let seoTitle = $derived(
     api.current_status === "down" || api.current_status === "degraded"
-      ? `🚨 ${api.current_status.toUpperCase()}: ${api.name} API Outage Active | Live Error Rates | APIDown`
-      : `${api.name} API Status | Real-Time Uptime & Latency | APIDown`,
+      ? `🚨 ${api.current_status === 'down' ? 'DOWN' : 'DEGRADED'}: ${api.name} API Outage — Live Status | APIdown`
+      : `Is ${api.name} Down? — Real-Time API Status, Uptime & Latency | APIdown`,
   );
 
   let seoDescription = $derived(
     api.current_status === "down" || api.current_status === "degraded"
-      ? `Live outage report for ${api.name}. Current error rates and latency from real production traffic. Is ${api.name} down right now?`
-      : `Real-time ${api.name} API status — uptime, latency, and incident history from crowd-sourced production traffic.`,
+      ? `${api.name} API is currently ${api.current_status}. Live error rates, latency data, and incident updates from real production traffic. Check if ${api.name} is down right now.`
+      : `Real-time ${api.name} API status: ${data.uptimePercent}% uptime over 90 days, ${avgP50}ms avg latency. Crowd-sourced monitoring from real production traffic. Is ${api.name} down? Check live status, outage history, and SLA data.`,
   );
 
-  let jsonLdSchema = $derived({
+  // Canonical URL
+  let canonicalUrl = $derived(`https://apidown.net/api/${api.slug}`);
+
+  // WebPage + MonitoringAction schema
+  let webPageSchema = $derived({
     "@context": "https://schema.org",
-    "@type":
-      api.current_status !== "operational" ? "LiveBlogPosting" : "Dataset",
-    name: `${api.name} API Status Data`,
+    "@type": "WebPage",
+    "@id": `https://apidown.net/api/${api.slug}#webpage`,
+    name: `${api.name} API Status`,
     description: seoDescription,
-    url: `https://apidown.net/api/${api.slug}`,
-    ...(api.current_status !== "operational"
-      ? {
-          coverageStartTime:
-            incidents.length > 0
-              ? incidents[0].started_at
-              : new Date().toISOString(),
-          liveBlogUpdate: incidents.slice(0, 5).map((inc) => ({
-            "@type": "BlogPosting",
-            headline: inc.title,
-            datePublished: inc.started_at,
-            dateModified: inc.started_at,
-            articleBody: `Status: ${inc.status}. Severity: ${inc.severity}.`,
-          })),
-        }
-      : {
-          license: "https://creativecommons.org/publicdomain/zero/1.0/",
-          isAccessibleForFree: true,
-          creator: {
-            "@type": "Organization",
-            name: "APIDown",
-          },
-        }),
+    url: canonicalUrl,
+    dateModified: api.updated_at || new Date().toISOString(),
+    inLanguage: "en-US",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": "https://apidown.net/#website",
+      name: "APIdown.net",
+      url: "https://apidown.net",
+    },
+    about: {
+      "@type": "SoftwareApplication",
+      name: `${api.name} API`,
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      ...(api.base_url ? { url: api.base_url } : {}),
+    },
+    mainEntity: {
+      "@type": "MonitorAction",
+      name: `${api.name} API Monitoring`,
+      agent: {
+        "@type": "Organization",
+        name: "APIdown.net",
+        url: "https://apidown.net",
+      },
+      object: {
+        "@type": "SoftwareApplication",
+        name: `${api.name} API`,
+      },
+    },
+    breadcrumb: { "@id": `https://apidown.net/api/${api.slug}#breadcrumb` },
+    publisher: {
+      "@type": "Organization",
+      name: "APIdown.net",
+      url: "https://apidown.net",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://apidown.net/logo-primary.png",
+      },
+    },
   });
+
+  // BreadcrumbList schema
+  let breadcrumbSchema = $derived({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "@id": `https://apidown.net/api/${api.slug}#breadcrumb`,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "API Status Dashboard",
+        item: "https://apidown.net",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: `${api.name} Status`,
+        item: canonicalUrl,
+      },
+    ],
+  });
+
+  // FAQPage schema — AI search and featured snippet bait
+  let faqSchema = $derived({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `https://apidown.net/api/${api.slug}#faq`,
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `Is ${api.name} down right now?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: api.current_status === "operational"
+            ? `No, ${api.name} API is currently operational with ${data.uptimePercent}% uptime over the last 90 days and an average latency of ${avgP50}ms. Check real-time status at https://apidown.net/api/${api.slug}`
+            : `Yes, ${api.name} API is currently experiencing issues (status: ${api.current_status}). ${incidents.length > 0 ? `Latest incident: ${incidents[0].title}. ` : ''}Check https://apidown.net/api/${api.slug} for live updates.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `What is the ${api.name} API uptime?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${api.name} API has ${data.uptimePercent}% uptime over the last 90 days, measured from real production traffic across multiple regions. Historical uptime data and SLA reports are available at https://apidown.net/api/${api.slug}`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `How do I check if ${api.name} API is working?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `You can check ${api.name} API status in real-time at https://apidown.net/api/${api.slug}. APIdown monitors ${api.name} using crowd-sourced data from real production traffic — not synthetic pings — so you see the actual developer experience. You can also subscribe to email alerts for instant notifications.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `What is the average ${api.name} API latency?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Based on the last 24 hours of production traffic, ${api.name} API has a median (P50) latency of ${avgP50}ms and a P95 latency of ${avgP95}ms. Real-time latency charts and regional breakdowns are available at https://apidown.net/api/${api.slug}`,
+        },
+      },
+      ...(incidents.length > 0 ? [{
+        "@type": "Question",
+        name: `Has ${api.name} had any recent outages?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${api.name} has had ${incidents.length} recorded incident${incidents.length === 1 ? '' : 's'}. The most recent was "${incidents[0].title}" (${incidents[0].severity} severity) on ${new Date(incidents[0].started_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. View full incident history at https://apidown.net/api/${api.slug}`,
+        },
+      }] : [{
+        "@type": "Question",
+        name: `Has ${api.name} had any recent outages?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `No, ${api.name} API has had no recorded incidents. It is currently operational with ${data.uptimePercent}% uptime over the last 90 days.`,
+        },
+      }]),
+    ],
+  });
+
+  // All schemas combined
+  let allSchemas = $derived([webPageSchema, breadcrumbSchema, faqSchema]);
+
+  // Alternate links
+  let alternateLinks = $derived([
+    { type: "text/plain", href: `https://apidown.net/api/${api.slug}.txt`, title: `${api.name} API Status (Plain Text)` },
+    { type: "application/json", href: `https://apidown.net/api-status/${api.slug}`, title: `${api.name} API Status (JSON)` },
+  ]);
 </script>
 
-<SEO title={seoTitle} description={seoDescription} schema={jsonLdSchema} />
+<SEO
+  title={seoTitle}
+  description={seoDescription}
+  canonical={canonicalUrl}
+  type="article"
+  schema={allSchemas}
+  alternates={alternateLinks}
+/>
 
 <a href="/" class="back">&larr; All APIs</a>
 
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">API Status Dashboard</a></li>
+    <li aria-current="page">{api.name} Status</li>
+  </ol>
+</nav>
+
+<article itemscope itemtype="https://schema.org/WebPage">
 <div class="api-header">
   <div class="api-info">
     {#if api.logo_url && !logoFailed}
@@ -338,6 +461,51 @@
     {/each}
   {/if}
 </section>
+
+<section class="faq-section">
+  <h2>Frequently Asked Questions</h2>
+
+  <div class="faq-item">
+    <h3>Is {api.name} down right now?</h3>
+    {#if api.current_status === 'operational'}
+      <p>No, {api.name} API is currently <strong>operational</strong> with {data.uptimePercent}% uptime over the last 90 days and an average latency of {avgP50}ms. This page updates in real-time using data from production traffic.</p>
+    {:else}
+      <p>Yes, {api.name} API is currently experiencing issues — status: <strong>{statusLabels[api.current_status]}</strong>.{#if incidents.length > 0} Latest incident: {incidents[0].title}.{/if} This page updates in real-time.</p>
+    {/if}
+  </div>
+
+  <div class="faq-item">
+    <h3>What is the {api.name} API uptime?</h3>
+    <p>{api.name} API has <strong>{data.uptimePercent}% uptime</strong> over the last 90 days, measured from real production traffic across multiple regions. You can download detailed <a href="/api-status/{api.slug}/sla">SLA reports</a> for compliance documentation.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>How do I check if {api.name} API is working?</h3>
+    <p>APIdown monitors {api.name} using crowd-sourced data from real developer traffic — not synthetic pings. This means you see the actual experience developers have calling the API. You can also <a href="/pricing">subscribe to email alerts</a> for instant outage notifications.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>What is the average {api.name} API latency?</h3>
+    <p>Based on the last 24 hours of production traffic, {api.name} API has a <strong>median (P50) latency of {avgP50}ms</strong> and a <strong>P95 latency of {avgP95}ms</strong>. View the charts above for regional breakdowns and trends.</p>
+  </div>
+
+  {#if incidents.length > 0}
+    <div class="faq-item">
+      <h3>Has {api.name} had any recent outages?</h3>
+      <p>{api.name} has had {incidents.length} recorded incident{incidents.length === 1 ? '' : 's'}. The most recent was "{incidents[0].title}" ({incidents[0].severity} severity) on {formatDate(incidents[0].started_at)}.</p>
+    </div>
+  {:else}
+    <div class="faq-item">
+      <h3>Has {api.name} had any recent outages?</h3>
+      <p>No, {api.name} API has had no recorded incidents. It is currently operational with {data.uptimePercent}% uptime over the last 90 days.</p>
+    </div>
+  {/if}
+</section>
+
+<footer class="page-footer">
+  <p>Data sourced from real production API traffic. Updated in real-time. <a href="/api/{api.slug}.txt">View as plain text</a> &middot; <a href="/api-status/{api.slug}">JSON API</a> &middot; <a href="/api-status/{api.slug}/sla">SLA Report</a></p>
+</footer>
+</article>
 
 <style>
   .back {
@@ -637,5 +805,88 @@
     color: var(--color-text-muted);
     font-size: 0.8rem;
     flex-shrink: 0;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    margin-bottom: 1rem;
+  }
+
+  .breadcrumb ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  .breadcrumb li:not(:last-child)::after {
+    content: '›';
+    margin-left: 0.35rem;
+  }
+
+  .breadcrumb a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary);
+  }
+
+  /* FAQ Section */
+  .faq-section {
+    margin-top: 2.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .faq-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .faq-item {
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem 0;
+  }
+
+  .faq-item:last-child {
+    border-bottom: none;
+  }
+
+  .faq-item h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--color-text);
+  }
+
+  .faq-item p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  .faq-item a {
+    color: var(--color-primary);
+  }
+
+  /* Page footer */
+  .page-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .page-footer p {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .page-footer a {
+    color: var(--color-text-muted);
+    text-decoration: underline;
   }
 </style>

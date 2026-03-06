@@ -17,7 +17,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="overlay" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal" onclick|stopPropagation>
+    <div class="modal" onclick={(e) => e.stopPropagation()}>
       <h3>Upgrade to unlock more</h3>
       <p class="limit-msg">
         You've used all <strong>{currentUsage}/{maxUsage}</strong> {limitLabel} on the <strong>{currentTier}</strong> plan.
