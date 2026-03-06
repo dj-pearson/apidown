@@ -67,7 +67,7 @@ async function refreshApiList(supabase) {
 
   const { data, error } = await supabase
     .from('apis')
-    .select('id, slug, name, base_domains');
+    .select('id, slug, name, base_domains, probe_url, expected_status');
 
   if (error) {
     console.error('[probe] Failed to refresh API list:', error.message);
@@ -155,21 +155,23 @@ async function getApisWithSdkCoverageFallback(supabase) {
  */
 async function probeApi(api, region) {
   const domain = api.base_domains[0];
-  const url = `https://${domain}`;
+  const url = api.probe_url || `https://${domain}`;
+  const expectedStatus = api.expected_status || 200;
   const reporterHash = `synth-${region}`;
 
   const start = Date.now();
   let statusCode;
 
   try {
-    // Try HEAD first
+    // Try HEAD first (skip for custom APIs with probe_url — use GET to get a real status)
+    const useGet = !!api.probe_url;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
 
     let response;
     try {
       response = await fetch(url, {
-        method: 'HEAD',
+        method: useGet ? 'GET' : 'HEAD',
         signal: controller.signal,
         redirect: 'follow',
         headers: { 'User-Agent': 'APIdown-Probe/1.0' },
@@ -179,7 +181,7 @@ async function probeApi(api, region) {
     }
 
     // Fall back to GET if HEAD not allowed
-    if (response.status === 405) {
+    if (!useGet && response.status === 405) {
       const controller2 = new AbortController();
       const timeout2 = setTimeout(() => controller2.abort(), PROBE_TIMEOUT);
       try {
@@ -194,13 +196,13 @@ async function probeApi(api, region) {
       }
     }
 
-    // Any HTTP response means the server is alive and reachable.
-    // Only 5xx indicates a server-side problem.
     const code = response.status;
-    if (code >= 500) {
-      statusCode = 503;
+    if (api.probe_url) {
+      // Custom API: check against expected status
+      statusCode = code === expectedStatus ? 200 : 503;
     } else {
-      statusCode = 200;
+      // System API: any non-5xx = healthy
+      statusCode = code >= 500 ? 503 : 200;
     }
   } catch (err) {
     // Timeout, DNS failure, connection refused = down

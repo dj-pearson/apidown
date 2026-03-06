@@ -76,6 +76,14 @@ export async function load({ cookies, platform }) {
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
 
+  // Get user's custom APIs
+  const { data: customApis } = await supabase
+    .from('apis')
+    .select('id, slug, name, base_domains, probe_url, expected_status, current_status, created_at')
+    .eq('owner_id', user.id)
+    .eq('is_custom', true)
+    .order('created_at', { ascending: false });
+
   // Get user's alert subscriptions
   const { data: subscriptions } = await supabase
     .from('alert_subscriptions')
@@ -87,6 +95,7 @@ export async function load({ cookies, platform }) {
     profile: syncedProfile || { email: user.email, tier: 'free' },
     apiKeys: apiKeys || [],
     pinnedApis: pinnedApis || [],
+    customApis: customApis || [],
     subscriptions: subscriptions || [],
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
     supabaseUrl: getEnv('PUBLIC_SUPABASE_URL') || getEnv('SUPABASE_URL'),

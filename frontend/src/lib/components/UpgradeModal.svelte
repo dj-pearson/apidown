@@ -6,7 +6,11 @@
   const nextTierKey = $derived(getNextTier(currentTier));
   const nextTier = $derived(nextTierKey ? TIER_INFO[nextTierKey] : null);
 
-  const limitLabel = $derived(limitType === 'apiKeys' ? 'API keys' : 'alert subscriptions');
+  const limitLabel = $derived(
+    limitType === 'apiKeys' ? 'API keys'
+    : limitType === 'customApis' ? 'custom APIs'
+    : 'alert subscriptions'
+  );
 
   function close() {
     show = false;
@@ -29,6 +33,7 @@
       </div>
       <ul class="features">
         <li>{nextTier.apiKeys === 'Unlimited' ? 'Unlimited' : nextTier.apiKeys} API keys</li>
+        <li>{nextTier.customApis === 'Unlimited' ? 'Unlimited' : nextTier.customApis} custom APIs</li>
         <li>{nextTier.subscriptions === 'Unlimited' ? 'Unlimited' : nextTier.subscriptions} alert subscriptions</li>
         <li>All notification channels</li>
       </ul>

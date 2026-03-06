@@ -7,6 +7,7 @@ import { reportsRoute } from './routes/reports.js';
 import { subscriptionsRoute } from './routes/subscriptions.js';
 import { apiKeysRoute } from './routes/api-keys.js';
 import { pinnedApisRoute } from './routes/pinned-apis.js';
+import { customApisRoute } from './routes/custom-apis.js';
 import { createRedisClient } from './lib/redis.js';
 import { createSupabaseClient } from './lib/supabase.js';
 import { buildDomainMap } from './lib/domain-map.js';
@@ -61,6 +62,7 @@ async function start() {
   await fastify.register(subscriptionsRoute);
   await fastify.register(apiKeysRoute);
   await fastify.register(pinnedApisRoute);
+  await fastify.register(customApisRoute);
 
   // Graceful shutdown
   const shutdown = async () => {

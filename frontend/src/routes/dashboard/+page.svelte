@@ -8,6 +8,7 @@
   let profile = $state(data.profile);
   let apiKeys = $state(data.apiKeys);
   let pinnedApis = $state(data.pinnedApis);
+  let customApis = $state(data.customApis);
   let editingCostId = $state(null);
   let costInput = $state('');
   let digestFrequency = $state(data.profile.digest_frequency || 'none');
@@ -22,9 +23,18 @@
   let showUpgradeModal = $state(false);
   let upgradeLimitType = $state('apiKeys');
 
+  // Custom API form state
+  let showAddApi = $state(false);
+  let customApiName = $state('');
+  let customApiUrl = $state('');
+  let customApiExpectedStatus = $state(200);
+  let addingApi = $state(false);
+  let confirmDeleteApiId = $state(null);
+
   const tier = $derived(profile.tier || 'free');
   const limits = $derived(getTierLimits(tier));
   const activeKeyCount = $derived(apiKeys.filter(k => k.is_active).length);
+  const customApiCount = $derived(customApis.length);
   const subCount = $derived(subscriptions.length);
   const hasNextTier = $derived(getNextTier(tier) !== null);
 
@@ -148,6 +158,83 @@
     document.cookie = 'sb-access-token=; Max-Age=0; path=/';
     document.cookie = 'sb-refresh-token=; Max-Age=0; path=/';
     goto('/');
+  }
+
+  async function addCustomApi() {
+    if (customApiCount >= limits.customApis && hasNextTier) {
+      upgradeLimitType = 'customApis';
+      showUpgradeModal = true;
+      return;
+    }
+    if (!customApiName.trim() || !customApiUrl.trim()) {
+      alert('Name and URL are required.');
+      return;
+    }
+    addingApi = true;
+    try {
+      const supabase = getAuthClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : {};
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        alert('Please log in again.');
+        addingApi = false;
+        return;
+      }
+
+      const res = await fetch(`${data.ingestUrl}/v1/custom-apis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: customApiName.trim(),
+          url: customApiUrl.trim(),
+          expected_status: customApiExpectedStatus,
+        }),
+      });
+
+      if (res.ok) {
+        const api = await res.json();
+        customApis = [api, ...customApis];
+        customApiName = '';
+        customApiUrl = '';
+        customApiExpectedStatus = 200;
+        showAddApi = false;
+        // Reload to refresh pinned APIs too
+        location.reload();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to add custom API');
+      }
+    } catch {
+      alert('Something went wrong.');
+    }
+    addingApi = false;
+  }
+
+  async function deleteCustomApi(apiId) {
+    try {
+      const supabase = getAuthClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : {};
+      const token = sessionData?.session?.access_token;
+      if (!token) return;
+
+      const res = await fetch(`${data.ingestUrl}/v1/custom-apis/${apiId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        customApis = customApis.filter(a => a.id !== apiId);
+        pinnedApis = pinnedApis.filter(p => p.api_id !== apiId);
+        confirmDeleteApiId = null;
+      } else {
+        alert('Failed to delete custom API');
+      }
+    } catch {
+      alert('Something went wrong.');
+    }
   }
 
   async function openBillingPortal() {
@@ -298,6 +385,86 @@
 <section class="section">
   <div class="section-header-row">
     <div>
+      <h2>Custom APIs</h2>
+      <p class="section-desc">Add your own API endpoints to monitor.</p>
+    </div>
+    <span class="usage-count">{customApiCount}/{formatLimit(limits.customApis)}</span>
+  </div>
+  <div class="usage-bar">
+    <div
+      class="usage-fill"
+      class:at-limit={customApiCount >= limits.customApis && limits.customApis !== Infinity}
+      style="width: {usagePercent(customApiCount, limits.customApis)}%; background: {usageColor(customApiCount, limits.customApis)}"
+    ></div>
+  </div>
+
+  {#if customApis.length > 0}
+    <div class="custom-api-list">
+      {#each customApis as api (api.id)}
+        <div class="custom-api-row">
+          <div class="custom-api-info">
+            <a href="/api/{api.slug}" class="custom-api-name">{api.name}</a>
+            <span class="custom-api-url">{api.probe_url}</span>
+          </div>
+          <div class="custom-api-meta">
+            <span class="stack-status stack-status-{api.current_status}">{api.current_status}</span>
+            <span class="custom-api-expect">expects {api.expected_status}</span>
+            {#if confirmDeleteApiId === api.id}
+              <span class="confirm-revoke">
+                Sure?
+                <button class="btn-danger-sm" onclick={() => deleteCustomApi(api.id)}>Yes, delete</button>
+                <button class="btn-cancel-sm" onclick={() => confirmDeleteApiId = null}>Cancel</button>
+              </span>
+            {:else}
+              <button class="btn-danger-sm" onclick={() => confirmDeleteApiId = api.id}>Delete</button>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
+  {:else if !showAddApi}
+    <p class="empty">No custom APIs yet. Add one to start monitoring.</p>
+  {/if}
+
+  {#if showAddApi}
+    <div class="add-api-form">
+      <div class="add-api-field">
+        <label for="custom-api-name">Name</label>
+        <input id="custom-api-name" type="text" bind:value={customApiName} placeholder="e.g. NetToolKit" />
+      </div>
+      <div class="add-api-field">
+        <label for="custom-api-url">Health Check URL</label>
+        <input id="custom-api-url" type="url" bind:value={customApiUrl} placeholder="https://api.example.com/health" />
+      </div>
+      <div class="add-api-field add-api-field-short">
+        <label for="custom-api-status">Expected Status</label>
+        <select id="custom-api-status" bind:value={customApiExpectedStatus}>
+          <option value={200}>200 OK</option>
+          <option value={201}>201 Created</option>
+          <option value={204}>204 No Content</option>
+          <option value={301}>301 Redirect</option>
+          <option value={302}>302 Redirect</option>
+        </select>
+      </div>
+      <div class="add-api-actions">
+        <button class="btn-primary" onclick={addCustomApi} disabled={addingApi}>
+          {addingApi ? 'Adding...' : 'Add API'}
+        </button>
+        <button class="btn-secondary" onclick={() => { showAddApi = false; customApiName = ''; customApiUrl = ''; }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  {:else}
+    <button class="btn-primary add-api-btn" onclick={() => showAddApi = true}>
+      + Add Custom API
+    </button>
+  {/if}
+</section>
+
+<section class="section">
+  <div class="section-header-row">
+    <div>
       <h2>API Keys</h2>
       <p class="section-desc">Use an API key to authenticate signal submissions from SDKs.</p>
     </div>
@@ -398,8 +565,8 @@
   bind:show={showUpgradeModal}
   currentTier={tier}
   limitType={upgradeLimitType}
-  currentUsage={upgradeLimitType === 'apiKeys' ? activeKeyCount : subCount}
-  maxUsage={upgradeLimitType === 'apiKeys' ? formatLimit(limits.apiKeys) : formatLimit(limits.subscriptions)}
+  currentUsage={upgradeLimitType === 'apiKeys' ? activeKeyCount : upgradeLimitType === 'customApis' ? customApiCount : subCount}
+  maxUsage={upgradeLimitType === 'apiKeys' ? formatLimit(limits.apiKeys) : upgradeLimitType === 'customApis' ? formatLimit(limits.customApis) : formatLimit(limits.subscriptions)}
 />
 
 <style>
@@ -886,11 +1053,118 @@
     font-size: 0.9rem;
   }
 
+  .custom-api-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .custom-api-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .custom-api-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .custom-api-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .custom-api-name:hover {
+    color: var(--color-primary);
+  }
+
+  .custom-api-url {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, monospace);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 400px;
+  }
+
+  .custom-api-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .custom-api-expect {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .add-api-btn {
+    margin-top: 0.5rem;
+  }
+
+  .add-api-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .add-api-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .add-api-field label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  .add-api-field input,
+  .add-api-field select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.85rem;
+  }
+
+  .add-api-field-short {
+    max-width: 200px;
+  }
+
+  .add-api-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
   @media (max-width: 640px) {
     .dashboard-header { flex-direction: column; gap: 0.75rem; }
     .key-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     .key-meta { flex-wrap: wrap; }
     .create-key { flex-direction: column; }
     .create-key input { max-width: 100%; }
+    .custom-api-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .custom-api-url { max-width: 100%; }
+    .custom-api-meta { flex-wrap: wrap; }
+    .add-api-field-short { max-width: 100%; }
   }
 </style>
