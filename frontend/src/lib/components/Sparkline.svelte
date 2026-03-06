@@ -13,7 +13,7 @@
   });
 </script>
 
-<svg {width} {height} class="sparkline" viewBox="0 0 {width} {height}">
+<svg {width} {height} class="sparkline" viewBox="0 0 {width} {height}" role="img" aria-label="24-hour latency trend">
   {#if data.length > 1}
     <polyline
       points={points}

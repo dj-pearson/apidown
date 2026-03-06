@@ -1,10 +1,12 @@
 <script>
   import { createClient } from '@supabase/supabase-js';
   import { page } from '$app/state';
+  import { friendlyAuthError } from '$lib/auth-errors.js';
 
   let mode = $state('login'); // 'login' or 'register'
   let email = $state('');
   let password = $state('');
+  let showPassword = $state(false);
   let loading = $state(false);
   let errorMsg = $state('');
   let successMsg = $state('');
@@ -31,7 +33,7 @@
     if (mode === 'login') {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        errorMsg = error.message;
+        errorMsg = friendlyAuthError(error.message);
       } else {
         // Set cookies via server endpoint so server-side auth works
         await fetch('/auth/callback', {
@@ -49,7 +51,7 @@
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
-        errorMsg = error.message;
+        errorMsg = friendlyAuthError(error.message);
       } else {
         successMsg = 'Check your email for a confirmation link.';
       }
@@ -72,11 +74,16 @@
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <label>
         Email
-        <input type="email" bind:value={email} required placeholder="you@example.com" />
+        <input type="email" bind:value={email} required placeholder="you@example.com" autocomplete="email" />
       </label>
       <label>
         Password
-        <input type="password" bind:value={password} required minlength="6" placeholder="Min 6 characters" />
+        <div class="password-field">
+          <input type={showPassword ? 'text' : 'password'} bind:value={password} required minlength="6" placeholder="Min 6 characters" autocomplete={mode === 'login' ? 'current-password' : 'new-password'} />
+          <button type="button" class="toggle-password" onclick={() => showPassword = !showPassword} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
       </label>
       <button type="submit" disabled={loading}>
         {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Sign Up'}
@@ -201,4 +208,31 @@
   }
 
   .link-btn:hover { text-decoration: underline; }
+
+  .password-field {
+    position: relative;
+    display: flex;
+  }
+
+  .password-field input {
+    flex: 1;
+    padding-right: 3.5rem;
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.4rem;
+  }
+
+  .toggle-password:hover {
+    color: var(--color-primary);
+  }
 </style>

@@ -39,3 +39,92 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* Global focus styles for keyboard navigation */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip to content link */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 1000;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* Global button reset */
+button {
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Print styles for incident detail and other pages */
+@media print {
+  :root {
+    --color-bg: #fff;
+    --color-surface: #fff;
+    --color-text: #111;
+    --color-text-muted: #555;
+    --color-border: #ccc;
+  }
+
+  html {
+    background: #fff;
+    color: #111;
+  }
+
+  header, footer, .skip-to-content {
+    display: none !important;
+  }
+
+  main {
+    padding: 0.5rem !important;
+    max-width: 100% !important;
+  }
+
+  a {
+    color: #111;
+    text-decoration: underline;
+  }
+
+  /* Prevent page breaks inside incident timeline entries */
+  .incident-card, .timeline-entry, .update-row, details {
+    break-inside: avoid;
+  }
+}

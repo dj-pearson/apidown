@@ -11,6 +11,8 @@
   let creatingKey = $state(false);
   let newKeyValue = $state('');
   let openingPortal = $state(false);
+  let copiedKey = $state(false);
+  let confirmRevokeId = $state(null);
 
   function getAuthClient() {
     const url = data.supabaseUrl;
@@ -56,11 +58,30 @@
     creatingKey = false;
   }
 
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copiedKey = true;
+      setTimeout(() => copiedKey = false, 2000);
+    } catch {
+      // Fallback for older browsers
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      copiedKey = true;
+      setTimeout(() => copiedKey = false, 2000);
+    }
+  }
+
   async function revokeKey(keyId) {
     const supabase = getAuthClient();
     if (!supabase) return;
     await supabase.from('api_keys').update({ is_active: false }).eq('id', keyId);
     apiKeys = apiKeys.map(k => k.id === keyId ? { ...k, is_active: false } : k);
+    confirmRevokeId = null;
   }
 
   async function logout() {
@@ -148,7 +169,15 @@
             <span>Created {formatDate(key.created_at)}</span>
             <span>Last used {formatDate(key.last_used_at)}</span>
             {#if key.is_active}
-              <button class="btn-danger-sm" onclick={() => revokeKey(key.id)}>Revoke</button>
+              {#if confirmRevokeId === key.id}
+                <span class="confirm-revoke">
+                  Sure?
+                  <button class="btn-danger-sm" onclick={() => revokeKey(key.id)}>Yes, revoke</button>
+                  <button class="btn-cancel-sm" onclick={() => confirmRevokeId = null}>Cancel</button>
+                </span>
+              {:else}
+                <button class="btn-danger-sm" onclick={() => confirmRevokeId = key.id} aria-label="Revoke API key {key.label}">Revoke</button>
+              {/if}
             {:else}
               <span class="revoked-label">Revoked</span>
             {/if}
@@ -169,8 +198,13 @@
 
   {#if newKeyValue}
     <div class="new-key-notice">
-      <strong>Your new API key (copy it now — it won't be shown again):</strong>
-      <code>{newKeyValue}</code>
+      <strong>Your new API key (save it now — it won't be shown again):</strong>
+      <div class="key-display">
+        <code>{newKeyValue}</code>
+        <button class="btn-copy" onclick={() => copyToClipboard(newKeyValue)} aria-label="Copy API key to clipboard">
+          {copiedKey ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
     </div>
   {/if}
 </section>
@@ -318,14 +352,6 @@
     border-radius: 8px;
   }
 
-  .new-key-notice code {
-    display: block;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-    word-break: break-all;
-    color: var(--color-operational);
-  }
-
   .sub-api {
     font-weight: 600;
     color: var(--color-text);
@@ -413,6 +439,54 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.75rem;
+  }
+
+  .btn-cancel-sm {
+    background: none;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+
+  .confirm-revoke {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--color-down);
+    font-weight: 500;
+  }
+
+  .key-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .key-display code {
+    flex: 1;
+    font-size: 0.9rem;
+    word-break: break-all;
+    color: var(--color-operational);
+  }
+
+  .btn-copy {
+    background: var(--color-operational);
+    color: #fff;
+    border: none;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .btn-copy:hover {
+    opacity: 0.9;
   }
 
   .empty {

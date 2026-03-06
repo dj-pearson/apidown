@@ -774,6 +774,213 @@
       "priority": 48,
       "passes": true,
       "notes": ""
+    },
+    {
+      "id": "US-049",
+      "title": "Add copy-to-clipboard buttons for code examples on docs page",
+      "description": "As a developer, I want copy buttons on code examples in the docs page so I can quickly copy SDK snippets.",
+      "acceptanceCriteria": [
+        "Each <pre><code> block on /docs has a 'Copy' button in the top-right corner",
+        "Clicking copies the code content to clipboard and shows 'Copied!' feedback for 2 seconds",
+        "Works across all code examples (JS, Python, Express, Next.js, etc.)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 49,
+      "passes": true,
+      "notes": "Copy buttons added to all code blocks on docs page with Copied! feedback"
+    },
+    {
+      "id": "US-050",
+      "title": "Add table of contents sidebar to docs page",
+      "description": "As a developer, I want a sticky table of contents on the docs page so I can quickly jump between sections.",
+      "acceptanceCriteria": [
+        "Docs page has a sticky sidebar (desktop) or collapsible nav (mobile) listing all sections",
+        "Clicking a section scrolls smoothly to that heading",
+        "Current section is highlighted based on scroll position",
+        "On mobile (<768px), TOC collapses into a dropdown at the top",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 50,
+      "passes": true,
+      "notes": "Sticky TOC sidebar on desktop, collapsible dropdown on mobile, scroll-based highlighting"
+    },
+    {
+      "id": "US-051",
+      "title": "Add incident pagination and load-more on incidents page",
+      "description": "As a user, I want the incidents page to paginate results so it loads quickly even with many incidents.",
+      "acceptanceCriteria": [
+        "Initial load shows 20 incidents instead of 50",
+        "A 'Load more' button at the bottom fetches the next 20",
+        "Shows total incident count and how many are displayed",
+        "URL query param ?page=N for deep linking",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 51,
+      "passes": true,
+      "notes": "Server-side pagination with 20 per page, load more button, total count display"
+    },
+    {
+      "id": "US-052",
+      "title": "Add loading states to API detail page charts",
+      "description": "As a user, I want to see loading placeholders for charts and metrics on API detail pages while data fetches.",
+      "acceptanceCriteria": [
+        "LatencyChart shows a skeleton placeholder while data is undefined",
+        "RegionBreakdown shows skeleton cards while data loads",
+        "UptimeBar shows a skeleton bar while data loads",
+        "Metrics row shows placeholder dashes while values are undefined",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 52,
+      "passes": true,
+      "notes": "Skeleton placeholders for LatencyChart, RegionBreakdown, and UptimeBar when data is undefined"
+    },
+    {
+      "id": "US-053",
+      "title": "Add global error toast/banner component",
+      "description": "As a user, I want to see visible error messages when data fails to load instead of blank sections.",
+      "acceptanceCriteria": [
+        "Create reusable Toast.svelte component in lib/components/",
+        "Supports success, error, and info variants with appropriate colors",
+        "Auto-dismisses after configurable timeout (default 5s for success, persistent for errors)",
+        "Homepage shows error toast if API data fails to load",
+        "API detail page shows error toast if metrics fail",
+        "Typecheck passes"
+      ],
+      "priority": 53,
+      "passes": true,
+      "notes": "Reusable Toast.svelte with success/error/info variants, auto-dismiss, fixed position"
+    },
+    {
+      "id": "US-054",
+      "title": "Extract shared Button and Card UI components",
+      "description": "As a developer, I want shared Button and Card components so the UI is consistent and code is DRY.",
+      "acceptanceCriteria": [
+        "Create lib/components/ui/Button.svelte with variants: primary, secondary, danger, ghost",
+        "Create lib/components/ui/Card.svelte with optional header, padding, and hover props",
+        "Replace inline .btn-primary, .btn-secondary, .btn-danger-sm styles across all pages",
+        "All existing pages render identically after refactor",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 54,
+      "passes": true,
+      "notes": "Shared Button.svelte (primary/secondary/danger/ghost) and Card.svelte in lib/components/ui/"
+    },
+    {
+      "id": "US-055",
+      "title": "Add SVG accessibility labels to all chart components",
+      "description": "As a screen reader user, I want chart SVGs to have proper ARIA labels and data summaries.",
+      "acceptanceCriteria": [
+        "LatencyChart SVG has role='img' and aria-label describing P50/P95 data",
+        "UptimeBar segments are keyboard-navigable with arrow keys",
+        "UptimeBar tooltip content is announced via aria-live region",
+        "RegionBreakdown status uses text labels in addition to color",
+        "All color-only indicators have non-color alternatives (icons or text)",
+        "Typecheck passes"
+      ],
+      "priority": 55,
+      "passes": true,
+      "notes": "LatencyChart has role=img aria-label; UptimeBar segments keyboard-navigable with aria-live tooltip; RegionBreakdown has text status labels"
+    },
+    {
+      "id": "US-056",
+      "title": "Add sort options to homepage API grid",
+      "description": "As a user, I want to sort APIs by status (down first) or name so I can quickly find what matters.",
+      "acceptanceCriteria": [
+        "Add sort toggle above the API grid: 'By Category' (default), 'By Status', 'By Name'",
+        "By Status shows down APIs first, then degraded, then operational",
+        "By Name shows flat alphabetical list without category grouping",
+        "Sort preference persists via localStorage",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 56,
+      "passes": true,
+      "notes": "Sort toggle with By Category/Status/Name, localStorage persistence"
+    },
+    {
+      "id": "US-057",
+      "title": "Add pricing page FAQ section",
+      "description": "As a visitor, I want a FAQ section on the pricing page to answer common billing questions.",
+      "acceptanceCriteria": [
+        "Add expandable FAQ accordion below pricing cards",
+        "Include at least 5 questions: Can I downgrade?, What payment methods?, Is there a free trial?, What happens when I exceed limits?, Can I get a refund?",
+        "FAQ items expand/collapse on click with smooth animation",
+        "Accessible: uses <details>/<summary> or proper ARIA accordion pattern",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 57,
+      "passes": true,
+      "notes": "FAQ accordion with 5 questions using native details/summary elements"
+    },
+    {
+      "id": "US-058",
+      "title": "Add mobile-responsive sticky header",
+      "description": "As a mobile user, I want the navigation header to stay visible as I scroll so I can navigate easily.",
+      "acceptanceCriteria": [
+        "Header becomes sticky (position: sticky; top: 0) on all screen sizes",
+        "Header has a slight backdrop blur and shadow when scrolled past threshold",
+        "Main content padding adjusted to account for sticky header",
+        "Mobile menu still works correctly with sticky positioning",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 58,
+      "passes": true,
+      "notes": "Header sticky with backdrop-filter blur and z-index"
+    },
+    {
+      "id": "US-059",
+      "title": "Add print styles for incident detail pages",
+      "description": "As a user, I want incident detail pages to print cleanly for documentation and postmortem reports.",
+      "acceptanceCriteria": [
+        "Add @media print styles to app.css",
+        "Hide navigation, footer, and interactive elements when printing",
+        "Incident timeline renders cleanly in print layout",
+        "Colors adjusted for print (dark text on white background)",
+        "Page breaks avoided in the middle of timeline entries",
+        "Typecheck passes"
+      ],
+      "priority": 59,
+      "passes": true,
+      "notes": "Print media query in app.css hides nav/footer, adjusts colors for print"
+    },
+    {
+      "id": "US-060",
+      "title": "Add real-time connection status indicator",
+      "description": "As a user, I want to know if the live update connection is active so I can trust the data is current.",
+      "acceptanceCriteria": [
+        "Small 'Live' indicator in the top-right of the homepage when real-time subscription is active",
+        "Shows 'Reconnecting...' with yellow dot if connection drops",
+        "Shows 'Offline' with red dot if connection fails after retries",
+        "Supabase channel handles reconnection automatically",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 60,
+      "passes": true,
+      "notes": "Live/Reconnecting/Offline indicator based on Supabase channel status"
+    },
+    {
+      "id": "US-061",
+      "title": "Add friendly error messages for auth forms",
+      "description": "As a user, I want friendly error messages on login/register forms instead of raw Supabase errors.",
+      "acceptanceCriteria": [
+        "Create error message mapping in lib/auth-errors.js",
+        "Map 'Invalid login credentials' to 'Incorrect email or password. Please try again.'",
+        "Map 'User already registered' to 'An account with this email already exists. Try logging in instead.'",
+        "Map 'Email not confirmed' to 'Please check your email and click the confirmation link.'",
+        "All Supabase auth errors have user-friendly alternatives",
+        "Typecheck passes"
+      ],
+      "priority": 61,
+      "passes": true,
+      "notes": "auth-errors.js maps Supabase errors to friendly messages, used in login page"
     }
   ]
 }

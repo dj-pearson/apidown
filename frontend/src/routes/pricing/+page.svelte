@@ -116,6 +116,32 @@
       </div>
     {/each}
   </div>
+
+  <section class="faq">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-list">
+      <details>
+        <summary>Can I downgrade my plan?</summary>
+        <p>Yes. You can downgrade at any time from your dashboard. Your current plan benefits will remain active until the end of your billing period, then you'll switch to the lower tier.</p>
+      </details>
+      <details>
+        <summary>What payment methods do you accept?</summary>
+        <p>We accept all major credit and debit cards (Visa, Mastercard, American Express) via Stripe. We also support bank transfers for annual Team plans.</p>
+      </details>
+      <details>
+        <summary>Is there a free trial for paid plans?</summary>
+        <p>We don't offer a traditional free trial, but our Free tier is fully functional and never expires. You can monitor APIs, receive email alerts, and evaluate the platform before upgrading.</p>
+      </details>
+      <details>
+        <summary>What happens when I exceed my plan limits?</summary>
+        <p>You won't lose any data. If you exceed your API key or subscription limits, you'll be prompted to upgrade or remove existing keys/subscriptions before creating new ones. Existing monitoring continues uninterrupted.</p>
+      </details>
+      <details>
+        <summary>Can I get a refund?</summary>
+        <p>Yes. If you're not satisfied within the first 14 days of a paid plan, contact us for a full refund. After 14 days, you can cancel anytime and your plan will remain active until the end of the billing period.</p>
+      </details>
+    </div>
+  </section>
 </div>
 
 <style>
@@ -227,5 +253,68 @@
   .cta-current {
     opacity: 0.5;
     cursor: default;
+  }
+
+  .faq {
+    max-width: 700px;
+    margin: 3rem auto 0;
+    text-align: left;
+  }
+
+  .faq h2 {
+    font-size: 1.25rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  details {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  details[open] {
+    border-color: var(--color-primary);
+  }
+
+  summary {
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: '+';
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    margin-left: 1rem;
+  }
+
+  details[open] summary::after {
+    content: '−';
+  }
+
+  details p {
+    padding: 0 1rem 0.85rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
   }
 </style>

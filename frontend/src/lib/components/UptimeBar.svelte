@@ -23,20 +23,43 @@
   }
 </script>
 
-{#if data.length > 0}
+{#if data === undefined}
+  <section class="uptime-section">
+    <div class="uptime-header">
+      <h2>90-Day Uptime</h2>
+    </div>
+    <div class="uptime-bar skeleton-bar-container">
+      {#each { length: 90 } as _}
+        <div class="bar-segment skeleton-segment"></div>
+      {/each}
+    </div>
+    <div class="uptime-labels">
+      <span>90 days ago</span>
+      <span>Today</span>
+    </div>
+  </section>
+{:else if data.length > 0}
   <section class="uptime-section">
     <div class="uptime-header">
       <h2>90-Day Uptime</h2>
       <span class="uptime-pct">{data.every(d => d.uptime >= 99.5) ? '100%' : ''}</span>
     </div>
-    <div class="uptime-bar" role="img" aria-label="90-day uptime history">
-      {#each data as day}
+    <div class="uptime-bar" role="img" aria-label="90-day uptime history showing daily uptime percentages">
+      {#each data as day, i}
         <div
           class="bar-segment"
           style="background: {barColor(day.uptime)}"
           onmouseenter={(e) => showTooltip(day, e)}
           onmouseleave={hideTooltip}
-          role="presentation"
+          onfocus={(e) => showTooltip(day, e)}
+          onblur={hideTooltip}
+          onkeydown={(e) => {
+            if (e.key === 'ArrowRight' && e.target.nextElementSibling) e.target.nextElementSibling.focus();
+            if (e.key === 'ArrowLeft' && e.target.previousElementSibling) e.target.previousElementSibling.focus();
+          }}
+          tabindex="0"
+          role="button"
+          aria-label="{day.date}: {day.uptime}% uptime"
         ></div>
       {/each}
     </div>
@@ -45,7 +68,7 @@
       <span>Today</span>
     </div>
     {#if tooltip}
-      <div class="uptime-tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">
+      <div class="uptime-tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;" aria-live="polite">
         <strong>{tooltip.date}</strong>
         <span>{tooltip.uptime}% uptime</span>
       </div>
@@ -101,6 +124,16 @@
     font-size: 0.7rem;
     color: var(--color-text-muted);
     margin-top: 0.25rem;
+  }
+
+  .skeleton-segment {
+    background: var(--color-surface-hover) !important;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 
   .uptime-tooltip {
