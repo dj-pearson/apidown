@@ -23,16 +23,17 @@ export async function load({ cookies, platform }) {
   let syncedProfile = profile;
   if (profile?.stripe_customer_id && profile.tier === 'free') {
     try {
-      const { getStripe } = await import('$lib/stripe-server.js');
+      const { getStripe, getTierFromSubscription } = await import('$lib/stripe-server.js');
       const stripe = getStripe();
       const subscriptions = await stripe.subscriptions.list({
         customer: profile.stripe_customer_id,
         status: 'active',
         limit: 1,
+        expand: ['data.items'],
       });
       if (subscriptions.data.length > 0) {
         const sub = subscriptions.data[0];
-        const tier = sub.metadata?.tier || 'pro';
+        const tier = getTierFromSubscription(sub);
         const updateData = {
           tier,
           stripe_subscription_id: sub.id,

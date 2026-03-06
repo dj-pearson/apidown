@@ -21,3 +21,22 @@ export function getPriceId(tier) {
   if (tier === 'team') return getEnv('STRIPE_TEAM_PRICE_ID');
   return null;
 }
+
+/** Determine tier from a Stripe subscription's price ID */
+export function getTierFromSubscription(subscription) {
+  // Check metadata first
+  if (subscription?.metadata?.tier) return subscription.metadata.tier;
+
+  // Fall back to matching the price ID against env vars
+  const proPriceId = getEnv('STRIPE_PRO_PRICE_ID');
+  const teamPriceId = getEnv('STRIPE_TEAM_PRICE_ID');
+
+  const items = subscription?.items?.data || [];
+  for (const item of items) {
+    const priceId = item.price?.id || item.plan?.id;
+    if (priceId === teamPriceId) return 'team';
+    if (priceId === proPriceId) return 'pro';
+  }
+
+  return 'pro'; // final fallback
+}

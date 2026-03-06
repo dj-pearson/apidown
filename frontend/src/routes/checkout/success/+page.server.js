@@ -1,5 +1,5 @@
 import { setPlatform, getSupabaseAdmin } from '$lib/supabase-server.js';
-import { getStripe } from '$lib/stripe-server.js';
+import { getStripe, getTierFromSubscription } from '$lib/stripe-server.js';
 import { redirect } from '@sveltejs/kit';
 
 export async function load({ url, cookies, platform }) {
@@ -18,17 +18,16 @@ export async function load({ url, cookies, platform }) {
   try {
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription'],
+      expand: ['subscription', 'subscription.items'],
     });
 
     const sub = session.subscription;
-    const subObj = typeof sub === 'string' ? await stripe.subscriptions.retrieve(sub) : sub;
-    const tier = subObj?.metadata?.tier || session.metadata?.tier || 'pro';
+    const subObj = typeof sub === 'string' ? await stripe.subscriptions.retrieve(sub, { expand: ['items'] }) : sub;
+    const tier = getTierFromSubscription(subObj) || session.metadata?.tier || 'pro';
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
 
     console.log(`[checkout-success] Session ${sessionId}: tier=${tier}, customer=${customerId}, subscription=${subObj?.id}, user=${user.id}`);
 
-    // Update the user's tier directly (don't rely solely on webhook)
     if (subObj) {
       const updateData = {
         tier,
@@ -43,7 +42,6 @@ export async function load({ url, cookies, platform }) {
 
       if (updateErr) {
         console.error('[checkout-success] DB update failed:', updateErr.message, updateErr.code, updateErr.details);
-        // If columns don't exist, try updating just the tier
         const { error: tierErr } = await supabase
           .from('users')
           .update({ tier })

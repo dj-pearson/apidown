@@ -1,6 +1,6 @@
 import { text } from '@sveltejs/kit';
 import { setPlatform, getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
-import { getStripe } from '$lib/stripe-server.js';
+import { getStripe, getTierFromSubscription } from '$lib/stripe-server.js';
 
 export async function POST({ request, platform }) {
   setPlatform(platform);
@@ -33,9 +33,9 @@ export async function POST({ request, platform }) {
         const session = event.data.object;
         console.log(`[stripe-webhook] Checkout completed: mode=${session.mode}, subscription=${session.subscription}`);
         if (session.mode === 'subscription' && session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          const subscription = await stripe.subscriptions.retrieve(session.subscription, { expand: ['items'] });
           const userId = subscription.metadata?.supabase_user_id || session.metadata?.supabase_user_id;
-          const tier = subscription.metadata?.tier || session.metadata?.tier || 'pro';
+          const tier = getTierFromSubscription(subscription) || session.metadata?.tier || 'pro';
 
           if (userId) {
             console.log(`[stripe-webhook] Upgrading user ${userId} to ${tier}`);
