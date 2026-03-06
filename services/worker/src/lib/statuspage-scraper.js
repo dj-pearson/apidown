@@ -79,7 +79,7 @@ async function scrapeStatusPage(api) {
   const statusPageUrl = api.status_page.replace(/\/+$/, '');
 
   // Skip non-Atlassian formats for now (AWS, Azure)
-  if (statusPageUrl.includes('health.aws.amazon.com') || statusPageUrl.includes('status.azure.com')) {
+  if (statusPageUrl.includes('health.aws.amazon.com') || statusPageUrl.includes('azure.status.microsoft')) {
     // TODO: Add specialized parsers for AWS and Azure
     return null;
   }
