@@ -54,6 +54,7 @@ export async function POST({ request, cookies, platform, url }) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${url.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${url.origin}/pricing`,
+      metadata: { supabase_user_id: user.id, tier },
       subscription_data: {
         metadata: { supabase_user_id: user.id, tier },
       },
