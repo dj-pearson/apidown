@@ -8,9 +8,9 @@ INSERT INTO apis (slug, name, category, base_domains, logo_url, status_page) VAL
 ('gcp-bigquery', 'GCP BigQuery', 'cloud-gcp', ARRAY['bigquery.googleapis.com'], '/logos/gcp-bigquery.svg', 'https://status.cloud.google.com'),
 
 -- Cloud - Azure
-('azure-functions', 'Azure Functions', 'cloud-azure', ARRAY['management.azure.com'], '/logos/azure-functions.svg', 'https://status.azure.com'),
-('azure-blob', 'Azure Blob Storage', 'cloud-azure', ARRAY['blob.core.windows.net'], '/logos/azure-blob.svg', 'https://status.azure.com'),
-('azure-cosmos-db', 'Azure Cosmos DB', 'cloud-azure', ARRAY['documents.azure.com'], '/logos/azure-cosmos.svg', 'https://status.azure.com'),
+('azure-functions', 'Azure Functions', 'cloud-azure', ARRAY['management.azure.com'], '/logos/azure-functions.svg', 'https://azure.status.microsoft/en-us/status'),
+('azure-blob', 'Azure Blob Storage', 'cloud-azure', ARRAY['blob.core.windows.net'], '/logos/azure-blob.svg', 'https://azure.status.microsoft/en-us/status'),
+('azure-cosmos-db', 'Azure Cosmos DB', 'cloud-azure', ARRAY['documents.azure.com'], '/logos/azure-cosmos.svg', 'https://azure.status.microsoft/en-us/status'),
 
 -- Commerce & Shipping
 ('shopify', 'Shopify', 'commerce', ARRAY['admin.shopify.com', 'api.shopify.com'], '/logos/shopify.svg', 'https://status.shopify.com'),
@@ -19,14 +19,14 @@ INSERT INTO apis (slug, name, category, base_domains, logo_url, status_page) VAL
 ('easypost', 'EasyPost', 'commerce', ARRAY['api.easypost.com'], '/logos/easypost.svg', 'https://status.easypost.com'),
 
 -- Additional Auth & Identity
-('okta', 'Okta', 'auth', ARRAY['dev-12345.okta.com'], '/logos/okta.svg', 'https://status.okta.com'),
+('okta', 'Okta', 'auth', ARRAY['okta.com', 'login.okta.com'], '/logos/okta.svg', 'https://status.okta.com'),
 ('auth0-2', 'Auth0', 'auth', ARRAY['auth0.com'], '/logos/auth0.svg', 'https://status.auth0.com'),
 ('clerk', 'Clerk', 'auth', ARRAY['api.clerk.com', 'clerk.com'], '/logos/clerk.svg', 'https://status.clerk.com'),
 
 -- Additional Database / Storage
 ('planetscale', 'PlanetScale', 'database', ARRAY['api.planetscale.com'], '/logos/planetscale.svg', 'https://status.planetscale.com'),
 ('neon', 'Neon', 'database', ARRAY['console.neon.tech'], '/logos/neon.svg', 'https://neonstatus.com'),
-('upstash', 'Upstash', 'database', ARRAY['api.upstash.com'], '/logos/upstash.svg', NULL),
+('upstash', 'Upstash', 'database', ARRAY['api.upstash.com', 'upstash.io'], '/logos/upstash.svg', 'https://status.upstash.com'),
 ('cloudflare-r2', 'Cloudflare R2', 'database', ARRAY['r2.cloudflarestorage.com'], '/logos/cloudflare-r2.svg', 'https://www.cloudflarestatus.com')
 
 ON CONFLICT (slug) DO NOTHING;

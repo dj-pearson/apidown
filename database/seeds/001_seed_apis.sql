@@ -37,7 +37,7 @@ INSERT INTO apis (slug, name, category, base_domains, logo_url, status_page) VAL
 ('supabase', 'Supabase', 'database', ARRAY['supabase.co', 'supabase.com'], '/logos/supabase.svg', 'https://status.supabase.com'),
 ('planetscale', 'PlanetScale', 'database', ARRAY['aws.connect.psdb.cloud'], '/logos/planetscale.svg', 'https://www.planetscalestatus.com'),
 ('mongodb-atlas', 'MongoDB Atlas', 'database', ARRAY['cloud.mongodb.com', 'data.mongodb-api.com'], '/logos/mongodb.svg', 'https://status.cloud.mongodb.com'),
-('upstash', 'Upstash', 'database', ARRAY['upstash.io'], '/logos/upstash.svg', 'https://status.upstash.com'),
+('upstash', 'Upstash', 'database', ARRAY['api.upstash.com', 'upstash.io'], '/logos/upstash.svg', 'https://status.upstash.com'),
 
 -- Dev Tools & Hosting
 ('github', 'GitHub', 'devtools', ARRAY['api.github.com'], '/logos/github.svg', 'https://www.githubstatus.com'),
