@@ -87,7 +87,10 @@ export async function POST({ request, platform }) {
               billing_period_end: null,
             }).eq('id', findUser.id);
           } else {
+            const tier = getTierFromSubscription(subscription);
+            console.log(`[stripe-webhook] Syncing user ${findUser.id} to tier=${tier}, sub=${subscription.id}`);
             await supabase.from('users').update({
+              tier,
               stripe_subscription_id: subscription.id,
               billing_period_end: stripePeriodEnd(subscription),
             }).eq('id', findUser.id);
