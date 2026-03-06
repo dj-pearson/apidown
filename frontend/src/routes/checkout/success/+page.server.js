@@ -1,5 +1,5 @@
 import { setPlatform, getSupabaseAdmin } from '$lib/supabase-server.js';
-import { getStripe, getTierFromSubscription } from '$lib/stripe-server.js';
+import { getStripe, getTierFromSubscription, stripePeriodEnd } from '$lib/stripe-server.js';
 import { redirect } from '@sveltejs/kit';
 
 export async function load({ url, cookies, platform }) {
@@ -33,7 +33,7 @@ export async function load({ url, cookies, platform }) {
         tier,
         stripe_customer_id: customerId,
         stripe_subscription_id: subObj.id,
-        billing_period_end: new Date(subObj.current_period_end * 1000).toISOString(),
+        billing_period_end: stripePeriodEnd(subObj),
       };
       const { error: updateErr } = await supabase
         .from('users')

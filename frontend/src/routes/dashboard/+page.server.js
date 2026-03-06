@@ -23,7 +23,7 @@ export async function load({ cookies, platform }) {
   let syncedProfile = profile;
   if (profile?.stripe_customer_id && profile.tier === 'free') {
     try {
-      const { getStripe, getTierFromSubscription } = await import('$lib/stripe-server.js');
+      const { getStripe, getTierFromSubscription, stripePeriodEnd } = await import('$lib/stripe-server.js');
       const stripe = getStripe();
       const subscriptions = await stripe.subscriptions.list({
         customer: profile.stripe_customer_id,
@@ -37,7 +37,7 @@ export async function load({ cookies, platform }) {
         const updateData = {
           tier,
           stripe_subscription_id: sub.id,
-          billing_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          billing_period_end: stripePeriodEnd(sub),
         };
         await supabase.from('users').update(updateData).eq('id', user.id);
         syncedProfile = { ...profile, ...updateData };

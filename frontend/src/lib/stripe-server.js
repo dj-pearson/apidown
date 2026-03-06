@@ -40,3 +40,10 @@ export function getTierFromSubscription(subscription) {
 
   return 'pro'; // final fallback
 }
+
+/** Safely convert a Stripe Unix timestamp to ISO string, or null */
+export function stripePeriodEnd(subscription) {
+  const ts = subscription?.current_period_end;
+  if (!ts) return null;
+  return new Date(ts * 1000).toISOString();
+}

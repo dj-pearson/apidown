@@ -1,6 +1,6 @@
 import { text } from '@sveltejs/kit';
 import { setPlatform, getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
-import { getStripe, getTierFromSubscription } from '$lib/stripe-server.js';
+import { getStripe, getTierFromSubscription, stripePeriodEnd } from '$lib/stripe-server.js';
 
 export async function POST({ request, platform }) {
   setPlatform(platform);
@@ -43,7 +43,7 @@ export async function POST({ request, platform }) {
               tier,
               stripe_subscription_id: subscription.id,
               stripe_customer_id: session.customer,
-              billing_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              billing_period_end: stripePeriodEnd(subscription),
             }).eq('id', userId);
           } else {
             // Try to find user by stripe_customer_id
@@ -57,7 +57,7 @@ export async function POST({ request, platform }) {
               await supabase.from('users').update({
                 tier,
                 stripe_subscription_id: subscription.id,
-                billing_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                billing_period_end: stripePeriodEnd(subscription),
               }).eq('id', userRow.id);
             } else {
               console.error('[stripe-webhook] Could not find user for checkout session:', session.id);
@@ -87,7 +87,7 @@ export async function POST({ request, platform }) {
           } else {
             await supabase.from('users').update({
               stripe_subscription_id: subscription.id,
-              billing_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              billing_period_end: stripePeriodEnd(subscription),
             }).eq('id', findUser.id);
           }
         }

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { setPlatform, getSupabaseAdmin } from '$lib/supabase-server.js';
-import { getStripe, getPriceId, getTierFromSubscription } from '$lib/stripe-server.js';
+import { getStripe, getPriceId, getTierFromSubscription, stripePeriodEnd } from '$lib/stripe-server.js';
 
 export async function POST({ request, cookies, platform, url }) {
   setPlatform(platform);
@@ -78,11 +78,12 @@ export async function POST({ request, cookies, platform, url }) {
           }
 
           // Update the user's tier immediately
-          await supabase.from('users').update({
+          const updateData = {
             tier,
             stripe_subscription_id: updated.id,
-            billing_period_end: new Date(updated.current_period_end * 1000).toISOString(),
-          }).eq('id', user.id);
+          };
+          updateData.billing_period_end = stripePeriodEnd(updated);
+          await supabase.from('users').update(updateData).eq('id', user.id);
 
           console.log(`[checkout] Upgraded user ${user.id} to ${tier} via subscription update`);
           return json({ upgraded: true, tier });
