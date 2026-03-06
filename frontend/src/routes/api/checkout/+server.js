@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { setPlatform, getSupabaseAdmin } from '$lib/supabase-server.js';
-import { getStripe, getPriceId, getTierFromSubscription, stripePeriodEnd } from '$lib/stripe-server.js';
+import { getStripe, getPriceId } from '$lib/stripe-server.js';
 
 export async function POST({ request, cookies, platform, url }) {
   setPlatform(platform);
@@ -47,45 +47,7 @@ export async function POST({ request, cookies, platform, url }) {
         .eq('id', user.id);
     }
 
-    // Only do inline upgrade if user has a tracked subscription in our DB
-    // This prevents orphaned Stripe subscriptions from bypassing payment
-    if (profile?.stripe_subscription_id) {
-      try {
-        const activeSub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
-          expand: ['items'],
-        });
-
-        if (activeSub.status === 'active' && activeSub.items.data[0]) {
-          const currentItem = activeSub.items.data[0];
-
-          // Update the subscription's price (immediate proration)
-          const updated = await stripe.subscriptions.update(activeSub.id, {
-            items: [{
-              id: currentItem.id,
-              price: priceId,
-            }],
-            proration_behavior: 'create_prorations',
-            metadata: { supabase_user_id: user.id, tier },
-          });
-
-          // Update the user's tier immediately
-          const updateData = {
-            tier,
-            stripe_subscription_id: updated.id,
-            billing_period_end: stripePeriodEnd(updated),
-          };
-          await supabase.from('users').update(updateData).eq('id', user.id);
-
-          console.log(`[checkout] Upgraded user ${user.id} to ${tier} via subscription update`);
-          return json({ upgraded: true, tier });
-        }
-      } catch (err) {
-        // Subscription not found or invalid — fall through to new checkout
-        console.log(`[checkout] Existing subscription ${profile.stripe_subscription_id} invalid: ${err.message}, creating new checkout`);
-      }
-    }
-
-    // No existing subscription — create new checkout session
+    // Create new checkout session (free → paid only; plan changes go through billing portal)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',

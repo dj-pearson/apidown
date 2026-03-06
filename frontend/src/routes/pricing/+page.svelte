@@ -56,8 +56,11 @@
     if (!data.user) return { label: plan.tier === 'free' ? 'Get Started' : `Upgrade to ${plan.name}`, action: 'login' };
     const currentTier = data.tier || 'free';
     if (plan.tier === currentTier) return { label: 'Current Plan', action: 'none' };
-    if (tierRank[plan.tier] > tierRank[currentTier]) return { label: `Upgrade to ${plan.name}`, action: 'checkout' };
-    // Downgrade — send to billing portal
+    // Free → paid: go through Stripe Checkout
+    if (currentTier === 'free' && plan.tier !== 'free') return { label: `Upgrade to ${plan.name}`, action: 'checkout' };
+    // Paid → different paid (upgrade or downgrade): use Billing Portal so user sees proration
+    if (currentTier !== 'free' && plan.tier !== 'free') return { label: `Switch to ${plan.name}`, action: 'portal' };
+    // Paid → free: billing portal to cancel
     return { label: 'Manage Billing', action: 'portal' };
   }
 
