@@ -30,6 +30,8 @@ export async function load({ params, cookies }) {
 
   // Check if logged-in user has a cost estimate configured for this API
   let costPerMinuteCents = 0;
+  let userProfile = null;
+  let notes = [];
   const accessToken = cookies.get('sb-access-token');
   if (accessToken) {
     try {
@@ -42,6 +44,26 @@ export async function load({ params, cookies }) {
           .eq('api_id', incident.api_id)
           .maybeSingle();
         costPerMinuteCents = pin?.cost_per_minute_cents || 0;
+
+        // Fetch user profile for tier check
+        const { data: profile } = await supabaseAdmin
+          .from('users')
+          .select('id, display_name, tier')
+          .eq('id', user.id)
+          .single();
+        if (profile) {
+          userProfile = profile;
+        }
+
+        // Load incident notes for team-tier users
+        if (userProfile?.tier === 'team') {
+          const { data: notesData } = await supabaseAdmin
+            .from('incident_notes')
+            .select('id, content, created_at, user_id, users(display_name, email)')
+            .eq('incident_id', id)
+            .order('created_at', { ascending: true });
+          notes = notesData || [];
+        }
       }
     } catch {
       // Not logged in — fine
@@ -52,5 +74,7 @@ export async function load({ params, cookies }) {
     incident: { ...incident, report_count: count || 0 },
     updates: updates || [],
     costPerMinuteCents,
+    userProfile,
+    notes,
   };
 }

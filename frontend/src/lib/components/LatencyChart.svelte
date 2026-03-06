@@ -1,5 +1,5 @@
 <script>
-  let { data = [] } = $props();
+  let { data = [], range = '24h' } = $props();
 
   const W = 700;
   const H = 200;
@@ -29,13 +29,18 @@
       yTicks.push({ val, y });
     }
 
-    // X-axis labels (every ~4 hours)
+    // X-axis labels — adapt to range
     const xTicks = [];
     const step = Math.max(1, Math.floor(data.length / 6));
     for (let i = 0; i < data.length; i += step) {
       const x = PAD.left + i * stepX;
       const d = new Date(data[i].bucket);
-      const label = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      let label;
+      if (range === '24h') {
+        label = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      } else {
+        label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
       xTicks.push({ x, label });
     }
 
@@ -61,7 +66,7 @@
   </div>
 {:else if chart}
   <div class="chart-container">
-    <svg viewBox="0 0 {W} {H}" class="latency-chart" role="img" aria-label="24-hour latency chart showing P50 and P95 response times">
+    <svg viewBox="0 0 {W} {H}" class="latency-chart" role="img" aria-label="{range} latency chart showing P50 and P95 response times">
       <!-- Grid lines -->
       {#each chart.yTicks as tick}
         <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y} stroke="var(--color-border)" stroke-width="0.5" />

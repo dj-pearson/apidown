@@ -1,5 +1,6 @@
 <script>
   import { createClient } from "@supabase/supabase-js";
+  import { goto, invalidateAll } from "$app/navigation";
   import LatencyChart from "$lib/components/LatencyChart.svelte";
   import RegionBreakdown from "$lib/components/RegionBreakdown.svelte";
   import UptimeBar from "$lib/components/UptimeBar.svelte";
@@ -8,7 +9,7 @@
   let { data } = $props();
   let api = $state(data.api);
   let incidents = $state(data.incidents);
-  let latencyData = $state(data.latencyData);
+  let latencyData = $derived(data.latencyData);
   let logoFailed = $state(false);
 
   // Report button state
@@ -22,6 +23,7 @@
   let subSubmitting = $state(false);
   let subMessage = $state("");
   let showChannelUpgrade = $state(false);
+  let subMinSeverity = $state("");
 
   // My App stats (Pro+)
   let myStats = $state(null);
@@ -31,6 +33,26 @@
   let pinLoading = $state(false);
 
   const ingestUrl = data.ingestUrl;
+  let latencyRange = $state(data.latencyRange || '24h');
+
+  const rangeOptions = [
+    { value: '24h', label: '24h' },
+    { value: '7d', label: '7d' },
+    { value: '30d', label: '30d' },
+  ];
+
+  async function setRange(range) {
+    const isFree = !data.userTier || data.userTier === 'free';
+    if (isFree && range !== '24h') return;
+    latencyRange = range;
+    const url = new URL(window.location.href);
+    if (range === '24h') {
+      url.searchParams.delete('range');
+    } else {
+      url.searchParams.set('range', range);
+    }
+    await goto(url.toString(), { invalidateAll: true, replaceState: true });
+  }
 
   async function loadMyStats() {
     if (myStats !== null || myStatsLoading) return;
@@ -189,6 +211,7 @@
           api_slug: api.slug,
           channel: subChannel,
           destination: subEmail,
+          ...(subMinSeverity ? { threshold_config: { min_severity: subMinSeverity } } : {}),
         }),
       });
       const body = await res.json();
@@ -198,6 +221,7 @@
             ? "You are already subscribed."
             : "Subscribed! You will receive alerts for this API.";
         subEmail = "";
+        subMinSeverity = "";
       } else {
         subMessage = body.error || "Failed to subscribe.";
       }
@@ -506,8 +530,28 @@
 {/if}
 
 <section class="latency-section">
-  <h2>24-Hour Latency</h2>
-  <LatencyChart data={latencyData} />
+  <div class="latency-header">
+    <h2>Latency</h2>
+    <div class="range-picker">
+      {#each rangeOptions as opt}
+        {@const isFree = !data.userTier || data.userTier === 'free'}
+        {@const locked = isFree && opt.value !== '24h'}
+        <button
+          class="range-pill"
+          class:active={latencyRange === opt.value}
+          class:locked
+          disabled={locked}
+          onclick={() => setRange(opt.value)}
+        >
+          {opt.label}
+          {#if locked}
+            <span class="pro-badge">Pro</span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+  </div>
+  <LatencyChart data={latencyData} range={latencyRange} />
 </section>
 
 <RegionBreakdown data={latencyData} />
@@ -601,6 +645,19 @@
           {subSubmitting ? "Subscribing..." : "Subscribe"}
         </button>
       </form>
+      {#if data.userTier && data.userTier !== 'free'}
+        <div class="threshold-selector">
+          <label class="threshold-label" for="min-severity">
+            Minimum severity
+            <select id="min-severity" bind:value={subMinSeverity} class="threshold-select">
+              <option value="">All (default)</option>
+              <option value="minor">Minor+</option>
+              <option value="major">Major+</option>
+              <option value="critical">Critical only</option>
+            </select>
+          </label>
+        </div>
+      {/if}
     {/if}
     {#if subMessage}
       <p class="action-message">{subMessage}</p>
@@ -939,6 +996,56 @@
     margin-bottom: 2rem;
   }
 
+  .latency-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .latency-header h2 {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .range-picker {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.2rem;
+  }
+
+  .range-pill {
+    background: none;
+    border: none;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s;
+  }
+
+  .range-pill:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+
+  .range-pill.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .range-pill.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   .latency-section h2 {
     font-size: 1.1rem;
     margin-bottom: 1rem;
@@ -1094,6 +1201,32 @@
     margin-top: 0.5rem;
     font-size: 0.8rem;
     color: var(--color-operational);
+  }
+
+  .threshold-selector {
+    margin-top: 0.5rem;
+  }
+
+  .threshold-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+  }
+
+  .threshold-select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 5px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.78rem;
+    outline: none;
+  }
+
+  .threshold-select:focus {
+    border-color: var(--color-primary);
   }
 
   @media (max-width: 640px) {

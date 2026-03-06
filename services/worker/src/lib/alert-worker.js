@@ -46,16 +46,27 @@ export async function drainAlerts(redis, supabase) {
 async function processAlert(supabase, alertJob) {
   const { incident_id, api_slug, api_name, severity, title, regions, event_type } = alertJob;
 
-  // Get subscribers for this API
+  // Get subscribers for this API (include threshold_config for filtering)
   const { data: subs, error } = await supabase
     .from('alert_subscriptions')
-    .select('id, channel, destination, token')
+    .select('id, channel, destination, token, threshold_config')
     .eq('api_id', alertJob.api_id)
     .eq('verified', true);
 
   if (error || !subs || subs.length === 0) return;
 
+  const SEVERITY_RANK = { minor: 1, major: 2, critical: 3 };
+
   for (const sub of subs) {
+    // Check min_severity threshold — skip if incident severity is below the subscriber's minimum.
+    // Resolution alerts (event_type === 'resolved') always pass through.
+    if (
+      sub.threshold_config?.min_severity &&
+      event_type !== 'resolved' &&
+      SEVERITY_RANK[severity] < SEVERITY_RANK[sub.threshold_config.min_severity]
+    ) {
+      continue;
+    }
     // Dedup check: already sent this alert?
     const { data: existing } = await supabase
       .from('alert_log')

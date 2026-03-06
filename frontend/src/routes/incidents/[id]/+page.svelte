@@ -1,7 +1,13 @@
 <script>
+  import { getSupabase } from '$lib/supabase.js';
+
   let { data } = $props();
   let incident = $state(data.incident);
   let updates = $state(data.updates);
+  let notes = $state(data.notes || []);
+  let userProfile = $state(data.userProfile);
+  let newNoteContent = $state('');
+  let submittingNote = $state(false);
 
   function formatDate(iso) {
     if (!iso) return '—';
@@ -9,6 +15,33 @@
       month: 'short', day: 'numeric', year: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
     });
+  }
+
+  async function submitNote() {
+    if (!newNoteContent.trim() || !userProfile) return;
+    submittingNote = true;
+    try {
+      const supabase = getSupabase();
+      const { data: inserted, error } = await supabase
+        .from('incident_notes')
+        .insert({
+          incident_id: incident.id,
+          user_id: userProfile.id,
+          content: newNoteContent.trim(),
+        })
+        .select('id, content, created_at, user_id')
+        .single();
+      if (error) throw error;
+      notes = [...notes, {
+        ...inserted,
+        users: { display_name: userProfile.display_name, email: null },
+      }];
+      newNoteContent = '';
+    } catch (err) {
+      console.error('Failed to add note:', err);
+    } finally {
+      submittingNote = false;
+    }
   }
 
   let durationMinutes = $derived.by(() => {
@@ -126,6 +159,41 @@
       </div>
     {/if}
   </section>
+
+  {#if userProfile?.tier === 'team'}
+    <section class="internal-notes">
+      <h2>Internal Notes</h2>
+      {#if notes.length === 0}
+        <p class="empty">No internal notes yet.</p>
+      {:else}
+        <div class="notes-list">
+          {#each notes as note (note.id)}
+            <div class="note-entry">
+              <div class="note-header">
+                <span class="note-author">{note.users?.display_name || 'Team Member'}</span>
+                <span class="note-time">{formatDate(note.created_at)}</span>
+              </div>
+              <p class="note-content">{note.content}</p>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      <div class="note-form">
+        <textarea
+          bind:value={newNoteContent}
+          placeholder="Add an internal note..."
+          rows="3"
+          disabled={submittingNote}
+        ></textarea>
+        <button
+          onclick={submitNote}
+          disabled={submittingNote || !newNoteContent.trim()}
+        >
+          {submittingNote ? 'Adding...' : 'Add Note'}
+        </button>
+      </div>
+    </section>
+  {/if}
 
   <div class="info-box">
     <p>This incident was {incident.auto_created ? 'automatically detected' : 'manually reported'} by APIdown.net based on {incident.auto_created ? 'anomalous signal data from real production traffic.' : 'user reports.'}</p>
@@ -326,6 +394,104 @@
     font-size: 0.85rem;
     color: var(--color-text);
     line-height: 1.4;
+  }
+
+  .internal-notes {
+    margin-bottom: 1.5rem;
+  }
+
+  .internal-notes h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .internal-notes .empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .note-entry {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+
+  .note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+  }
+
+  .note-author {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+
+  .note-time {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+  }
+
+  .note-content {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .note-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .note-form textarea {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+
+  .note-form textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .note-form button {
+    align-self: flex-end;
+    padding: 0.45rem 1rem;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .note-form button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .note-form button:hover:not(:disabled) {
+    opacity: 0.9;
   }
 
   .info-box {

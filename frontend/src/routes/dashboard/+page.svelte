@@ -34,6 +34,58 @@
   let addingApi = $state(false);
   let confirmDeleteApiId = $state(null);
 
+  // Public Status Page state
+  let statusEnabled = $state(data.profile.public_status_enabled || false);
+  let statusTitle = $state(data.profile.public_status_title || '');
+  let statusDescription = $state(data.profile.public_status_description || '');
+  let statusSlug = $state(data.profile.public_status_slug || '');
+  let statusSaving = $state(false);
+  let statusSaved = $state(false);
+  let statusError = $state('');
+  let copiedEmbed = $state(false);
+  let copiedUrl = $state(false);
+
+  const isPro = $derived(tier === 'pro' || tier === 'team');
+  const publicUrl = $derived(statusSlug ? `https://apidown.net/status/${statusSlug}` : '');
+  const embedSnippet = $derived(statusSlug ? `<iframe src="${publicUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:8px;"></iframe>` : '');
+
+  async function saveStatusPage() {
+    statusSaving = true;
+    statusError = '';
+    statusSaved = false;
+    const supabase = getAuthClient();
+    if (!supabase) { statusSaving = false; return; }
+
+    // Validate slug
+    const slug = statusSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (statusEnabled && !slug) {
+      statusError = 'Please enter a URL slug.';
+      statusSaving = false;
+      return;
+    }
+
+    const { error: err } = await supabase
+      .from('users')
+      .update({
+        public_status_enabled: statusEnabled,
+        public_status_title: statusTitle.trim(),
+        public_status_description: statusDescription.trim(),
+        public_status_slug: slug || null,
+      })
+      .eq('id', data.profile.id || '');
+
+    if (err) {
+      statusError = err.message?.includes('unique') || err.message?.includes('duplicate')
+        ? 'That slug is already taken. Please choose a different one.'
+        : 'Failed to save. Please try again.';
+    } else {
+      statusSlug = slug;
+      statusSaved = true;
+      setTimeout(() => statusSaved = false, 3000);
+    }
+    statusSaving = false;
+  }
+
   // 2FA / TOTP state
   let mfaEnabled = $state(data.profile.mfa_enabled || false);
   let showMfaSetup = $state(false);
@@ -490,6 +542,17 @@
         <span class="stack-ok">All operational</span>
       {/if}
     </p>
+    {#if data.slaSummary && data.slaSummary.total > 0}
+      <p class="stack-summary sla-summary-line">
+        <a href="/sla" class="sla-link-inline">
+          {#if data.slaSummary.passing === data.slaSummary.total}
+            <span class="stack-ok">{data.slaSummary.passing}/{data.slaSummary.total} SLA targets met</span>
+          {:else}
+            <span class="stack-warn">{data.slaSummary.passing}/{data.slaSummary.total} SLA targets met</span>
+          {/if}
+        </a>
+      </p>
+    {/if}
   {/if}
 </section>
 
@@ -712,6 +775,88 @@
     <p class="empty">No subscriptions. Visit an API's detail page to subscribe.</p>
   {/if}
 </section>
+
+{#if isPro}
+<section class="section">
+  <h2>Public Status Page</h2>
+  <p class="section-desc">Share a public status page showing your pinned APIs. Requires Pro or Team plan.</p>
+
+  <div class="status-page-form">
+    <div class="status-toggle-row">
+      <label class="status-toggle-label" for="status-enabled">Enable public status page</label>
+      <button
+        id="status-enabled"
+        class="toggle-btn"
+        class:toggle-on={statusEnabled}
+        onclick={() => statusEnabled = !statusEnabled}
+        role="switch"
+        aria-checked={statusEnabled}
+      >
+        <span class="toggle-knob"></span>
+      </button>
+    </div>
+
+    {#if statusEnabled}
+      <div class="status-fields">
+        <div class="status-field">
+          <label for="status-title">Page Title</label>
+          <input id="status-title" type="text" bind:value={statusTitle} placeholder="My API Status" maxlength="100" />
+        </div>
+
+        <div class="status-field">
+          <label for="status-desc-input">Description</label>
+          <input id="status-desc-input" type="text" bind:value={statusDescription} placeholder="Current status of our API dependencies" maxlength="200" />
+        </div>
+
+        <div class="status-field">
+          <label for="status-slug">URL Slug</label>
+          <div class="slug-input-row">
+            <span class="slug-prefix">apidown.net/status/</span>
+            <input id="status-slug" type="text" bind:value={statusSlug} placeholder="my-company" maxlength="60" pattern="[a-z0-9-]+" />
+          </div>
+          <span class="field-hint">Lowercase letters, numbers, and hyphens only.</span>
+        </div>
+      </div>
+    {/if}
+
+    <div class="status-actions">
+      <button class="btn-primary" onclick={saveStatusPage} disabled={statusSaving}>
+        {statusSaving ? 'Saving...' : 'Save'}
+      </button>
+      {#if statusSaved}
+        <span class="status-saved-msg">Saved!</span>
+      {/if}
+      {#if statusError}
+        <span class="status-error-msg">{statusError}</span>
+      {/if}
+    </div>
+
+    {#if statusEnabled && statusSlug}
+      <div class="status-embed-info">
+        <div class="status-url-row">
+          <label>Public URL</label>
+          <div class="status-url-display">
+            <a href={publicUrl} target="_blank" rel="noopener">{publicUrl}</a>
+            <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(publicUrl); copiedUrl = true; setTimeout(() => copiedUrl = false, 2000); }}>
+              {copiedUrl ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <div class="status-url-row">
+          <label>Embed Snippet</label>
+          <div class="embed-code-wrap">
+            <code class="embed-code">{embedSnippet}</code>
+            <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(embedSnippet); copiedEmbed = true; setTimeout(() => copiedEmbed = false, 2000); }}>
+              {copiedEmbed ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
+  </div>
+</section>
+{/if}
 
 <section class="section">
   <h2>Security</h2>
@@ -994,6 +1139,10 @@
   .stack-ok { color: var(--color-operational); }
   .stack-warn { color: var(--color-degraded); }
   .stack-alert { color: var(--color-down); }
+
+  .sla-summary-line { margin-top: 0.25rem; }
+  .sla-link-inline { text-decoration: none; }
+  .sla-link-inline:hover { text-decoration: underline; }
 
   .stack-cost {
     border-top: 1px solid var(--color-border);
@@ -1666,5 +1815,194 @@
     .mfa-qr-area { flex-direction: column; align-items: flex-start; }
     .mfa-verify-row { flex-direction: column; align-items: stretch; }
     .mfa-code-input { width: 100%; }
+    .slug-input-row { flex-direction: column; }
+    .slug-prefix { margin-bottom: 0.25rem; }
+    .embed-code { font-size: 0.65rem; }
+  }
+
+  /* Public Status Page */
+  .status-page-form {
+    padding: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .status-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .status-toggle-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .toggle-btn {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    border: none;
+    background: var(--color-border, #555);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s;
+  }
+
+  .toggle-btn.toggle-on {
+    background: var(--color-operational, #4ade80);
+  }
+
+  .toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+  }
+
+  .toggle-btn.toggle-on .toggle-knob {
+    transform: translateX(20px);
+  }
+
+  .status-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .status-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .status-field label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  .status-field input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.85rem;
+  }
+
+  .slug-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .slug-prefix {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, monospace);
+    white-space: nowrap;
+    padding-right: 0.25rem;
+  }
+
+  .slug-input-row input {
+    flex: 1;
+  }
+
+  .status-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .status-saved-msg {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-operational, #4ade80);
+  }
+
+  .status-error-msg {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-down, #ef4444);
+  }
+
+  .status-embed-info {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .status-url-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .status-url-row label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  .status-url-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-url-display a {
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    word-break: break-all;
+  }
+
+  .btn-copy-sm {
+    flex-shrink: 0;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-copy-sm:hover {
+    opacity: 0.9;
+  }
+
+  .embed-code-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .embed-code {
+    flex: 1;
+    font-size: 0.75rem;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    word-break: break-all;
+    line-height: 1.4;
   }
 </style>

@@ -101,6 +101,13 @@ US-046: DONE - Rate limiting already handled by @fastify/rate-limit
 US-047: DONE - Add SLA export endpoint (GET /api-status/[slug]/sla)
 US-048: DONE - Add SLA report download link to API detail page
 
+-- Phase 14: Pro Features --
+US-066: DONE - Historical latency date range picker (24h/7d/30d pill selector, Pro-gated, hourly bucketing for 7d/30d)
+US-068: DONE - Custom anomaly detection thresholds (min_severity filter per subscription, Pro+ UI, alert-worker.js threshold check)
+US-069: DONE - Team incident annotations (incident_notes table, Internal Notes section for Team tier, client-side insert)
+US-071: DONE - Public embeddable status page (/status/[slug] route, dashboard settings for Pro+, iframe embed snippet)
+US-072: DONE - SLA target tracking with pass/fail (/sla report page, CSV export, dashboard summary widget)
+
 == Architecture Notes ==
 - svelte.config.js uses adapter-cloudflare (not adapter-node)
 - Supabase clients use lazy initialization (getSupabase/getSupabaseAdmin) to avoid build-time crashes

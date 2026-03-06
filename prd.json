@@ -1063,8 +1063,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 66,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Date range pill picker (24h/7d/30d) on API detail page, free users locked to 24h with Pro badge, hourly bucketing for 7d/30d, adaptive x-axis labels. Compare mode deferred."
     },
     {
       "id": "US-067",
@@ -1095,8 +1095,8 @@
         "Typecheck passes"
       ],
       "priority": 68,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "threshold_config JSONB on alert_subscriptions (migration 020), min_severity filter in alert-worker.js, severity dropdown on subscribe form for Pro+ users, default behavior unchanged"
     },
     {
       "id": "US-069",
@@ -1111,8 +1111,8 @@
         "Typecheck passes"
       ],
       "priority": 69,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "incident_notes table in migration 020, Internal Notes section on incident detail page for Team tier users, client-side Supabase insert, RLS policies for read/write"
     },
     {
       "id": "US-070",
@@ -1145,8 +1145,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 71,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Public /status/[slug] route with cached output (60s), dashboard settings for Pro+ (title, description, slug, enable toggle), iframe embed snippet, Powered by APIdown.net footer"
     },
     {
       "id": "US-072",
@@ -1161,8 +1161,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 72,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "sla_targets table in migration 020, /sla report page with pass/fail badges and CSV export, dashboard SLA summary widget in My Stack, incident-based uptime calculation"
     }
   ]
 }

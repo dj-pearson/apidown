@@ -5,6 +5,13 @@ const subscribeSchema = {
     api_slug: { type: 'string', minLength: 1, maxLength: 100 },
     channel: { type: 'string', enum: ['email', 'slack', 'pagerduty', 'discord', 'teams', 'webhook'] },
     destination: { type: 'string', minLength: 3, maxLength: 500 },
+    threshold_config: {
+      type: 'object',
+      properties: {
+        min_severity: { type: 'string', enum: ['minor', 'major', 'critical'] },
+      },
+      additionalProperties: false,
+    },
   },
 };
 
@@ -16,7 +23,7 @@ export async function subscriptionsRoute(fastify) {
       rateLimit: { max: 10, timeWindow: '1 hour' },
     },
   }, async (request, reply) => {
-    const { api_slug, channel, destination } = request.body;
+    const { api_slug, channel, destination, threshold_config } = request.body;
 
     // Basic email validation for email channel
     if (channel === 'email' && !destination.includes('@')) {
@@ -61,16 +68,23 @@ export async function subscriptionsRoute(fastify) {
     // For email: require verification via token-based link
     const needsVerification = channel === 'email';
 
+    const insertPayload = {
+      api_id: api.id,
+      channel,
+      destination,
+      verified: !needsVerification,
+      email_verified: !needsVerification,
+      tier: 'free',
+    };
+
+    // Only store threshold_config if provided (Pro+ feature)
+    if (threshold_config && Object.keys(threshold_config).length > 0) {
+      insertPayload.threshold_config = threshold_config;
+    }
+
     const { data: sub, error: insertErr } = await fastify.supabase
       .from('alert_subscriptions')
-      .insert({
-        api_id: api.id,
-        channel,
-        destination,
-        verified: !needsVerification,
-        email_verified: !needsVerification,
-        tier: 'free',
-      })
+      .insert(insertPayload)
       .select('token')
       .single();
 

@@ -1,7 +1,7 @@
 import { getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
 import { error } from '@sveltejs/kit';
 
-export async function load({ params, cookies }) {
+export async function load({ params, cookies, url }) {
   const supabaseAdmin = getSupabaseAdmin();
   const { slug } = params;
 
@@ -21,13 +21,80 @@ export async function load({ params, cookies }) {
     .order('started_at', { ascending: false })
     .limit(20);
 
-  // Get 24h latency data from signals_1min
-  const { data: latencyData } = await supabaseAdmin
+  // Determine latency range from URL param (default 24h)
+  const VALID_RANGES = ['24h', '7d', '30d'];
+  const rangeParam = url.searchParams.get('range') || '24h';
+  const latencyRange = VALID_RANGES.includes(rangeParam) ? rangeParam : '24h';
+
+  // Check user tier to enforce free-tier restriction
+  // (userTier is resolved below, so we peek at it early here)
+  let resolvedUserTier = null;
+  const accessTokenEarly = cookies.get('sb-access-token');
+  if (accessTokenEarly) {
+    try {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(accessTokenEarly);
+      if (user) {
+        const { data: profile } = await supabaseAdmin
+          .from('users')
+          .select('tier')
+          .eq('id', user.id)
+          .single();
+        resolvedUserTier = profile?.tier || 'free';
+      }
+    } catch {
+      // Not logged in or error
+    }
+  }
+
+  // Free users can only see 24h
+  const effectiveRange = (!resolvedUserTier || resolvedUserTier === 'free') ? '24h' : latencyRange;
+
+  const rangeMs = {
+    '24h': 24 * 60 * 60 * 1000,
+    '7d': 7 * 24 * 60 * 60 * 1000,
+    '30d': 30 * 24 * 60 * 60 * 1000,
+  };
+
+  const cutoff = new Date(Date.now() - rangeMs[effectiveRange]).toISOString();
+
+  // Get latency data from signals_1min
+  const { data: rawLatencyData } = await supabaseAdmin
     .from('signals_1min')
     .select('bucket, total_signals, error_count, avg_duration_ms, p50_ms, p95_ms, region')
     .eq('api_id', api.id)
-    .gte('bucket', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .gte('bucket', cutoff)
     .order('bucket', { ascending: true });
+
+  // For 7d/30d, bucket by hour to reduce data points
+  let latencyData;
+  if (effectiveRange === '24h') {
+    latencyData = rawLatencyData || [];
+  } else {
+    const hourBuckets = new Map();
+    for (const row of (rawLatencyData || [])) {
+      const d = new Date(row.bucket);
+      const hourKey = d.toISOString().slice(0, 13) + ':00:00.000Z';
+      if (!hourBuckets.has(hourKey)) {
+        hourBuckets.set(hourKey, { bucket: hourKey, p50_sum: 0, p95_sum: 0, avg_sum: 0, total_signals: 0, error_count: 0, count: 0, region: row.region });
+      }
+      const b = hourBuckets.get(hourKey);
+      b.p50_sum += (row.p50_ms || 0) * (row.total_signals || 1);
+      b.p95_sum += (row.p95_ms || 0) * (row.total_signals || 1);
+      b.avg_sum += (row.avg_duration_ms || 0) * (row.total_signals || 1);
+      b.total_signals += row.total_signals || 0;
+      b.error_count += row.error_count || 0;
+      b.count += row.total_signals || 1;
+    }
+    latencyData = Array.from(hourBuckets.values()).map(b => ({
+      bucket: b.bucket,
+      p50_ms: b.count > 0 ? b.p50_sum / b.count : 0,
+      p95_ms: b.count > 0 ? b.p95_sum / b.count : 0,
+      avg_duration_ms: b.count > 0 ? b.avg_sum / b.count : 0,
+      total_signals: b.total_signals,
+      error_count: b.error_count,
+      region: b.region,
+    }));
+  }
 
   // Calculate 90-day uptime
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
@@ -83,19 +150,21 @@ export async function load({ params, cookies }) {
     .limit(5);
 
   // Check if user is logged in and has this API pinned
-  let userTier = null;
+  let userTier = resolvedUserTier;
   let isPinned = false;
   const accessToken = cookies.get('sb-access-token');
   if (accessToken) {
     try {
       const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
       if (user) {
-        const { data: profile } = await supabaseAdmin
-          .from('users')
-          .select('tier')
-          .eq('id', user.id)
-          .single();
-        userTier = profile?.tier || 'free';
+        if (!userTier) {
+          const { data: profile } = await supabaseAdmin
+            .from('users')
+            .select('tier')
+            .eq('id', user.id)
+            .single();
+          userTier = profile?.tier || 'free';
+        }
 
         const { data: pin } = await supabaseAdmin
           .from('pinned_apis')
@@ -114,6 +183,7 @@ export async function load({ params, cookies }) {
     api,
     incidents: incidents || [],
     latencyData: latencyData || [],
+    latencyRange: effectiveRange,
     uptimePercent,
     dailyUptime,
     userTier,
