@@ -72,6 +72,9 @@
       const result = await res.json();
       if (result.url) {
         window.location.href = result.url;
+      } else if (result.upgraded) {
+        // Inline upgrade (existing subscription updated) — go to dashboard
+        window.location.href = '/dashboard';
       } else {
         alert(result.error || 'Failed to start checkout');
         loading = null;

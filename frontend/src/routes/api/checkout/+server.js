@@ -1,6 +1,6 @@
-import { json, error as kitError } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import { setPlatform, getSupabaseAdmin } from '$lib/supabase-server.js';
-import { getStripe, getPriceId } from '$lib/stripe-server.js';
+import { getStripe, getPriceId, getTierFromSubscription } from '$lib/stripe-server.js';
 
 export async function POST({ request, cookies, platform, url }) {
   setPlatform(platform);
@@ -20,7 +20,7 @@ export async function POST({ request, cookies, platform, url }) {
 
   const priceId = getPriceId(tier);
   if (!priceId) {
-    console.error(`[checkout] Missing price ID for tier "${tier}". STRIPE_PRO_PRICE_ID=${getPriceId('pro') ? 'set' : 'MISSING'}, STRIPE_TEAM_PRICE_ID=${getPriceId('team') ? 'set' : 'MISSING'}`);
+    console.error(`[checkout] Missing price ID for tier "${tier}".`);
     return json({ error: 'Stripe price not configured for this tier. Please contact support.' }, { status: 500 });
   }
 
@@ -30,7 +30,7 @@ export async function POST({ request, cookies, platform, url }) {
     // Get or create Stripe customer
     const { data: profile } = await supabase
       .from('users')
-      .select('stripe_customer_id, email')
+      .select('stripe_customer_id, stripe_subscription_id, email')
       .eq('id', user.id)
       .single();
 
@@ -47,7 +47,50 @@ export async function POST({ request, cookies, platform, url }) {
         .eq('id', user.id);
     }
 
-    // Create Checkout Session
+    // Check for existing active subscription — upgrade/downgrade in place
+    if (customerId) {
+      const existingSubs = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        expand: ['data.items'],
+        limit: 10,
+      });
+
+      if (existingSubs.data.length > 0) {
+        // Find the subscription to update (use the first active one)
+        const activeSub = existingSubs.data[0];
+        const currentItem = activeSub.items.data[0];
+
+        if (currentItem) {
+          // Update the subscription's price (immediate proration)
+          const updated = await stripe.subscriptions.update(activeSub.id, {
+            items: [{
+              id: currentItem.id,
+              price: priceId,
+            }],
+            proration_behavior: 'create_prorations',
+            metadata: { supabase_user_id: user.id, tier },
+          });
+
+          // Cancel any other active subscriptions (cleanup duplicates)
+          for (let i = 1; i < existingSubs.data.length; i++) {
+            await stripe.subscriptions.cancel(existingSubs.data[i].id);
+          }
+
+          // Update the user's tier immediately
+          await supabase.from('users').update({
+            tier,
+            stripe_subscription_id: updated.id,
+            billing_period_end: new Date(updated.current_period_end * 1000).toISOString(),
+          }).eq('id', user.id);
+
+          console.log(`[checkout] Upgraded user ${user.id} to ${tier} via subscription update`);
+          return json({ upgraded: true, tier });
+        }
+      }
+    }
+
+    // No existing subscription — create new checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
