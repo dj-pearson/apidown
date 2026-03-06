@@ -1,6 +1,8 @@
 <script>
   import { createClient } from '@supabase/supabase-js';
   import { goto } from '$app/navigation';
+  import { getTierLimits, getNextTier } from '$lib/tier-limits.js';
+  import UpgradeModal from '$lib/components/UpgradeModal.svelte';
 
   let { data } = $props();
   let profile = $state(data.profile);
@@ -13,6 +15,31 @@
   let openingPortal = $state(false);
   let copiedKey = $state(false);
   let confirmRevokeId = $state(null);
+  let showUpgradeModal = $state(false);
+  let upgradeLimitType = $state('apiKeys');
+
+  const tier = $derived(profile.tier || 'free');
+  const limits = $derived(getTierLimits(tier));
+  const activeKeyCount = $derived(apiKeys.filter(k => k.is_active).length);
+  const subCount = $derived(subscriptions.length);
+  const hasNextTier = $derived(getNextTier(tier) !== null);
+
+  function formatLimit(n) {
+    return n === Infinity ? 'Unlimited' : n;
+  }
+
+  function usagePercent(current, max) {
+    if (max === Infinity) return 0;
+    return Math.min(Math.round((current / max) * 100), 100);
+  }
+
+  function usageColor(current, max) {
+    if (max === Infinity) return 'var(--color-operational, #4ade80)';
+    const pct = current / max;
+    if (pct >= 1) return 'var(--color-down, #ef4444)';
+    if (pct >= 0.5) return 'var(--color-degraded, #f59e0b)';
+    return 'var(--color-operational, #4ade80)';
+  }
 
   function getAuthClient() {
     const url = data.supabaseUrl;
@@ -22,6 +49,11 @@
   }
 
   async function createApiKey() {
+    if (activeKeyCount >= limits.apiKeys && hasNextTier) {
+      upgradeLimitType = 'apiKeys';
+      showUpgradeModal = true;
+      return;
+    }
     creatingKey = true;
     try {
       // Get current session token for auth
@@ -154,8 +186,20 @@
 </section>
 
 <section class="section">
-  <h2>API Keys</h2>
-  <p class="section-desc">Use an API key to authenticate signal submissions from SDKs.</p>
+  <div class="section-header-row">
+    <div>
+      <h2>API Keys</h2>
+      <p class="section-desc">Use an API key to authenticate signal submissions from SDKs.</p>
+    </div>
+    <span class="usage-count">{activeKeyCount}/{formatLimit(limits.apiKeys)}</span>
+  </div>
+  <div class="usage-bar">
+    <div
+      class="usage-fill"
+      class:at-limit={activeKeyCount >= limits.apiKeys && limits.apiKeys !== Infinity}
+      style="width: {usagePercent(activeKeyCount, limits.apiKeys)}%; background: {usageColor(activeKeyCount, limits.apiKeys)}"
+    ></div>
+  </div>
 
   {#if apiKeys.length > 0}
     <div class="key-list">
@@ -210,8 +254,20 @@
 </section>
 
 <section class="section">
-  <h2>Alert Subscriptions</h2>
-  <p class="section-desc">APIs you're subscribed to for status change alerts.</p>
+  <div class="section-header-row">
+    <div>
+      <h2>Alert Subscriptions</h2>
+      <p class="section-desc">APIs you're subscribed to for status change alerts.</p>
+    </div>
+    <span class="usage-count">{subCount}/{formatLimit(limits.subscriptions)}</span>
+  </div>
+  <div class="usage-bar">
+    <div
+      class="usage-fill"
+      class:at-limit={subCount >= limits.subscriptions && limits.subscriptions !== Infinity}
+      style="width: {usagePercent(subCount, limits.subscriptions)}%; background: {usageColor(subCount, limits.subscriptions)}"
+    ></div>
+  </div>
 
   {#if subscriptions.length > 0}
     <div class="sub-list">
@@ -227,6 +283,14 @@
     <p class="empty">No subscriptions. Visit an API's detail page to subscribe.</p>
   {/if}
 </section>
+
+<UpgradeModal
+  bind:show={showUpgradeModal}
+  currentTier={tier}
+  limitType={upgradeLimitType}
+  currentUsage={upgradeLimitType === 'apiKeys' ? activeKeyCount : subCount}
+  maxUsage={upgradeLimitType === 'apiKeys' ? formatLimit(limits.apiKeys) : formatLimit(limits.subscriptions)}
+/>
 
 <style>
   .dashboard-header {
@@ -273,7 +337,45 @@
   .section-desc {
     color: var(--color-text-muted);
     font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .usage-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    margin-top: 0.15rem;
+  }
+
+  .usage-bar {
+    height: 4px;
+    background: var(--color-border, #333);
+    border-radius: 2px;
     margin-bottom: 1rem;
+    overflow: hidden;
+  }
+
+  .usage-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    min-width: 2px;
+  }
+
+  .usage-fill.at-limit {
+    animation: pulse-bar 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-bar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   .key-list, .sub-list {

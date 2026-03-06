@@ -25,7 +25,7 @@ export async function apiKeysRoute(fastify) {
       .single();
 
     const tier = profile?.tier || 'free';
-    const maxKeys = { free: 1, pro: 10, team: 50 }[tier] || 1;
+    const maxKeys = { free: 1, pro: 10, team: Infinity }[tier] || 1;
 
     const { count } = await fastify.supabase
       .from('api_keys')

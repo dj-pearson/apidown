@@ -7,7 +7,8 @@
       "Bash(node:*)",
       "Bash(xargs:*)",
       "Bash(npx svelte-kit:*)",
-      "Bash(npx svelte-check:*)"
+      "Bash(npx svelte-check:*)",
+      "Bash(grep:*)"
     ]
   }
 }

@@ -19,3 +19,14 @@ export const TIER_LIMITS = {
 export function getTierLimits(tier) {
   return TIER_LIMITS[tier] || TIER_LIMITS.free;
 }
+
+export const TIER_INFO = {
+  pro: { name: 'Pro', price: '$19/mo', apiKeys: 10, subscriptions: 50 },
+  team: { name: 'Team', price: '$49/mo', apiKeys: 'Unlimited', subscriptions: 'Unlimited' },
+};
+
+export function getNextTier(tier) {
+  if (tier === 'free') return 'pro';
+  if (tier === 'pro') return 'team';
+  return null;
+}
