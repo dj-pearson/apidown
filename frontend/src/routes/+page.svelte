@@ -130,6 +130,60 @@
         "target": "https://apidown.net/api/{search_term_string}",
         "query-input": "required name=search_term_string"
       }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is APIdown and how does it work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "APIdown is a crowd-sourced, real-time API health monitoring platform. Instead of synthetic pings, it aggregates anonymized signals from real production traffic across thousands of applications to determine whether an API like Stripe, OpenAI, or AWS is actually experiencing issues."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is APIdown free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The public status dashboard is completely free. You can view real-time status, latency trends, and incident history for all monitored APIs without an account. Paid plans unlock features like webhook alerts, custom API monitoring, and API access."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is APIdown different from a traditional status page?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Traditional status pages are operated by the API provider and often lag behind real outages. APIdown uses independent, crowd-sourced data from actual production traffic, giving you a neutral, real-time view of API health before the provider acknowledges a problem."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which APIs does APIdown monitor?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "APIdown monitors over 40 popular APIs across categories including Payments (Stripe, PayPal), AI/LLM (OpenAI, Anthropic), Cloud (AWS, GCP, Azure), Communications (Twilio, SendGrid), Auth (Auth0, Clerk), and more. New APIs are added regularly based on community demand."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I get alerts when an API goes down?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Create a free account and subscribe to any APIs you depend on. You'll receive email alerts when status changes are detected. Paid plans add webhook notifications so you can trigger automated incident responses in your own infrastructure."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I monitor my own custom APIs with APIdown?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Pro and Enterprise plans let you add custom API endpoints to the monitoring network. Your custom APIs benefit from the same crowd-sourced signal aggregation and alerting as the built-in catalog."
+          }
+        }
+      ]
     }
   ])}</script>`}
 </svelte:head>
@@ -144,8 +198,8 @@
       <span class="conn-dot conn-offline"></span> <span class="conn-text">Offline</span>
     {/if}
   </div>
-  <h1>API Status Dashboard</h1>
-  <p class="subtitle">Real-time health from real production traffic</p>
+  <h1>Real-Time API Status Dashboard — Powered by Production Traffic</h1>
+  <p class="subtitle">Is the API actually down — or is it your code? Find out in seconds with crowd-sourced health data from real applications.</p>
   <div class="stats">
     <span class="stat">{apis.length} APIs monitored</span>
     <span class="divider">·</span>
@@ -202,6 +256,100 @@
     {/each}
   {/if}
 {/if}
+
+<!-- How It Works -->
+<section class="seo-section" aria-labelledby="how-it-works">
+  <h2 id="how-it-works">How APIdown Works</h2>
+  <p class="section-intro">Unlike traditional status pages controlled by the provider, APIdown aggregates anonymized signals from <strong>real production traffic</strong> to give you an independent, crowd-sourced view of API health.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">📡</div>
+      <h3>Crowd-Sourced Signals</h3>
+      <p>Lightweight SDKs report latency and error rates from thousands of production apps — no synthetic pings required.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Real-Time Detection</h3>
+      <p>Outages and degradations surface within seconds thanks to continuous signal aggregation and anomaly detection.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔔</div>
+      <h3>Instant Alerts</h3>
+      <p>Get email or webhook notifications the moment an API you depend on shows signs of trouble — before the provider discloses it.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Latency Analytics</h3>
+      <p>View per-region latency trends, percentile breakdowns, and 24-hour sparkline charts for every monitored API.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Why APIdown -->
+<section class="seo-section" aria-labelledby="why-apidown">
+  <h2 id="why-apidown">Why Developers Trust APIdown</h2>
+  <div class="trust-grid">
+    <div class="trust-item">
+      <strong>Independent & Neutral</strong>
+      <p>APIdown is not operated by any API provider. The data comes from your peers — real developers running real workloads.</p>
+    </div>
+    <div class="trust-item">
+      <strong>Faster Than Official Status Pages</strong>
+      <p>Community signals often detect problems minutes before the vendor acknowledges them. Stop refreshing their status page.</p>
+    </div>
+    <div class="trust-item">
+      <strong>40+ APIs, Growing Weekly</strong>
+      <p>From Stripe and OpenAI to AWS S3 and Twilio — monitor the APIs your stack depends on, all in one dashboard.</p>
+    </div>
+    <div class="trust-item">
+      <strong>Free Forever Tier</strong>
+      <p>The public dashboard is free with no account required. Paid plans add alerts, webhooks, custom APIs, and API access.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="seo-section faq-section" aria-labelledby="faq-heading">
+  <h2 id="faq-heading">Frequently Asked Questions</h2>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>What is APIdown and how does it work?</summary>
+      <div class="faq-answer">
+        <p>APIdown is a crowd-sourced, real-time API health monitoring platform. Instead of synthetic pings, it aggregates anonymized signals from real production traffic across thousands of applications to determine whether an API like Stripe, OpenAI, or AWS is actually experiencing issues. The lightweight SDK reports latency and error-rate data, and our backend uses anomaly detection to flag degradations or outages within seconds.</p>
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>Is APIdown free to use?</summary>
+      <div class="faq-answer">
+        <p>Yes. The public status dashboard is completely free. You can view real-time status, latency trends, and incident history for all monitored APIs without an account. Paid plans unlock features like webhook alerts, custom API monitoring, and programmatic API access.</p>
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>How is APIdown different from a traditional status page?</summary>
+      <div class="faq-answer">
+        <p>Traditional status pages are operated by the API provider and often lag behind real outages. APIdown uses independent, crowd-sourced data from actual production traffic, giving you a neutral, real-time view of API health before the provider acknowledges a problem. Think of it as "Waze for API status."</p>
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>Which APIs does APIdown monitor?</summary>
+      <div class="faq-answer">
+        <p>APIdown monitors over 40 popular APIs across categories including Payments (Stripe, PayPal), AI/LLM (OpenAI, Anthropic), Cloud (AWS, GCP, Azure), Communications (Twilio, SendGrid), Auth (Auth0, Clerk), and more. New APIs are added regularly based on community demand.</p>
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>How do I get alerts when an API goes down?</summary>
+      <div class="faq-answer">
+        <p>Create a free account and subscribe to any APIs you depend on. You'll receive email alerts when status changes are detected. Paid plans add webhook notifications so you can trigger automated incident responses in your own infrastructure.</p>
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>Can I monitor my own custom APIs with APIdown?</summary>
+      <div class="faq-answer">
+        <p>Yes. Pro and Enterprise plans let you add custom API endpoints to the monitoring network. Your custom APIs benefit from the same crowd-sourced signal aggregation and alerting as the built-in catalog.</p>
+      </div>
+    </details>
+  </div>
+</section>
 
 <style>
   .hero {
@@ -375,5 +523,162 @@
 
   .clear-search:hover {
     border-color: var(--color-primary);
+  }
+
+  /* SEO sections */
+  .seo-section {
+    margin-top: 3rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .seo-section h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-intro {
+    text-align: center;
+    color: var(--color-text-muted);
+    max-width: 680px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+
+  /* Features grid */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .feature-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--color-primary);
+  }
+
+  .feature-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .feature-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .feature-card p {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+
+  /* Trust grid */
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .trust-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .trust-item strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+    color: var(--color-text);
+  }
+
+  .trust-item p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+
+  /* FAQ section */
+  .faq-section {
+    margin-bottom: 2rem;
+  }
+
+  .faq-list {
+    max-width: 760px;
+    margin: 1.5rem auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .faq-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .faq-item[open] {
+    border-color: var(--color-primary);
+  }
+
+  .faq-item summary {
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-text);
+    transition: color 0.15s;
+  }
+
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-item summary::after {
+    content: '+';
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+    margin-left: 1rem;
+  }
+
+  .faq-item[open] summary::after {
+    content: '−';
+    color: var(--color-primary);
+  }
+
+  .faq-item summary:hover {
+    color: var(--color-primary-light);
+  }
+
+  .faq-answer {
+    padding: 0 1.25rem 1.15rem;
+  }
+
+  .faq-answer p {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
   }
 </style>

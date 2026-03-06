@@ -32,7 +32,7 @@
 <header>
   <nav aria-label="Main navigation">
     <a href="/" class="logo" style="display: flex; align-items: center;">
-      <img src="/logo-primary.png" alt="APIdown.net - Home" height="28" style="height: 28px; width: auto;" />
+      <img src="/logo-white.svg" alt="APIdown.net - Home" height="28" style="height: 28px; width: auto;" />
     </a>
     <button
       class="hamburger"
@@ -67,12 +67,53 @@
 </main>
 
 <footer>
-  <div class="footer-content">
-    <p>&copy; {new Date().getFullYear()} Pearson Media LLC &middot; Real API status from real traffic.</p>
-    <div class="footer-links">
-      <a href="/api-status">API</a>
-      <a href="/docs">Docs</a>
-      <a href="https://github.com/dj-pearson/apidown" target="_blank" rel="noopener">GitHub</a>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <!-- Brand column -->
+      <div class="footer-brand">
+        <a href="/" class="footer-logo">
+          <img src="/logo-white.svg" alt="APIdown.net" height="24" style="height: 24px; width: auto;" />
+        </a>
+        <p class="footer-tagline">Real-time API status from real production traffic. Independent, crowd-sourced, and developer-first.</p>
+      </div>
+
+      <!-- Product -->
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/">Status Dashboard</a></li>
+          <li><a href="/incidents">Incidents</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/dashboard">Dashboard</a></li>
+        </ul>
+      </div>
+
+      <!-- Developers -->
+      <div class="footer-col">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/api-status">API Reference</a></li>
+          <li><a href="https://github.com/dj-pearson/apidown" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="/docs#sdks">SDKs</a></li>
+        </ul>
+      </div>
+
+      <!-- Company -->
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/login">Log In / Sign Up</a></li>
+          <li><a href="/sitemap.xml">Sitemap</a></li>
+          <li><a href="/llms.txt">LLMs.txt</a></li>
+          <li><a href="/robots.txt">Robots.txt</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; {new Date().getFullYear()} Pearson Media LLC. All rights reserved.</p>
+      <p class="footer-seo-text">APIdown monitors Stripe, OpenAI, AWS, Twilio, and 40+ APIs with crowd-sourced production traffic data.</p>
     </div>
   </div>
 </footer>
@@ -161,31 +202,81 @@
 
   footer {
     border-top: 1px solid var(--color-border);
-    padding: 1.5rem;
+    padding: 3rem 1.5rem 2rem;
     color: var(--color-text-muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    background: var(--color-surface);
   }
 
-  .footer-content {
+  .footer-inner {
     max-width: 1200px;
     margin: 0 auto;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 2.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .footer-logo {
+    display: inline-block;
+  }
+
+  .footer-tagline {
+    line-height: 1.6;
+    max-width: 300px;
+  }
+
+  .footer-col h4 {
+    color: var(--color-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.85rem;
+  }
+
+  .footer-col ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .footer-col a {
+    color: var(--color-text-muted);
+    transition: color 0.15s;
+    font-size: 0.85rem;
+  }
+
+  .footer-col a:hover {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .footer-bottom {
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.78rem;
   }
 
-  .footer-links {
-    display: flex;
-    gap: 1rem;
-  }
-
-  .footer-links a {
+  .footer-seo-text {
     color: var(--color-text-muted);
-    transition: color 0.15s;
-  }
-
-  .footer-links a:hover {
-    color: var(--color-text);
+    opacity: 0.7;
   }
 
   @media (max-width: 640px) {
@@ -214,9 +305,17 @@
       position: relative;
     }
 
-    .footer-content {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    .footer-brand {
+      grid-column: 1 / -1;
+    }
+
+    .footer-bottom {
       flex-direction: column;
-      gap: 0.75rem;
       text-align: center;
     }
   }

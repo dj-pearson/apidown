@@ -5,7 +5,6 @@
       <stop offset="100%" stop-color="#04B0CC" />
     </linearGradient>
   </defs>
-  <rect width="180" height="180" rx="30" fill="#08142A" />
   <g fill="none" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10">
     <path stroke="#04B0CC" stroke-width="9" d="
       M 32.5 77.5 
