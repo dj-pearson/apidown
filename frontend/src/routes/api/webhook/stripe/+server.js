@@ -71,14 +71,16 @@ export async function POST({ request, platform }) {
         const subscription = event.data.object;
         const userId = subscription.metadata?.supabase_user_id;
         const status = subscription.status;
-        console.log(`[stripe-webhook] Subscription updated: ${subscription.id}, status=${status}, user=${userId}`);
+        console.log(`[stripe-webhook] Subscription updated: ${subscription.id}, status=${status}, cancel_at_period_end=${subscription.cancel_at_period_end}, user=${userId}`);
 
         const findUser = userId
           ? { id: userId }
-          : (await supabase.from('users').select('id').eq('stripe_subscription_id', subscription.id).single()).data;
+          : (await supabase.from('users').select('id').eq('stripe_subscription_id', subscription.id).single()).data
+            || (await supabase.from('users').select('id').eq('stripe_customer_id', subscription.customer).single()).data;
 
         if (findUser?.id) {
-          if (status === 'canceled' || status === 'unpaid' || status === 'past_due') {
+          if (status === 'canceled' || status === 'unpaid' || status === 'past_due' || status === 'incomplete_expired') {
+            console.log(`[stripe-webhook] Downgrading user ${findUser.id} to free (status=${status})`);
             await supabase.from('users').update({
               tier: 'free',
               stripe_subscription_id: null,
@@ -90,6 +92,8 @@ export async function POST({ request, platform }) {
               billing_period_end: stripePeriodEnd(subscription),
             }).eq('id', findUser.id);
           }
+        } else {
+          console.error(`[stripe-webhook] Could not find user for subscription ${subscription.id}, customer=${subscription.customer}`);
         }
         break;
       }
@@ -97,18 +101,22 @@ export async function POST({ request, platform }) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const userId = subscription.metadata?.supabase_user_id;
-        console.log(`[stripe-webhook] Subscription deleted: ${subscription.id}, user=${userId}`);
+        console.log(`[stripe-webhook] Subscription deleted: ${subscription.id}, user=${userId}, customer=${subscription.customer}`);
 
         const findUser = userId
           ? { id: userId }
-          : (await supabase.from('users').select('id').eq('stripe_subscription_id', subscription.id).single()).data;
+          : (await supabase.from('users').select('id').eq('stripe_subscription_id', subscription.id).single()).data
+            || (await supabase.from('users').select('id').eq('stripe_customer_id', subscription.customer).single()).data;
 
         if (findUser?.id) {
+          console.log(`[stripe-webhook] Downgrading user ${findUser.id} to free (subscription deleted)`);
           await supabase.from('users').update({
             tier: 'free',
             stripe_subscription_id: null,
             billing_period_end: null,
           }).eq('id', findUser.id);
+        } else {
+          console.error(`[stripe-webhook] Could not find user for deleted subscription ${subscription.id}, customer=${subscription.customer}`);
         }
         break;
       }

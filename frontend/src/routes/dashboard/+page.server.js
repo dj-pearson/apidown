@@ -19,29 +19,43 @@ export async function load({ cookies, platform }) {
     .eq('id', user.id)
     .single();
 
-  // If user has a stripe_customer_id but shows free tier, sync from Stripe
+  // Sync tier with Stripe on every dashboard load
   let syncedProfile = profile;
-  if (profile?.stripe_customer_id && profile.tier === 'free') {
+  if (profile?.stripe_customer_id) {
     try {
       const { getStripe, getTierFromSubscription, stripePeriodEnd } = await import('$lib/stripe-server.js');
       const stripe = getStripe();
-      const subscriptions = await stripe.subscriptions.list({
+      const subs = await stripe.subscriptions.list({
         customer: profile.stripe_customer_id,
         status: 'active',
         limit: 1,
         expand: ['data.items'],
       });
-      if (subscriptions.data.length > 0) {
-        const sub = subscriptions.data[0];
+
+      if (subs.data.length > 0) {
+        // Has active subscription — sync tier from Stripe
+        const sub = subs.data[0];
         const tier = getTierFromSubscription(sub);
+        if (tier !== profile.tier || profile.stripe_subscription_id !== sub.id) {
+          const updateData = {
+            tier,
+            stripe_subscription_id: sub.id,
+            billing_period_end: stripePeriodEnd(sub),
+          };
+          await supabase.from('users').update(updateData).eq('id', user.id);
+          syncedProfile = { ...profile, ...updateData };
+          console.log(`[dashboard] Synced user ${user.id} tier to ${tier} from Stripe`);
+        }
+      } else if (profile.tier !== 'free') {
+        // No active subscription but DB shows paid — downgrade to free
         const updateData = {
-          tier,
-          stripe_subscription_id: sub.id,
-          billing_period_end: stripePeriodEnd(sub),
+          tier: 'free',
+          stripe_subscription_id: null,
+          billing_period_end: null,
         };
         await supabase.from('users').update(updateData).eq('id', user.id);
         syncedProfile = { ...profile, ...updateData };
-        console.log(`[dashboard] Synced user ${user.id} tier to ${tier} from Stripe`);
+        console.log(`[dashboard] Downgraded user ${user.id} to free (no active Stripe subscription)`);
       }
     } catch (err) {
       console.error('[dashboard] Stripe sync error:', err.message);
