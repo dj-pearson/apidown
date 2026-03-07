@@ -6,37 +6,31 @@ export async function GET({ platform }) {
   let apis = [];
   let incidents = [];
   let statusPages = [];
+  let debug = "";
 
   try {
+    const cf = platform?.env || {};
+    const envKeys = Object.keys(cf);
+    debug = `platform=${!!platform}, envKeys=${envKeys.length}`;
+
     const supabase = getSupabaseAdmin();
 
-    // Fetch all APIs for individual /api/[slug] pages
-    const { data: apisData, error: apisErr } = await supabase
-      .from("apis")
-      .select("slug, updated_at, current_status")
-      .order("name");
-    if (apisErr) console.error("Sitemap: apis query error:", apisErr.message);
-    apis = apisData || [];
+    const [apisRes, incRes, spRes] = await Promise.all([
+      supabase.from("apis").select("slug, updated_at, current_status").order("name"),
+      supabase.from("incidents").select("id, started_at, updated_at, status").order("started_at", { ascending: false }).limit(200),
+      supabase.from("users").select("public_status_slug, updated_at").eq("public_status_enabled", true).not("public_status_slug", "is", null),
+    ]);
 
-    // Fetch recent resolved + active incidents for individual /incidents/[id] pages
-    const { data: incData, error: incErr } = await supabase
-      .from("incidents")
-      .select("id, started_at, updated_at, status")
-      .order("started_at", { ascending: false })
-      .limit(200);
-    if (incErr) console.error("Sitemap: incidents query error:", incErr.message);
-    incidents = incData || [];
+    apis = apisRes.data || [];
+    incidents = incRes.data || [];
+    statusPages = spRes.data || [];
 
-    // Fetch public status pages for /status/[slug]
-    const { data: spData, error: spErr } = await supabase
-      .from("users")
-      .select("public_status_slug, updated_at")
-      .eq("public_status_enabled", true)
-      .not("public_status_slug", "is", null);
-    if (spErr) console.error("Sitemap: status pages query error:", spErr.message);
-    statusPages = spData || [];
+    if (apisRes.error) debug += `, apisErr=${apisRes.error.message}`;
+    if (incRes.error) debug += `, incErr=${incRes.error.message}`;
+    if (spRes.error) debug += `, spErr=${spRes.error.message}`;
+    debug += `, apis=${apis.length}, incidents=${incidents.length}, statusPages=${statusPages.length}`;
   } catch (err) {
-    console.error("Sitemap: failed to connect to Supabase:", err.message);
+    debug += `, catch=${err.message}`;
   }
 
   const base = "https://apidown.net";
@@ -84,6 +78,7 @@ export async function GET({ platform }) {
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!-- debug: ${debug} -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join("\n")}
 </urlset>`;
