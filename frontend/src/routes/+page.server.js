@@ -17,6 +17,14 @@ export async function load() {
       .order('started_at', { ascending: false })
       .limit(10);
 
+    // Fetch recent resolved/active incidents for the "Recently Detected" widget
+    const { data: recentIncidents } = await supabaseAdmin
+      .from('incidents')
+      .select('id, api_id, severity, status, title, started_at, resolved_at')
+      .in('severity', ['critical', 'major'])
+      .order('started_at', { ascending: false })
+      .limit(5);
+
     // Fetch 24h sparkline data for all APIs (hourly avg latency)
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: sparklineRaw } = await supabaseAdmin
@@ -44,10 +52,23 @@ export async function load() {
       });
     }
 
+    // Build a lookup of api_id -> api name/slug for recent incidents
+    const apiLookup = {};
+    for (const api of (apis || [])) {
+      apiLookup[api.id] = { name: api.name, slug: api.slug, logo_url: api.logo_url };
+    }
+    const recentDetected = (recentIncidents || []).map(inc => ({
+      ...inc,
+      api_name: apiLookup[inc.api_id]?.name || 'Unknown API',
+      api_slug: apiLookup[inc.api_id]?.slug || '',
+      api_logo: apiLookup[inc.api_id]?.logo_url || '',
+    }));
+
     return {
       apis: apis || [],
       activeIncidents: incidents || [],
       sparklineData,
+      recentDetected,
     };
   } catch (err) {
     console.error('Homepage load error:', err);
