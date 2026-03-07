@@ -6,13 +6,7 @@ export async function GET({ platform }) {
   let apis = [];
   let incidents = [];
   let statusPages = [];
-  let debug = "";
-
   try {
-    const cf = platform?.env || {};
-    const envKeys = Object.keys(cf);
-    debug = `platform=${!!platform}, envKeys=${envKeys.length}`;
-
     const supabase = getSupabaseAdmin();
 
     const [apisRes, incRes, spRes] = await Promise.all([
@@ -24,13 +18,8 @@ export async function GET({ platform }) {
     apis = apisRes.data || [];
     incidents = incRes.data || [];
     statusPages = spRes.data || [];
-
-    if (apisRes.error) debug += `, apisErr=${apisRes.error.message}`;
-    if (incRes.error) debug += `, incErr=${incRes.error.message}`;
-    if (spRes.error) debug += `, spErr=${spRes.error.message}`;
-    debug += `, apis=${apis.length}, incidents=${incidents.length}, statusPages=${statusPages.length}`;
   } catch (err) {
-    debug += `, catch=${err.message}`;
+    console.error("Sitemap: Supabase error:", err.message);
   }
 
   const base = "https://apidown.net";
@@ -75,7 +64,6 @@ export async function GET({ platform }) {
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<!-- debug: ${debug} -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join("\n")}
 </urlset>`;
@@ -83,7 +71,7 @@ ${urls.join("\n")}
   return new Response(xml, {
     headers: {
       "Content-Type": "application/xml",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "public, s-maxage=0, max-age=300",
     },
   });
 }
