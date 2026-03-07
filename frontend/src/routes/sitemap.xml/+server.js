@@ -16,9 +16,9 @@ export async function GET({ platform }) {
     const supabase = getSupabaseAdmin();
 
     const [apisRes, incRes, spRes] = await Promise.all([
-      supabase.from("apis").select("slug, updated_at, current_status").order("name"),
-      supabase.from("incidents").select("id, started_at, updated_at, status").order("started_at", { ascending: false }).limit(200),
-      supabase.from("users").select("public_status_slug, updated_at").eq("public_status_enabled", true).not("public_status_slug", "is", null),
+      supabase.from("apis").select("slug, current_status").order("name"),
+      supabase.from("incidents").select("id, started_at, resolved_at, status").order("started_at", { ascending: false }).limit(200),
+      supabase.from("users").select("public_status_slug").eq("public_status_enabled", true).not("public_status_slug", "is", null),
     ]);
 
     apis = apisRes.data || [];
@@ -57,21 +57,18 @@ export async function GET({ platform }) {
 
   // Individual API detail pages  /api/[slug]
   for (const a of apis) {
-    const lastmod = a.updated_at || now;
-    // APIs with active issues get higher priority for crawl freshness
     const priority = a.current_status !== "operational" ? "1.0" : "0.9";
-    urls.push(urlEntry(`${base}/api/${a.slug}`, lastmod, "hourly", priority));
+    urls.push(urlEntry(`${base}/api/${a.slug}`, now, "hourly", priority));
   }
 
   // Public status pages  /status/[slug]
   for (const sp of statusPages) {
-    const lastmod = sp.updated_at || now;
-    urls.push(urlEntry(`${base}/status/${sp.public_status_slug}`, lastmod, "daily", "0.7"));
+    urls.push(urlEntry(`${base}/status/${sp.public_status_slug}`, now, "daily", "0.7"));
   }
 
   // Individual incident pages  /incidents/[id]
   for (const inc of incidents) {
-    const lastmod = inc.updated_at || inc.started_at || now;
+    const lastmod = inc.resolved_at || inc.started_at || now;
     const priority = inc.status !== "resolved" ? "0.7" : "0.5";
     const freq = inc.status !== "resolved" ? "hourly" : "monthly";
     urls.push(urlEntry(`${base}/incidents/${inc.id}`, lastmod, freq, priority));
