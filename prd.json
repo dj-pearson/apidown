@@ -1565,8 +1565,8 @@
         "Typecheck passes"
       ],
       "priority": 97,
-      "passes": false,
-      "notes": "Legal pages are missing from the site entirely"
+      "passes": true,
+      "notes": "Added /privacy and /terms routes with full legal content, footer links added"
     },
     {
       "id": "US-098",
@@ -1594,8 +1594,8 @@
         "Typecheck passes"
       ],
       "priority": 99,
-      "passes": false,
-      "notes": "Homepage has real-time updates but incidents page is static"
+      "passes": true,
+      "notes": "Added Supabase postgres_changes subscription for INSERT/UPDATE on incidents table, live indicator dot"
     },
     {
       "id": "US-100",
@@ -1608,8 +1608,8 @@
         "Typecheck passes"
       ],
       "priority": 100,
-      "passes": false,
-      "notes": "Currently filters reset when navigating away and back"
+      "passes": true,
+      "notes": "Filters synced to URL query params (severity, status, range, q), restored on page load, debounced search"
     },
     {
       "id": "US-101",
@@ -1622,8 +1622,8 @@
         "Typecheck passes"
       ],
       "priority": 101,
-      "passes": false,
-      "notes": "Current registration only has min 6 character check with no visual feedback"
+      "passes": true,
+      "notes": "Added 5-point scoring system, visual strength bar, and requirement hint checkmarks"
     }
   ]
 }

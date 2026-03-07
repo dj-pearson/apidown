@@ -1,16 +1,21 @@
 <script>
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { createClient } from '@supabase/supabase-js';
 
   let { data } = $props();
   let incidents = $state(data.incidents);
   let totalCount = $state(data.totalCount);
   let currentPage = $state(data.page);
   let pageSize = data.pageSize;
-  let filterSeverity = $state('all');
-  let filterStatus = $state('all');
-  let filterDateRange = $state('all');
-  let searchQuery = $state('');
   let loadingMore = $state(false);
+  let liveIndicator = $state('connecting');
+
+  // Initialize filters from URL query params
+  let filterSeverity = $state(page.url.searchParams.get('severity') || 'all');
+  let filterStatus = $state(page.url.searchParams.get('status') || 'all');
+  let filterDateRange = $state(page.url.searchParams.get('range') || 'all');
+  let searchQuery = $state(page.url.searchParams.get('q') || '');
 
   // Update state when data changes (navigation)
   $effect(() => {
@@ -18,6 +23,58 @@
     totalCount = data.totalCount;
     currentPage = data.page;
   });
+
+  // Real-time subscription for incident changes
+  $effect(() => {
+    const url = data.supabaseUrl;
+    const key = data.supabaseAnonKey;
+    if (!url || !key) return;
+
+    const supabase = createClient(url, key);
+    const channel = supabase
+      .channel('incidents-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' }, (payload) => {
+        // Prepend new incident to list
+        const newInc = { ...payload.new, apis: { name: 'Loading...', slug: '' }, report_count: 0 };
+        incidents = [newInc, ...incidents];
+        totalCount++;
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'incidents' }, (payload) => {
+        // Update existing incident in list
+        incidents = incidents.map(inc =>
+          inc.id === payload.new.id ? { ...inc, ...payload.new } : inc
+        );
+      })
+      .subscribe((status) => {
+        liveIndicator = status === 'SUBSCRIBED' ? 'live' : 'connecting';
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  });
+
+  // Persist filter state to URL without triggering navigation
+  function updateFilterUrl() {
+    const url = new URL(window.location.href);
+    if (filterSeverity !== 'all') url.searchParams.set('severity', filterSeverity);
+    else url.searchParams.delete('severity');
+    if (filterStatus !== 'all') url.searchParams.set('status', filterStatus);
+    else url.searchParams.delete('status');
+    if (filterDateRange !== 'all') url.searchParams.set('range', filterDateRange);
+    else url.searchParams.delete('range');
+    if (searchQuery) url.searchParams.set('q', searchQuery);
+    else url.searchParams.delete('q');
+    url.searchParams.delete('page');
+    history.replaceState(null, '', url.toString());
+  }
+
+  // Debounce search query URL updates
+  let searchTimeout;
+  function onSearchInput() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(updateFilterUrl, 300);
+  }
 
   let filteredIncidents = $derived.by(() => {
     return incidents.filter(inc => {
@@ -94,7 +151,7 @@
 
 <div class="incidents-header">
   <div>
-    <h1>Incidents</h1>
+    <h1>Incidents <span class="live-dot" class:live={liveIndicator === 'live'} title={liveIndicator === 'live' ? 'Live updates active' : 'Connecting...'}></span></h1>
     <p class="subtitle">Active and recent incidents across all monitored APIs</p>
   </div>
   <a href="/incidents/rss" class="rss-link" aria-label="RSS Feed" title="Subscribe to RSS Feed">
@@ -111,11 +168,11 @@
 {:else}
   <div class="filters" role="toolbar" aria-label="Incident filters">
     <div class="filter-group search-group">
-      <input type="text" placeholder="Search by API or incident title..." bind:value={searchQuery} aria-label="Search incidents" class="search-input" />
+      <input type="text" placeholder="Search by API or incident title..." bind:value={searchQuery} oninput={onSearchInput} aria-label="Search incidents" class="search-input" />
     </div>
     <div class="filter-group">
       <label for="severity-filter">Severity</label>
-      <select id="severity-filter" bind:value={filterSeverity}>
+      <select id="severity-filter" bind:value={filterSeverity} onchange={updateFilterUrl}>
         <option value="all">All</option>
         <option value="critical">Critical</option>
         <option value="major">Major</option>
@@ -124,7 +181,7 @@
     </div>
     <div class="filter-group">
       <label for="status-filter">Status</label>
-      <select id="status-filter" bind:value={filterStatus}>
+      <select id="status-filter" bind:value={filterStatus} onchange={updateFilterUrl}>
         <option value="all">All</option>
         <option value="active">Active</option>
         <option value="resolved">Resolved</option>
@@ -132,7 +189,7 @@
     </div>
     <div class="filter-group">
       <label for="date-filter">Period</label>
-      <select id="date-filter" bind:value={filterDateRange}>
+      <select id="date-filter" bind:value={filterDateRange} onchange={updateFilterUrl}>
         <option value="all">All time</option>
         <option value="7d">Last 7 days</option>
         <option value="30d">Last 30 days</option>
@@ -145,7 +202,7 @@
   {#if filteredIncidents.length === 0}
     <div class="empty-state">
       <p>No incidents match the selected filters.</p>
-      <button class="clear-filters" onclick={() => { filterSeverity = 'all'; filterStatus = 'all'; }}>Clear filters</button>
+      <button class="clear-filters" onclick={() => { filterSeverity = 'all'; filterStatus = 'all'; filterDateRange = 'all'; searchQuery = ''; updateFilterUrl(); }}>Clear filters</button>
     </div>
   {:else}
     <div class="incidents-list">
@@ -194,6 +251,28 @@
   h1 {
     font-size: 1.5rem;
     margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .live-dot.live {
+    background: var(--color-operational);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
 
   .subtitle {

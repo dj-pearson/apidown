@@ -10,6 +10,22 @@
   let errorMsg = $state('');
   let successMsg = $state('');
 
+  // Password strength
+  let passwordStrength = $derived.by(() => {
+    if (!password || mode !== 'register') return null;
+    let score = 0;
+    if (password.length >= 6) score++;
+    if (password.length >= 10) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (score <= 1) return { label: 'Weak', color: 'var(--color-down)', pct: 20 };
+    if (score <= 2) return { label: 'Fair', color: '#f97316', pct: 40 };
+    if (score <= 3) return { label: 'Good', color: 'var(--color-degraded)', pct: 60 };
+    if (score <= 4) return { label: 'Strong', color: 'var(--color-operational)', pct: 80 };
+    return { label: 'Very strong', color: 'var(--color-operational)', pct: 100 };
+  });
+
   // MFA challenge state
   let mfaRequired = $state(false);
   let mfaCode = $state('');
@@ -239,6 +255,20 @@
             </button>
           </div>
         </label>
+        {#if passwordStrength}
+          <div class="password-strength" aria-label="Password strength: {passwordStrength.label}">
+            <div class="strength-bar">
+              <div class="strength-fill" style="width: {passwordStrength.pct}%; background: {passwordStrength.color}"></div>
+            </div>
+            <span class="strength-label" style="color: {passwordStrength.color}">{passwordStrength.label}</span>
+          </div>
+          <div class="password-hints">
+            <span class:met={password.length >= 6}>6+ characters</span>
+            <span class:met={/[A-Z]/.test(password)}>Uppercase</span>
+            <span class:met={/[0-9]/.test(password)}>Number</span>
+            <span class:met={/[^A-Za-z0-9]/.test(password)}>Special char</span>
+          </div>
+        {/if}
         {#if mode === 'login'}
           <div class="forgot-password">
             <a href="/auth/forgot-password">Forgot password?</a>
@@ -545,6 +575,53 @@
 
   .toggle-password:hover {
     color: var(--color-primary);
+  }
+
+  /* Password strength */
+  .password-strength {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: -0.5rem;
+  }
+
+  .strength-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .strength-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.2s, background 0.2s;
+  }
+
+  .strength-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .password-hints {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: -0.5rem;
+  }
+
+  .password-hints span {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    transition: opacity 0.15s, color 0.15s;
+  }
+
+  .password-hints span.met {
+    color: var(--color-operational);
+    opacity: 1;
   }
 
   /* Mobile: stack vertically */

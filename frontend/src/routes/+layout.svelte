@@ -197,6 +197,8 @@
         <h4>Company</h4>
         <ul>
           <li><a href="/login">Log In / Sign Up</a></li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Service</a></li>
           <li><a href="/sitemap.xml">Sitemap</a></li>
           <li><a href="/llms.txt">LLMs.txt</a></li>
           <li><a href="/robots.txt">Robots.txt</a></li>
