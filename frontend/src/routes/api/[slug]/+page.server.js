@@ -179,6 +179,17 @@ export async function load({ params, cookies, url }) {
     }
   }
 
+  // Community pulse: subscriber count and report count
+  const { count: subscriberCount } = await supabaseAdmin
+    .from('alert_subscriptions')
+    .select('*', { count: 'exact', head: true })
+    .eq('api_id', api.id);
+
+  const { count: reportCount } = await supabaseAdmin
+    .from('manual_reports')
+    .select('*', { count: 'exact', head: true })
+    .eq('api_id', api.id);
+
   return {
     api,
     incidents: incidents || [],
@@ -189,6 +200,8 @@ export async function load({ params, cookies, url }) {
     userTier,
     isPinned,
     maintenances: maintenances || [],
+    subscriberCount: subscriberCount || 0,
+    reportCount: reportCount || 0,
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
   };
 }
