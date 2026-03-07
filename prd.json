@@ -1163,6 +1163,381 @@
       "priority": 72,
       "passes": true,
       "notes": "sla_targets table in migration 020, /sla report page with pass/fail badges and CSV export, dashboard SLA summary widget in My Stack, incident-based uptime calculation"
+    },
+    {
+      "id": "US-073",
+      "title": "Add prominent hero CTA button on homepage",
+      "description": "As a visitor, I want to see a clear call-to-action button in the hero section so I immediately know how to get started with APIdown.",
+      "acceptanceCriteria": [
+        "Add a prominent 'Get Started Free' primary CTA button below the hero headline",
+        "Add a secondary 'View Live Demo' ghost/outline button beside it",
+        "CTA links to /login for signup, demo scrolls to the API grid",
+        "Buttons are responsive and stack vertically on mobile",
+        "Include brief subtext under CTAs: 'No credit card required. Monitor 40+ APIs instantly.'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 73,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-074",
+      "title": "Add social proof and trust signals to homepage",
+      "description": "As a visitor, I want to see trust signals like developer count, monitored API count, and uptime guarantees so I feel confident in the platform's reliability.",
+      "acceptanceCriteria": [
+        "Add a trust bar section between hero and API grid with key metrics (e.g., '10,000+ Developers', '40+ APIs Monitored', '99.9% Platform Uptime', '< 30s Detection Time')",
+        "Style as a horizontal strip with icon + metric + label layout",
+        "Metrics animate or stand out visually on scroll into view",
+        "Responsive: 2x2 grid on mobile, 4-column row on desktop",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 74,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-075",
+      "title": "Add recently detected outages widget to homepage",
+      "description": "As a visitor, I want to see a 'Recently Detected Outages' section on the homepage so I can immediately see the platform's value in detecting real incidents.",
+      "acceptanceCriteria": [
+        "Add a 'Recently Detected' section below the API grid showing the last 5 critical/major incidents",
+        "Each incident shows: API name, severity badge, title, time ago, and resolution status",
+        "Link each incident to its detail page",
+        "Show 'View All Incidents' link to /incidents",
+        "Empty state: 'All systems operational \u2014 no recent critical incidents'",
+        "Section includes brief SEO copy explaining crowd-sourced detection",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 75,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-076",
+      "title": "Add feature comparison table to pricing page",
+      "description": "As a prospective customer, I want to see a side-by-side feature comparison table on the pricing page so I can quickly understand which plan fits my needs.",
+      "acceptanceCriteria": [
+        "Add a feature comparison matrix below the plan cards on the pricing page",
+        "Columns: Free, Pro, Team; Rows: all key features with check/cross/value indicators",
+        "Include features: API keys, alert channels, alert subscriptions, SLA reports, incident notes, custom APIs, support tier",
+        "Highlight the Pro column as recommended",
+        "Responsive: horizontally scrollable on mobile with sticky first column",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 76,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-077",
+      "title": "Add annual billing toggle with discount to pricing page",
+      "description": "As a prospective customer, I want to see an option for annual billing with a discount so I can save money by committing long-term.",
+      "acceptanceCriteria": [
+        "Add a Monthly/Annual toggle above the pricing cards",
+        "Annual pricing shows discounted rate (e.g., 20% off) with 'Save 20%' badge",
+        "Pro annual: $15/mo billed annually vs $19/month; Team: $39/mo billed annually vs $49/month",
+        "Toggle animates smoothly between pricing views",
+        "Checkout flow passes correct billing period to Stripe",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 77,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-078",
+      "title": "Add testimonials section to pricing page",
+      "description": "As a prospective customer, I want to see testimonials from other developers on the pricing page to reinforce my confidence before purchasing.",
+      "acceptanceCriteria": [
+        "Add 3 testimonial cards below the pricing comparison table",
+        "Each testimonial includes quote, name, role, company, and optional avatar",
+        "Layout: 3-column grid on desktop, stacked on mobile",
+        "Testimonials are hardcoded initially but structured for future CMS integration",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 78,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-079",
+      "title": "Add 'Get Started Free' CTA button to site navigation",
+      "description": "As a visitor, I want to see a visible signup CTA in the navigation bar so I can register from any page without hunting for the signup link.",
+      "acceptanceCriteria": [
+        "Add a 'Get Started' primary-styled button/link in the header nav (right side)",
+        "Button appears for unauthenticated users only",
+        "Authenticated users see 'Dashboard' link instead",
+        "Button is visible on both desktop and mobile nav",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 79,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-080",
+      "title": "Add newsletter signup to footer",
+      "description": "As a visitor, I want to subscribe to a newsletter from the footer so I can stay updated on API outages and platform news.",
+      "acceptanceCriteria": [
+        "Add a newsletter signup form in the footer with email input and 'Subscribe' button",
+        "Form submits to a Supabase newsletter_subscribers table or third-party service",
+        "Show success/error toast on submission",
+        "Include brief copy: 'Get weekly API reliability insights'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 80,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-081",
+      "title": "Add social media links and expanded footer content",
+      "description": "As a visitor, I want to see social media links and comprehensive footer navigation so I can connect with the brand and find information easily.",
+      "acceptanceCriteria": [
+        "Add social media icons/links in footer (GitHub, Twitter/X, LinkedIn, Discord)",
+        "Add 'Resources' column with links to Blog, Changelog, API Reference, Status Page",
+        "Add 'Company' column with About, Contact, Privacy Policy, Terms of Service",
+        "Footer includes platform uptime badge or status indicator",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 81,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-082",
+      "title": "Add visible breadcrumb navigation to all content pages",
+      "description": "As a user, I want to see breadcrumb navigation on all content pages so I can understand my location in the site hierarchy and navigate back easily.",
+      "acceptanceCriteria": [
+        "Add visual breadcrumb component below the header on: Incidents list, Incident detail, API detail, Docs, Pricing, Dashboard",
+        "Breadcrumbs match the existing JSON-LD BreadcrumbList schema already in head",
+        "Styled consistently with the dark theme: muted text with '/' or '>' separators",
+        "Last breadcrumb is current page (not a link)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 82,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-083",
+      "title": "Add incident search and date range filter to incidents page",
+      "description": "As a user, I want to search incidents by API name or keyword and filter by date range so I can find specific historical outages quickly.",
+      "acceptanceCriteria": [
+        "Add a search input to the incidents page toolbar for filtering by API name or incident title",
+        "Add a date range filter (Last 7 days, 30 days, 90 days, All time)",
+        "Search and filters work client-side on loaded data",
+        "Update the 'Showing X of Y incidents' counter to reflect filtered results",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 83,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-084",
+      "title": "Add 'Why APIdown' comparison page vs traditional status pages",
+      "description": "As a prospective customer, I want to see a detailed comparison between APIdown and traditional vendor status pages so I understand the unique value proposition.",
+      "acceptanceCriteria": [
+        "Create /compare route with 'APIdown vs Vendor Status Pages' content",
+        "Side-by-side comparison table: Detection time, Independence, Coverage, Cost, Real-time accuracy",
+        "Include 2-3 real-world examples of delayed vendor status page updates",
+        "CTA to sign up for free at bottom of page",
+        "Proper SEO meta tags and structured data",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 84,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-085",
+      "title": "Add 'How It Works' visual step-by-step section to homepage",
+      "description": "As a visitor, I want a clear visual step-by-step explanation of how APIdown works so I quickly understand the platform's value without reading long text.",
+      "acceptanceCriteria": [
+        "Replace or enhance the existing 'How Does APIdown Monitor' section with a 3-step visual flow",
+        "Steps: 1) Install SDK (code snippet preview), 2) We Detect Issues (anomaly detection visual), 3) Get Alerted (notification channels visual)",
+        "Each step has an icon/illustration, heading, and brief description",
+        "Connected by visual flow arrows or lines between steps",
+        "Responsive: stacks vertically on mobile with connecting line",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 85,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-086",
+      "title": "Add login page benefit messaging and social login",
+      "description": "As a new user, I want to see the benefits of signing up on the login page and have easy social login options so registration feels frictionless.",
+      "acceptanceCriteria": [
+        "Add a left panel or section showing 3-4 key benefits of signing up (Free forever, 40+ APIs, Instant alerts, No credit card)",
+        "Benefits panel includes a mini testimonial or trust metric",
+        "Add 'Continue with GitHub' OAuth button above the email form",
+        "Add divider 'or continue with email' between social and email login",
+        "Forgot password link visible below the password field",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 86,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-087",
+      "title": "Add responsive search bar and improved mobile toolbar on homepage",
+      "description": "As a mobile user, I want the search bar and toolbar controls to be fully responsive so I can easily filter and sort APIs on any device.",
+      "acceptanceCriteria": [
+        "Search bar expands to full width on mobile (remove fixed 300px width)",
+        "Sort buttons wrap to a second row on small screens without overflow",
+        "Toolbar stacks vertically on screens <480px",
+        "Touch targets meet 44px minimum for mobile accessibility",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 87,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-088",
+      "title": "Add dashboard onboarding checklist for new users",
+      "description": "As a new user, I want to see a getting-started checklist on my dashboard so I know what steps to take to get value from the platform.",
+      "acceptanceCriteria": [
+        "Show an onboarding card at the top of the dashboard for users with no API keys or subscriptions",
+        "Checklist items: 1) Create API key, 2) Install SDK, 3) Subscribe to alerts, 4) Pin APIs to My Stack",
+        "Each item links to the relevant section or documentation",
+        "Card can be dismissed and stays dismissed (stored in localStorage)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 88,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-089",
+      "title": "Add SEO-optimized 'Is [API] Down?' pages for top APIs",
+      "description": "As a search user, I want to find APIdown when I search 'Is Stripe down?' or 'AWS status' so the platform captures high-intent organic traffic.",
+      "acceptanceCriteria": [
+        "API detail pages include H1 formatted as 'Is [API Name] Down? Real-Time Status'",
+        "Meta title follows pattern: 'Is [API] Down? Check [API] Status & Outages | APIdown'",
+        "Meta description includes current status and recent incident info dynamically",
+        "FAQ schema includes 'Is [API] down right now?' with dynamic answer",
+        "Add 'Check [API] Status' internal links from homepage API cards",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 89,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-090",
+      "title": "Add incident RSS feed for SEO and engagement",
+      "description": "As a developer, I want an RSS feed of API incidents so I can subscribe in my feed reader and stay updated without visiting the site.",
+      "acceptanceCriteria": [
+        "Create /incidents/rss.xml endpoint that returns valid RSS 2.0 feed",
+        "Feed includes last 50 incidents with title, description, link, pubDate, category (severity)",
+        "Add RSS autodiscovery link tag in the head of incidents pages",
+        "Add visible 'RSS Feed' link/icon on the incidents list page",
+        "Typecheck passes"
+      ],
+      "priority": 90,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-091",
+      "title": "Improve docs page with Getting Started guide and API reference",
+      "description": "As a developer, I want a clear Getting Started section at the top of the docs and a REST API reference section so I can quickly integrate APIdown.",
+      "acceptanceCriteria": [
+        "Add 'Getting Started' section at the top of docs with 3-step quickstart",
+        "Add 'REST API Reference' section documenting the public API endpoints",
+        "Add 'Troubleshooting' section with common integration issues",
+        "Update sidebar TOC to include new sections",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 91,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-092",
+      "title": "Add keyboard-accessible mobile menu with focus trap",
+      "description": "As a keyboard/screen reader user, I want the mobile menu to trap focus and be fully navigable so I can use the site without a mouse.",
+      "acceptanceCriteria": [
+        "Mobile menu traps focus when open (Tab cycles within menu items)",
+        "Escape key closes the menu",
+        "Focus returns to hamburger button when menu closes",
+        "Menu items are reachable via Tab and activatable via Enter/Space",
+        "aria-expanded attribute toggles on hamburger button",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 92,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-093",
+      "title": "Add font loading optimization for performance",
+      "description": "As a user, I want fonts to load without visible layout shift so the page renders smoothly on first visit.",
+      "acceptanceCriteria": [
+        "Add font-display: swap to Google Fonts import URL",
+        "Add preload link tags for critical font files (Inter, JetBrains Mono)",
+        "Measure and verify no CLS (Cumulative Layout Shift) from font loading",
+        "Typecheck passes"
+      ],
+      "priority": 93,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-094",
+      "title": "Add 'Monitoring [API] community pulse' social proof to API detail pages",
+      "description": "As a visitor on an API detail page, I want to see how many developers are monitoring this API so I understand the community trust in the platform.",
+      "acceptanceCriteria": [
+        "Show 'X developers monitoring this API' count on API detail page header area",
+        "Show 'X reports submitted' count to demonstrate crowd-sourced activity",
+        "Counts pull from actual subscription and report data",
+        "If counts are low, show 'Be one of the first to monitor [API]' instead",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 94,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-095",
+      "title": "Add page-level structured data improvements for rich search results",
+      "description": "As a search engine, I want comprehensive structured data on all pages so APIdown appears with rich snippets in search results.",
+      "acceptanceCriteria": [
+        "Add Organization schema to layout with logo, social profiles, contact info",
+        "Incidents page gets ItemList schema for incident entries",
+        "Pricing page gets Product schema with pricing offers",
+        "Docs page gets TechArticle schema",
+        "Validate all schemas with Google Rich Results Test",
+        "Typecheck passes"
+      ],
+      "priority": 95,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

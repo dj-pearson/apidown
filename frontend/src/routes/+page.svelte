@@ -6,6 +6,7 @@
   let { data } = $props();
   let apis = $state(data.apis);
   let activeIncidents = $state(data.activeIncidents);
+  let recentDetected = data.recentDetected || [];
   let sparklineData = data.sparklineData || {};
   let searchQuery = $state('');
   let sortMode = $state(typeof localStorage !== 'undefined' ? localStorage.getItem('apidown-sort') || 'category' : 'category');
@@ -195,9 +196,34 @@
     <span class="divider">·</span>
     <span class="stat stat-ok">{operationalCount}/{apis.length} operational</span>
   </div>
+  <div class="hero-ctas">
+    <a href="/login" class="cta-primary">Get Started Free</a>
+    <a href="#api-grid" class="cta-secondary">View Live Status</a>
+  </div>
+  <p class="hero-subtext">No credit card required. Monitor {apis.length}+ APIs instantly.</p>
 </div>
 
-<div class="toolbar">
+<!-- Trust Bar -->
+<section class="trust-bar" aria-label="Platform metrics">
+  <div class="trust-metric">
+    <span class="trust-number">{apis.length}+</span>
+    <span class="trust-label">APIs Monitored</span>
+  </div>
+  <div class="trust-metric">
+    <span class="trust-number">99.9%</span>
+    <span class="trust-label">Platform Uptime</span>
+  </div>
+  <div class="trust-metric">
+    <span class="trust-number">&lt; 30s</span>
+    <span class="trust-label">Detection Time</span>
+  </div>
+  <div class="trust-metric">
+    <span class="trust-number">24/7</span>
+    <span class="trust-label">Real-Time Monitoring</span>
+  </div>
+</section>
+
+<div class="toolbar" id="api-grid">
   <div class="search-bar">
     <input
       type="text"
@@ -244,6 +270,47 @@
     {/each}
   {/if}
 {/if}
+
+<!-- Recently Detected Outages -->
+<section class="seo-section recent-incidents-section" aria-labelledby="recent-outages">
+  <h2 id="recent-outages">Recently Detected Outages</h2>
+  <p class="section-intro">Our crowd-sourced monitoring network detects API outages in real-time from production traffic — often minutes before official status pages acknowledge the issue.</p>
+  {#if recentDetected.length > 0}
+    <div class="recent-incidents-list">
+      {#each recentDetected as incident}
+        {@const timeAgo = (() => {
+          const diff = Date.now() - new Date(incident.started_at).getTime();
+          const hours = Math.floor(diff / 3600000);
+          const days = Math.floor(hours / 24);
+          if (days > 0) return `${days}d ago`;
+          if (hours > 0) return `${hours}h ago`;
+          return 'Just now';
+        })()}
+        <a href="/incidents/{incident.id}" class="recent-incident-card">
+          <div class="recent-incident-left">
+            <span class="severity-badge severity-{incident.severity}">{incident.severity}</span>
+            <div class="recent-incident-info">
+              <span class="recent-api-name">{incident.api_name}</span>
+              <span class="recent-incident-title">{incident.title}</span>
+            </div>
+          </div>
+          <div class="recent-incident-right">
+            <span class="recent-status status-{incident.status}">{incident.status}</span>
+            <span class="recent-time">{timeAgo}</span>
+          </div>
+        </a>
+      {/each}
+    </div>
+    <div class="recent-incidents-footer">
+      <a href="/incidents" class="view-all-link">View All Incidents &rarr;</a>
+    </div>
+  {:else}
+    <div class="no-recent-incidents">
+      <span class="all-clear-icon">&#10003;</span>
+      <p>All systems operational — no recent critical incidents detected.</p>
+    </div>
+  {/if}
+</section>
 
 <!-- How It Works -->
 <section class="seo-section" aria-labelledby="how-it-works">
@@ -410,6 +477,106 @@
     color: var(--color-operational);
   }
 
+  /* Hero CTAs */
+  .hero-ctas {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .cta-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 2rem;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .cta-primary:hover {
+    background: var(--color-primary-light);
+    transform: translateY(-1px);
+  }
+
+  .cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 2rem;
+    background: transparent;
+    color: var(--color-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid var(--color-primary);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .cta-secondary:hover {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .hero-subtext {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  /* Trust Bar */
+  .trust-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    padding: 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+
+  .trust-metric {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .trust-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .trust-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    .trust-bar {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero-ctas {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cta-primary, .cta-secondary {
+      width: 100%;
+      max-width: 280px;
+      justify-content: center;
+    }
+  }
+
   .toolbar {
     display: flex;
     align-items: center;
@@ -420,7 +587,7 @@
   }
 
   .search-bar input {
-    width: 300px;
+    width: min(300px, 100%);
     padding: 0.6rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -511,6 +678,171 @@
 
   .clear-search:hover {
     border-color: var(--color-primary);
+  }
+
+  /* Recently Detected Outages */
+  .recent-incidents-list {
+    max-width: 760px;
+    margin: 1.5rem auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .recent-incident-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--color-text);
+    transition: border-color 0.15s, background 0.15s;
+    gap: 1rem;
+  }
+
+  .recent-incident-card:hover {
+    border-color: var(--color-primary);
+    background: var(--color-surface-hover, #1e293b);
+  }
+
+  .recent-incident-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .severity-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+
+  .severity-critical {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+
+  .severity-major {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  .recent-incident-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .recent-api-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .recent-incident-title {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .recent-incident-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .recent-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .status-resolved {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  .status-investigating, .status-identified, .status-monitoring {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  .recent-time {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .recent-incidents-footer {
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  .view-all-link {
+    color: var(--color-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .view-all-link:hover {
+    color: var(--color-primary-light);
+  }
+
+  .no-recent-incidents {
+    text-align: center;
+    padding: 2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    max-width: 500px;
+    margin: 1.5rem auto 0;
+  }
+
+  .all-clear-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .no-recent-incidents p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .recent-incident-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .recent-incident-right {
+      align-self: flex-end;
+    }
   }
 
   /* SEO sections */
