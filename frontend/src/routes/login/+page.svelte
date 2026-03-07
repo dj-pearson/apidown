@@ -132,6 +132,54 @@
 </svelte:head>
 
 <div class="auth-page">
+  <!-- Benefits panel (left on desktop, top on mobile) -->
+  <div class="benefits-panel">
+    <h2 class="benefits-heading">Monitor every API you depend on</h2>
+    <ul class="benefits-list">
+      <li class="benefit-item">
+        <span class="benefit-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+        <div>
+          <strong>Free Forever</strong>
+          <span class="benefit-desc">Monitor 40+ APIs at no cost</span>
+        </div>
+      </li>
+      <li class="benefit-item">
+        <span class="benefit-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </span>
+        <div>
+          <strong>Instant Alerts</strong>
+          <span class="benefit-desc">Get notified before vendors acknowledge issues</span>
+        </div>
+      </li>
+      <li class="benefit-item">
+        <span class="benefit-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </span>
+        <div>
+          <strong>Production Data</strong>
+          <span class="benefit-desc">Real traffic signals, not synthetic pings</span>
+        </div>
+      </li>
+      <li class="benefit-item">
+        <span class="benefit-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </span>
+        <div>
+          <strong>One Dashboard</strong>
+          <span class="benefit-desc">All your API dependencies in one place</span>
+        </div>
+      </li>
+    </ul>
+    <p class="trust-metric">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-operational)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Trusted by <strong>10,000+</strong> developers
+    </p>
+  </div>
+
+  <!-- Auth form (right on desktop, bottom on mobile) -->
   <div class="auth-card">
     {#if mfaRequired}
       <h1>Two-Factor Authentication</h1>
@@ -167,6 +215,16 @@
         {mode === 'login' ? 'Sign in to manage your API keys and alerts.' : 'Create a free account to get started.'}
       </p>
 
+      <!-- GitHub OAuth button -->
+      <a href="/auth/oauth/github" class="github-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        Continue with GitHub
+      </a>
+
+      <div class="divider">
+        <span>or continue with email</span>
+      </div>
+
       <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
         <label>
           Email
@@ -181,6 +239,11 @@
             </button>
           </div>
         </label>
+        {#if mode === 'login'}
+          <div class="forgot-password">
+            <a href="/auth/forgot-password">Forgot password?</a>
+          </div>
+        {/if}
         <button type="submit" disabled={loading}>
           {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Sign Up'}
         </button>
@@ -208,9 +271,90 @@
   .auth-page {
     display: flex;
     justify-content: center;
-    padding-top: 2rem;
+    align-items: stretch;
+    gap: 2rem;
+    padding: 2rem 1rem;
+    max-width: 900px;
+    margin: 0 auto;
   }
 
+  /* Benefits panel */
+  .benefits-panel {
+    flex: 1;
+    max-width: 380px;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(16, 185, 129, 0.06) 100%);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .benefits-heading {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+  }
+
+  .benefits-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .benefit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .benefit-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(6, 182, 212, 0.12);
+    border-radius: 8px;
+    color: var(--color-primary);
+  }
+
+  .benefit-item strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    margin-bottom: 0.1rem;
+  }
+
+  .benefit-desc {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+  }
+
+  .trust-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  .trust-metric strong {
+    color: var(--color-text);
+  }
+
+  /* Auth card */
   .auth-card {
     width: 100%;
     max-width: 400px;
@@ -218,6 +362,7 @@
     border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 2rem;
+    align-self: center;
   }
 
   h1 {
@@ -229,6 +374,51 @@
     color: var(--color-text-muted);
     font-size: 0.85rem;
     margin-bottom: 1.5rem;
+  }
+
+  /* GitHub OAuth button */
+  .github-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .github-btn:hover {
+    border-color: var(--color-text-muted);
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+  }
+
+  .divider span {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
   }
 
   form {
@@ -266,6 +456,22 @@
     letter-spacing: 0.3em;
     text-align: center;
     padding: 0.75rem;
+  }
+
+  /* Forgot password link */
+  .forgot-password {
+    text-align: right;
+    margin-top: -0.5rem;
+  }
+
+  .forgot-password a {
+    font-size: 0.8rem;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .forgot-password a:hover {
+    text-decoration: underline;
   }
 
   button[type="submit"] {
@@ -339,5 +545,23 @@
 
   .toggle-password:hover {
     color: var(--color-primary);
+  }
+
+  /* Mobile: stack vertically */
+  @media (max-width: 768px) {
+    .auth-page {
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .benefits-panel {
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .auth-card {
+      max-width: 100%;
+    }
   }
 </style>

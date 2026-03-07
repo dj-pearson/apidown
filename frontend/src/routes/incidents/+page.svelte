@@ -8,6 +8,8 @@
   let pageSize = data.pageSize;
   let filterSeverity = $state('all');
   let filterStatus = $state('all');
+  let filterDateRange = $state('all');
+  let searchQuery = $state('');
   let loadingMore = $state(false);
 
   // Update state when data changes (navigation)
@@ -22,9 +24,24 @@
       if (filterSeverity !== 'all' && inc.severity !== filterSeverity) return false;
       if (filterStatus === 'active' && inc.status === 'resolved') return false;
       if (filterStatus === 'resolved' && inc.status !== 'resolved') return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesApi = (inc.apis?.name || '').toLowerCase().includes(q);
+        const matchesTitle = (inc.title || '').toLowerCase().includes(q);
+        if (!matchesApi && !matchesTitle) return false;
+      }
+      if (filterDateRange !== 'all') {
+        const days = { '7d': 7, '30d': 30, '90d': 90 }[filterDateRange] || 0;
+        if (days > 0) {
+          const cutoff = Date.now() - days * 86400000;
+          if (new Date(inc.started_at).getTime() < cutoff) return false;
+        }
+      }
       return true;
     });
   });
+
+  let filteredCount = $derived(filteredIncidents.length);
 
   let displayedCount = $derived(incidents.length);
   let hasMore = $derived(currentPage * pageSize < totalCount);
@@ -47,6 +64,7 @@
 <svelte:head>
   <title>API Incidents — APIdown.net</title>
   <meta name="description" content="Active and recent API incidents detected from real production traffic. View outage timelines, affected regions, and resolution status for {totalCount} tracked incidents." />
+  <link rel="alternate" type="application/rss+xml" title="APIdown.net Incident Feed" href="/incidents/rss" />
   {@html `<script type="application/ld+json">${JSON.stringify([
     {
       "@context": "https://schema.org",
@@ -67,8 +85,23 @@
   ])}</script>`}
 </svelte:head>
 
-<h1>Incidents</h1>
-<p class="subtitle">Active and recent incidents across all monitored APIs</p>
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Home</a></li>
+    <li aria-current="page">Incidents</li>
+  </ol>
+</nav>
+
+<div class="incidents-header">
+  <div>
+    <h1>Incidents</h1>
+    <p class="subtitle">Active and recent incidents across all monitored APIs</p>
+  </div>
+  <a href="/incidents/rss" class="rss-link" aria-label="RSS Feed" title="Subscribe to RSS Feed">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 010 4.36 2.18 2.18 0 010-4.36M4 4.44A15.56 15.56 0 0119.56 20h-2.83A12.73 12.73 0 004 7.27V4.44m0 5.66a9.9 9.9 0 019.9 9.9h-2.83A7.07 7.07 0 004 12.93V10.1z"/></svg>
+    RSS
+  </a>
+</div>
 
 {#if totalCount === 0}
   <div class="empty-state">
@@ -77,6 +110,9 @@
   </div>
 {:else}
   <div class="filters" role="toolbar" aria-label="Incident filters">
+    <div class="filter-group search-group">
+      <input type="text" placeholder="Search by API or incident title..." bind:value={searchQuery} aria-label="Search incidents" class="search-input" />
+    </div>
     <div class="filter-group">
       <label for="severity-filter">Severity</label>
       <select id="severity-filter" bind:value={filterSeverity}>
@@ -94,7 +130,16 @@
         <option value="resolved">Resolved</option>
       </select>
     </div>
-    <span class="filter-count">Showing {displayedCount} of {totalCount} incidents</span>
+    <div class="filter-group">
+      <label for="date-filter">Period</label>
+      <select id="date-filter" bind:value={filterDateRange}>
+        <option value="all">All time</option>
+        <option value="7d">Last 7 days</option>
+        <option value="30d">Last 30 days</option>
+        <option value="90d">Last 90 days</option>
+      </select>
+    </div>
+    <span class="filter-count">Showing {filteredCount} of {totalCount} incidents</span>
   </div>
 
   {#if filteredIncidents.length === 0}
@@ -139,6 +184,13 @@
 {/if}
 
 <style>
+  .incidents-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
   h1 {
     font-size: 1.5rem;
     margin-bottom: 0.25rem;
@@ -146,7 +198,27 @@
 
   .subtitle {
     color: var(--color-text-muted);
-    margin-bottom: 2rem;
+  }
+
+  .rss-link {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .rss-link:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    text-decoration: none;
   }
 
   .empty-state {
@@ -311,5 +383,31 @@
   .load-more-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .breadcrumb { margin-bottom: 1rem; }
+  .breadcrumb ol { list-style: none; padding: 0; margin: 0; display: flex; gap: 0.35rem; font-size: 0.8rem; color: var(--color-text-muted); }
+  .breadcrumb li:not(:last-child)::after { content: '\203A'; margin-left: 0.35rem; }
+  .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--color-primary); }
+
+  .search-group { flex: 1; min-width: 200px; }
+
+  .search-input {
+    width: 100%;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    outline: none;
+  }
+
+  .search-input:focus { border-color: var(--color-primary); }
+
+  @media (max-width: 640px) {
+    .filters { flex-direction: column; align-items: stretch; }
+    .filter-count { text-align: center; }
   }
 </style>

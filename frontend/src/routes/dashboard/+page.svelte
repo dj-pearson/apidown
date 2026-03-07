@@ -106,6 +106,33 @@
   const subCount = $derived(subscriptions.length);
   const hasNextTier = $derived(getNextTier(tier) !== null);
 
+  // Onboarding checklist state (US-088)
+  let onboardingDismissed = $state(false);
+
+  $effect(() => {
+    if (typeof localStorage !== 'undefined') {
+      onboardingDismissed = localStorage.getItem('apidown-onboarding-dismissed') === 'true';
+    }
+  });
+
+  const onboardingSteps = $derived([
+    { label: 'Create your first API key', href: '#api-keys', done: apiKeys.length > 0 },
+    { label: 'Install the SDK', href: '/docs', done: false },
+    { label: 'Subscribe to alerts', href: '/', done: subscriptions.length > 0 },
+    { label: 'Pin APIs to My Stack', href: '/', done: pinnedApis.length > 0 },
+  ]);
+
+  const showOnboarding = $derived(
+    !onboardingDismissed && apiKeys.length === 0 && subscriptions.length <= 1
+  );
+
+  function dismissOnboarding() {
+    onboardingDismissed = true;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('apidown-onboarding-dismissed', 'true');
+    }
+  }
+
   function formatLimit(n) {
     return n === Infinity ? 'Unlimited' : n;
   }
@@ -439,6 +466,22 @@
   </div>
 </div>
 
+{#if showOnboarding}
+  <div class="onboarding-card">
+    <button class="onboarding-dismiss" onclick={dismissOnboarding} aria-label="Dismiss onboarding checklist">&times;</button>
+    <h2 class="onboarding-title">Welcome to APIdown!</h2>
+    <p class="onboarding-desc">Complete these steps to get the most out of your dashboard.</p>
+    <ul class="onboarding-checklist">
+      {#each onboardingSteps as step}
+        <li class="onboarding-item" class:done={step.done}>
+          <span class="onboarding-check">{step.done ? '\u2713' : ''}</span>
+          <a href={step.href} class="onboarding-link">{step.label}</a>
+        </li>
+      {/each}
+    </ul>
+  </div>
+{/if}
+
 <section class="section">
   <h2>Subscription</h2>
   <p class="section-desc">Your current plan and billing details.</p>
@@ -677,7 +720,7 @@
   {/if}
 </section>
 
-<section class="section">
+<section class="section" id="api-keys">
   <div class="section-header-row">
     <div>
       <h2>API Keys</h2>
@@ -978,6 +1021,97 @@
 />
 
 <style>
+  /* Onboarding checklist (US-088) */
+  .onboarding-card {
+    position: relative;
+    background: var(--card-bg, #1e1e2e);
+    border: 1px solid var(--border, #2e2e3e);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .onboarding-dismiss {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--text-muted, #888);
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .onboarding-dismiss:hover {
+    color: var(--text, #eee);
+    background: var(--hover-bg, rgba(255,255,255,0.06));
+  }
+
+  .onboarding-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+    color: var(--text, #eee);
+  }
+
+  .onboarding-desc {
+    color: var(--text-muted, #999);
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+  }
+
+  .onboarding-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .onboarding-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .onboarding-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    border: 2px solid var(--border, #444);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    color: var(--text-muted, #888);
+  }
+
+  .onboarding-item.done .onboarding-check {
+    background: var(--accent, #4ade80);
+    border-color: var(--accent, #4ade80);
+    color: #000;
+  }
+
+  .onboarding-link {
+    color: var(--link, #60a5fa);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .onboarding-link:hover {
+    text-decoration: underline;
+  }
+
+  .onboarding-item.done .onboarding-link {
+    color: var(--text-muted, #888);
+    text-decoration: line-through;
+  }
+
   .dashboard-header {
     display: flex;
     justify-content: space-between;

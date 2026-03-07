@@ -312,28 +312,67 @@
   {/if}
 </section>
 
-<!-- How It Works -->
-<section class="seo-section" aria-labelledby="how-it-works">
-  <h2 id="how-it-works">How Does APIdown Monitor API Health?</h2>
-  <p class="section-intro">Unlike traditional status pages controlled by the provider, APIdown aggregates anonymized signals from <strong>real production traffic</strong> to give you an independent, crowd-sourced view of API health.</p>
+<!-- How It Works — 3-Step Visual Flow -->
+<section class="seo-section how-it-works-section" aria-labelledby="how-it-works">
+  <h2 id="how-it-works">How APIdown Works</h2>
+  <p class="section-intro">Three steps to independent, crowd-sourced API monitoring — no synthetic pings, no vendor bias.</p>
+
+  <div class="steps-flow">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3-3 3M12 14h4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3>Install the SDK</h3>
+      <p>Add one line to your app. Our lightweight SDK silently reports anonymized latency and error data from real API calls.</p>
+      <div class="step-code"><code>npm install @apidown/sdk</code></div>
+    </div>
+
+    <div class="step-connector" aria-hidden="true">
+      <svg width="40" height="24" viewBox="0 0 40 24"><path d="M0 12h30M24 6l6 6-6 6" stroke="var(--color-primary)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/></svg>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><circle cx="18" cy="5" r="3" fill="var(--color-down)" stroke="var(--color-down)"/></svg>
+      </div>
+      <h3>We Detect Issues</h3>
+      <p>Signals from thousands of apps feed our anomaly detection engine. We spot degradations and outages in under 30 seconds.</p>
+    </div>
+
+    <div class="step-connector" aria-hidden="true">
+      <svg width="40" height="24" viewBox="0 0 40 24"><path d="M0 12h30M24 6l6 6-6 6" stroke="var(--color-primary)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/></svg>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/><path d="M2 8c0-3.87 3.85-7 10-7" stroke-dasharray="2 2"/></svg>
+      </div>
+      <h3>Get Alerted</h3>
+      <p>Receive instant notifications via email, Slack, Discord, PagerDuty, or webhook — minutes before official status pages update.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Detailed Features -->
+<section class="seo-section" aria-labelledby="features-detail">
+  <h2 id="features-detail">Built for Developer Workflows</h2>
   <div class="features-grid">
     <div class="feature-card">
-      <div class="feature-icon">📡</div>
       <h3>Crowd-Sourced Signals</h3>
       <p>Lightweight SDKs report latency and error rates from thousands of production apps — no synthetic pings required.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">⚡</div>
       <h3>Real-Time Detection</h3>
       <p>Outages and degradations surface within seconds thanks to continuous signal aggregation and anomaly detection.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">🔔</div>
       <h3>Instant Alerts</h3>
       <p>Get email or webhook notifications the moment an API you depend on shows signs of trouble — before the provider discloses it.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">📊</div>
       <h3>Latency Analytics</h3>
       <p>View per-region latency trends, percentile breakdowns, and 24-hour sparkline charts for every monitored API.</p>
     </div>
@@ -586,8 +625,14 @@
     flex-wrap: wrap;
   }
 
+  .search-bar {
+    flex: 1;
+    min-width: 0;
+  }
+
   .search-bar input {
-    width: min(300px, 100%);
+    width: 100%;
+    max-width: 300px;
     padding: 0.6rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -865,6 +910,117 @@
     max-width: 680px;
     margin: 0 auto 2rem;
     line-height: 1.6;
+  }
+
+  /* Steps flow */
+  .steps-flow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    margin-top: 2rem;
+  }
+
+  .step {
+    flex: 1;
+    max-width: 280px;
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    position: relative;
+  }
+
+  .step-number {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-icon {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .step h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .step p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+
+  .step-code {
+    margin-top: 0.75rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-primary);
+  }
+
+  .step-connector {
+    display: flex;
+    align-items: center;
+    padding-top: 3rem;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .steps-flow {
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .step {
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .step-connector {
+      padding: 0.5rem 0;
+      transform: rotate(90deg);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .search-bar input {
+      max-width: 100%;
+    }
+
+    .sort-options {
+      justify-content: center;
+    }
+
+    .sort-options button {
+      padding: 0.55rem 0.85rem;
+      min-height: 44px;
+    }
   }
 
   /* Features grid */

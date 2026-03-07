@@ -17,11 +17,14 @@
   ];
 
   const tocSections = [
+    { id: 'getting-started', label: 'Getting Started' },
     { id: 'javascript', label: 'JavaScript / Node.js' },
     { id: 'python', label: 'Python' },
     { id: 'configuration', label: 'Configuration Options' },
+    { id: 'rest-api', label: 'REST API Reference' },
     { id: 'privacy', label: 'Privacy' },
     { id: 'manual-recording', label: 'Manual Recording' },
+    { id: 'troubleshooting', label: 'Troubleshooting' },
   ];
 
   let activeSection = $state('javascript');
@@ -124,8 +127,44 @@
   </nav>
 
   <article class="docs">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li aria-current="page">Documentation</li>
+      </ol>
+    </nav>
+
     <h1>SDK Integration Guide</h1>
     <p class="lead">Start contributing real-time API health signals with a single line of code.</p>
+
+  <section id="getting-started">
+    <h2>Getting Started</h2>
+    <p>Get up and running with APIdown in three steps:</p>
+
+    <div class="quickstart-steps">
+      <div class="qs-step">
+        <span class="qs-num">1</span>
+        <div>
+          <strong>Create a free account</strong>
+          <p>Sign up at <a href="/login">apidown.net/login</a> and generate an API key from your <a href="/dashboard">dashboard</a>.</p>
+        </div>
+      </div>
+      <div class="qs-step">
+        <span class="qs-num">2</span>
+        <div>
+          <strong>Install the SDK</strong>
+          <p>Run <code>npm install apidown-monitor</code> (JavaScript) or <code>pip install apidown</code> (Python).</p>
+        </div>
+      </div>
+      <div class="qs-step">
+        <span class="qs-num">3</span>
+        <div>
+          <strong>Initialize and deploy</strong>
+          <p>Call <code>apidown.init(&#123; key: 'YOUR_KEY' &#125;)</code> in your app entry point. All outbound HTTP calls are automatically monitored.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section id="javascript">
     <h2>JavaScript / Node.js</h2>
@@ -214,6 +253,53 @@
     <p>APIdown <strong>never</strong> captures request payloads, headers, authentication tokens, or any user data. Only domain, HTTP status code, response duration (ms), and timestamp are transmitted. All data is anonymized at the SDK level before transmission.</p>
   </section>
 
+  <section id="rest-api">
+    <h2>REST API Reference</h2>
+    <p>APIdown provides public REST endpoints for programmatic access to status data.</p>
+
+    <h3>Get API Status</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/api-status/&#123;slug&#125;</code>
+    </div>
+    <p>Returns JSON status for a specific API. No authentication required.</p>
+
+    <h3>Submit Signals</h3>
+    <div class="api-endpoint">
+      <span class="method post">POST</span>
+      <code>/v1/signals</code>
+    </div>
+    <p>Submit a batch of monitoring signals. Requires <code>X-APIdown-Key</code> header with your SDK key.</p>
+
+    <h3>Generate API Key</h3>
+    <div class="api-endpoint">
+      <span class="method post">POST</span>
+      <code>/v1/keys</code>
+    </div>
+    <p>Generate a new SDK key. Requires authentication via bearer token.</p>
+
+    <h3>Subscribe to Alerts</h3>
+    <div class="api-endpoint">
+      <span class="method post">POST</span>
+      <code>/v1/subscribe</code>
+    </div>
+    <p>Create an alert subscription for an API. Supports email, Slack, Discord, PagerDuty, Teams, and webhook channels.</p>
+
+    <h3>Report an Issue</h3>
+    <div class="api-endpoint">
+      <span class="method post">POST</span>
+      <code>/v1/reports</code>
+    </div>
+    <p>Submit a manual issue report for an API to help the community.</p>
+
+    <h3>SLA Report (Pro)</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/v1/reports/sla?api_slug=&#123;slug&#125;</code>
+    </div>
+    <p>Download an SLA compliance report in JSON format. Requires Pro tier.</p>
+  </section>
+
   <section id="manual-recording">
     <h2>Manual Recording</h2>
     <p>For custom HTTP clients not auto-patched by the SDK:</p>
@@ -226,6 +312,30 @@
     <div class="code-block">
       <button class="copy-btn" onclick={() => copyCode(10)}>{copiedIndex === 10 ? 'Copied!' : 'Copy'}</button>
       <pre><code>{codeBlocks[10]}</code></pre>
+    </div>
+  </section>
+
+  <section id="troubleshooting">
+    <h2>Troubleshooting</h2>
+
+    <div class="faq-item">
+      <h3>Signals not appearing in dashboard</h3>
+      <p>Ensure your SDK key is correct and active. Check that <code>apidown.init()</code> is called before any HTTP requests. Enable <code>debug: true</code> in the config to see console output.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>SDK conflicts with existing interceptors</h3>
+      <p>APIdown patches <code>fetch</code>, <code>axios</code>, and <code>requests</code> at the module level. If you have custom interceptors, ensure APIdown is initialized first. Use the <code>allowlist</code> or <code>denylist</code> config to control which domains are monitored.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>High signal volume / rate limiting</h3>
+      <p>The SDK batches signals and respects rate limits automatically. Free tier allows 10,000 signals/day; Pro allows 100,000. Increase <code>flushInterval</code> or use <code>allowlist</code> to reduce volume.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>SDK not initializing in serverless environments</h3>
+      <p>In Lambda/Vercel/Cloudflare Workers, call <code>init()</code> outside the handler to avoid re-initialization on each invocation. Use the global guard pattern shown in the Next.js example above.</p>
     </div>
   </section>
   </article>
@@ -445,5 +555,113 @@
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
     font-size: 0.8rem;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb { margin-bottom: 1rem; }
+  .breadcrumb ol { list-style: none; padding: 0; margin: 0; display: flex; gap: 0.35rem; font-size: 0.8rem; color: var(--color-text-muted); }
+  .breadcrumb li:not(:last-child)::after { content: '\203A'; margin-left: 0.35rem; }
+  .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--color-primary); }
+
+  /* Getting Started quickstart */
+  .quickstart-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .qs-step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+  }
+
+  .qs-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .qs-step strong {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .qs-step p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .qs-step code {
+    background: var(--color-bg);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.8rem;
+  }
+
+  /* REST API Reference */
+  .api-endpoint {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .method {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .method.get { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+  .method.post { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+
+  /* FAQ/Troubleshooting items */
+  .faq-item {
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem 0;
+  }
+
+  .faq-item:last-child { border-bottom: none; }
+
+  .faq-item h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.4rem;
+    margin-top: 0;
+  }
+
+  .faq-item p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
   }
 </style>
