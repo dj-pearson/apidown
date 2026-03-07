@@ -33,6 +33,7 @@ export async function load({ params, platform, setHeaders }) {
   });
 
   return {
+    slug: owner.public_status_slug,
     title: owner.public_status_title || 'Status',
     description: owner.public_status_description || '',
     apis: (pinnedApis || []).map(p => ({

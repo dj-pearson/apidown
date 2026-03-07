@@ -82,6 +82,12 @@ textarea:focus-visible,
   top: 0;
 }
 
+/* INP optimization: CSS containment for repeated card layouts */
+.grid, .api-grid, .faq-list, .features-grid, .trust-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
 /* Global button reset */
 button {
   cursor: pointer;

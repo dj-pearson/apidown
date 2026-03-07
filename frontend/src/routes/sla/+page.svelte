@@ -86,7 +86,8 @@
 </script>
 
 <svelte:head>
-  <title>SLA Targets | APIdown</title>
+  <title>SLA Tracking & Uptime Targets — APIdown.net</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <a href="/dashboard" class="back">&larr; Dashboard</a>

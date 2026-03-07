@@ -31,9 +31,6 @@ export async function GET({ platform }) {
     { path: "/incidents", freq: "hourly", priority: "0.8" },
     { path: "/docs", freq: "weekly", priority: "0.7" },
     { path: "/pricing", freq: "monthly", priority: "0.7" },
-    { path: "/login", freq: "monthly", priority: "0.5" },
-    { path: "/sla", freq: "monthly", priority: "0.5" },
-    { path: "/dashboard", freq: "daily", priority: "0.4" },
   ];
 
   // ── Build URL entries ──

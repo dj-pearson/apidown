@@ -23,7 +23,7 @@
 <a href="/api/{api.slug}" class="card">
   <div class="card-header">
     {#if api.logo_url && !logoFailed}
-      <img src={api.logo_url} alt="{api.name} logo" class="logo" onerror={() => logoFailed = true} />
+      <img src={api.logo_url} alt="{api.name} logo" class="logo" loading="lazy" width="24" height="24" onerror={() => logoFailed = true} />
     {:else}
       <div class="logo-placeholder">{api.name[0]}</div>
     {/if}

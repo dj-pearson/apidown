@@ -76,6 +76,21 @@
     },
     {
       "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to integrate APIdown SDK into your application",
+      "description": "Step-by-step guide to add real-time API health monitoring to your JavaScript or Python application.",
+      "step": [
+        { "@type": "HowToStep", "position": 1, "name": "Install the SDK", "text": "Run npm install apidown-monitor (JavaScript) or pip install apidown (Python) to add the SDK to your project." },
+        { "@type": "HowToStep", "position": 2, "name": "Initialize with your API key", "text": "Import the SDK and call init() with your API key. All outbound HTTP calls are automatically monitored." },
+        { "@type": "HowToStep", "position": 3, "name": "Deploy and monitor", "text": "Deploy your application. API health signals are automatically reported to APIdown from real production traffic." }
+      ],
+      "tool": [
+        { "@type": "HowToTool", "name": "npm or pip" },
+        { "@type": "HowToTool", "name": "APIdown SDK key" }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://apidown.net" },

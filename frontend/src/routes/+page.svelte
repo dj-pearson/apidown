@@ -121,18 +121,6 @@
     },
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "APIdown.net",
-      "url": "https://apidown.net",
-      "description": "Is the API actually down — or is it your code? Real-time, crowd-sourced API health monitoring.",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://apidown.net/api/{search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
-    },
-    {
-      "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
         {
@@ -259,7 +247,7 @@
 
 <!-- How It Works -->
 <section class="seo-section" aria-labelledby="how-it-works">
-  <h2 id="how-it-works">How APIdown Works</h2>
+  <h2 id="how-it-works">How Does APIdown Monitor API Health?</h2>
   <p class="section-intro">Unlike traditional status pages controlled by the provider, APIdown aggregates anonymized signals from <strong>real production traffic</strong> to give you an independent, crowd-sourced view of API health.</p>
   <div class="features-grid">
     <div class="feature-card">
@@ -287,7 +275,7 @@
 
 <!-- Why APIdown -->
 <section class="seo-section" aria-labelledby="why-apidown">
-  <h2 id="why-apidown">Why Developers Trust APIdown</h2>
+  <h2 id="why-apidown">Why Do Developers Choose APIdown Over Official Status Pages?</h2>
   <div class="trust-grid">
     <div class="trust-item">
       <strong>Independent & Neutral</strong>

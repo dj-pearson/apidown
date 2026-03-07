@@ -23,10 +23,42 @@
 </script>
 
 <svelte:head>
-  <title>{data.title} - Status</title>
-  {#if data.description}
-    <meta name="description" content={data.description} />
-  {/if}
+  <title>{data.title} — Status | APIdown.net</title>
+  <meta name="description" content={data.description || `Live status page for ${data.title}. Real-time monitoring powered by APIdown.net.`} />
+  <link rel="canonical" href={`https://apidown.net/status/${data.slug || ''}`} />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={`${data.title} — Status`} />
+  <meta property="og:description" content={data.description || `Live status page for ${data.title}.`} />
+  <meta property="og:url" content={`https://apidown.net/status/${data.slug || ''}`} />
+  {@html `<script type="application/ld+json">${JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": `${data.title} — Status`,
+      "description": data.description || `Live status page for ${data.title}`,
+      "url": `https://apidown.net/status/${data.slug || ''}`,
+      "isPartOf": { "@type": "WebSite", "name": "APIdown.net", "url": "https://apidown.net" },
+      "mainEntity": {
+        "@type": "ItemList",
+        "name": `${data.title} Monitored APIs`,
+        "numberOfItems": data.apis.length,
+        "itemListElement": data.apis.map((api, i) => ({
+          "@type": "ListItem",
+          "position": i + 1,
+          "name": api.name,
+          "url": `https://apidown.net/api/${api.slug}`
+        }))
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://apidown.net" },
+        { "@type": "ListItem", "position": 2, "name": data.title, "item": `https://apidown.net/status/${data.slug || ''}` }
+      ]
+    }
+  ])}</script>`}
 </svelte:head>
 
 <div class="status-page">
@@ -48,7 +80,7 @@
         <a href="/api/{api.slug}" class="api-card" target="_blank" rel="noopener">
           <div class="api-card-header">
             {#if api.logo_url}
-              <img src={api.logo_url} alt="" class="api-logo" />
+              <img src={api.logo_url} alt="" class="api-logo" loading="lazy" width="24" height="24" />
             {:else}
               <div class="api-logo-placeholder">{api.name.charAt(0)}</div>
             {/if}

@@ -25,6 +25,34 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "APIdown.net",
+    "legalName": "Pearson Media LLC",
+    "url": "https://apidown.net",
+    "logo": "https://apidown.net/logo-primary.png",
+    "description": "Crowd-sourced, real-time API health monitoring from production traffic. Independent and developer-first.",
+    "sameAs": ["https://github.com/dj-pearson/apidown"],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "technical support",
+      "url": "https://apidown.net/docs"
+    }
+  })}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "APIdown.net",
+    "url": "https://apidown.net",
+    "description": "Real-time API status from real production traffic. Is the API actually down — or is it your code?",
+    "publisher": { "@type": "Organization", "name": "APIdown.net", "url": "https://apidown.net" },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://apidown.net/api/{search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  })}</script>`}
 </svelte:head>
 
 <a href="#main-content" class="skip-to-content">Skip to content</a>

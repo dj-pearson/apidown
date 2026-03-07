@@ -408,6 +408,9 @@
         src={api.logo_url}
         alt={api.name}
         class="logo"
+        width="48"
+        height="48"
+        fetchpriority="high"
         onerror={() => (logoFailed = true)}
       />
     {:else}
