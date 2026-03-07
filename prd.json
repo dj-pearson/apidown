@@ -1538,6 +1538,92 @@
       "priority": 95,
       "passes": true,
       "notes": ""
+    },
+    {
+      "id": "US-096",
+      "title": "Wire newsletter signup form to backend storage",
+      "description": "As a platform operator, I want the footer newsletter signup form to actually store email addresses so we can build an engaged mailing list instead of discarding signups.",
+      "acceptanceCriteria": [
+        "Create newsletter_subscribers table or use existing alert_subscriptions",
+        "Ingest endpoint POST /v1/newsletter accepts email and stores it",
+        "Footer form calls the endpoint and shows real success/error state",
+        "Duplicate emails handled gracefully",
+        "Typecheck passes"
+      ],
+      "priority": 96,
+      "passes": false,
+      "notes": "Footer newsletter form currently shows success message without storing the email"
+    },
+    {
+      "id": "US-097",
+      "title": "Add Privacy Policy and Terms of Service pages",
+      "description": "As a platform operator, I need legal pages (Privacy Policy, Terms of Service) so the site is compliant with GDPR/CCPA and users trust the platform.",
+      "acceptanceCriteria": [
+        "Add /privacy route with privacy policy content",
+        "Add /terms route with terms of service content",
+        "Add footer links to both pages",
+        "Typecheck passes"
+      ],
+      "priority": 97,
+      "passes": true,
+      "notes": "Added /privacy and /terms routes with full legal content, footer links added"
+    },
+    {
+      "id": "US-098",
+      "title": "Add PWA manifest and service worker for offline support",
+      "description": "As a mobile user, I want APIdown to be installable as a PWA so I can quickly check API status from my home screen.",
+      "acceptanceCriteria": [
+        "Add manifest.json with app name, icons, theme color, and display: standalone",
+        "Add link rel=manifest to app.html",
+        "Register service worker for basic offline caching of static assets",
+        "App is installable on Chrome/Safari mobile",
+        "Typecheck passes"
+      ],
+      "priority": 98,
+      "passes": false,
+      "notes": "Monitoring app is a natural PWA candidate for mobile users"
+    },
+    {
+      "id": "US-099",
+      "title": "Add real-time incident list updates on incidents page",
+      "description": "As a user, I want the incidents page to update in real-time when incidents are created or resolved so I don't need to refresh.",
+      "acceptanceCriteria": [
+        "Add Supabase real-time subscription on incidents page for incident changes",
+        "New incidents appear at the top of the list without refresh",
+        "Incident status changes reflect immediately",
+        "Typecheck passes"
+      ],
+      "priority": 99,
+      "passes": true,
+      "notes": "Added Supabase postgres_changes subscription for INSERT/UPDATE on incidents table, live indicator dot"
+    },
+    {
+      "id": "US-100",
+      "title": "Add incident filter persistence via URL query params",
+      "description": "As a user, I want my incident filters (severity, status, date range) to persist in the URL so I can share filtered views and use browser back/forward.",
+      "acceptanceCriteria": [
+        "Filter state serialized to URL query params (?severity=critical&status=active&range=30d)",
+        "Filters restored from URL on page load",
+        "Browser back/forward navigates between filter states",
+        "Typecheck passes"
+      ],
+      "priority": 100,
+      "passes": true,
+      "notes": "Filters synced to URL query params (severity, status, range, q), restored on page load, debounced search"
+    },
+    {
+      "id": "US-101",
+      "title": "Add password strength indicator and requirements to registration",
+      "description": "As a new user, I want to see password strength feedback and clear requirements during registration so I create a secure account.",
+      "acceptanceCriteria": [
+        "Add visual password strength meter below password input",
+        "Show requirement hints (min length, character types)",
+        "Strength indicator updates in real-time as user types",
+        "Typecheck passes"
+      ],
+      "priority": 101,
+      "passes": true,
+      "notes": "Added 5-point scoring system, visual strength bar, and requirement hint checkmarks"
     }
   ]
 }

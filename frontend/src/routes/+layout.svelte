@@ -2,6 +2,8 @@
   import '../app.css';
   import { page } from '$app/state';
   import { initSupabase } from '$lib/supabase.js';
+  import Toast from '$lib/components/Toast.svelte';
+  import { toast } from '$lib/stores/toast.js';
   let props = $props();
 
   // Initialize Supabase client with server-provided config (reactive via $effect)
@@ -66,7 +68,10 @@
 <svelte:head>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  {#if props.data?.supabaseUrl}
+    <link rel="preconnect" href={props.data.supabaseUrl} crossorigin="anonymous" />
+  {/if}
+  {@html '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'" /><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>'}
   {@html `<script type="application/ld+json">${JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -192,6 +197,8 @@
         <h4>Company</h4>
         <ul>
           <li><a href="/login">Log In / Sign Up</a></li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Service</a></li>
           <li><a href="/sitemap.xml">Sitemap</a></li>
           <li><a href="/llms.txt">LLMs.txt</a></li>
           <li><a href="/robots.txt">Robots.txt</a></li>
@@ -220,6 +227,10 @@
     </div>
   </div>
 </footer>
+
+{#if $toast}
+  <Toast message={$toast.message} variant={$toast.variant} timeout={$toast.timeout} onclose={() => toast.dismiss()} />
+{/if}
 
 <style>
   header {

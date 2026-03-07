@@ -29,7 +29,7 @@
     {/if}
     <span class="name">{api.name}</span>
     <div class="sparkline-wrap">
-      <Sparkline data={sparkline} />
+      <Sparkline data={sparkline} apiName={api.name} />
     </div>
   </div>
   <div class="card-status">

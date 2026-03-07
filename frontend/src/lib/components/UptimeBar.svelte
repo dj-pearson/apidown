@@ -1,5 +1,5 @@
 <script>
-  let { data = [] } = $props();
+  let { data = [], loading = false } = $props();
   let tooltip = $state(null);
 
   function barColor(uptime) {
@@ -21,9 +21,18 @@
   function hideTooltip() {
     tooltip = null;
   }
+
+  let uptimeSummary = $derived.by(() => {
+    if (!data || !data.length) return '';
+    const perfect = data.filter(d => d.uptime >= 99.5).length;
+    const degraded = data.filter(d => d.uptime >= 95 && d.uptime < 99.5).length;
+    const down = data.filter(d => d.uptime < 95).length;
+    const avg = (data.reduce((s, d) => s + d.uptime, 0) / data.length).toFixed(2);
+    return `${data.length}-day uptime summary: ${avg}% average. ${perfect} healthy days, ${degraded} degraded days, ${down} outage days.`;
+  });
 </script>
 
-{#if data === undefined}
+{#if loading || data === undefined}
   <section class="uptime-section">
     <div class="uptime-header">
       <h2>90-Day Uptime</h2>
@@ -44,6 +53,7 @@
       <h2>90-Day Uptime</h2>
       <span class="uptime-pct">{data.every(d => d.uptime >= 99.5) ? '100%' : ''}</span>
     </div>
+    <span class="sr-only">{uptimeSummary}</span>
     <div class="uptime-bar" role="img" aria-label="90-day uptime history showing daily uptime percentages">
       {#each data as day, i}
         <div
@@ -77,6 +87,18 @@
 {/if}
 
 <style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .uptime-section {
     margin-bottom: 2rem;
     position: relative;

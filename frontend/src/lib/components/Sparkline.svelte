@@ -1,5 +1,11 @@
 <script>
-  let { data = [], width = 80, height = 24 } = $props();
+  let { data = [], width = 80, height = 24, apiName = 'API' } = $props();
+
+  let sparkSummary = $derived(
+    data.length > 1
+      ? `${apiName} latency trend: min ${Math.round(Math.min(...data))}ms, max ${Math.round(Math.max(...data))}ms, latest ${Math.round(data[data.length - 1])}ms`
+      : `${apiName}: no latency data available`
+  );
 
   let points = $derived.by(() => {
     if (!data.length) return '';
@@ -13,7 +19,8 @@
   });
 </script>
 
-<svg {width} {height} class="sparkline" viewBox="0 0 {width} {height}" role="img" aria-label="24-hour latency trend">
+<svg {width} {height} class="sparkline" viewBox="0 0 {width} {height}" role="img" aria-labelledby="sparkline-title-{apiName}">
+  <title id="sparkline-title-{apiName}">{sparkSummary}</title>
   {#if data.length > 1}
     <polyline
       points={points}
