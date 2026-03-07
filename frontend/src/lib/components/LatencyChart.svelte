@@ -1,11 +1,20 @@
 <script>
-  let { data = [], range = '24h' } = $props();
+  let { data = [], range = '24h', loading = false } = $props();
 
   const W = 700;
   const H = 200;
   const PAD = { top: 20, right: 20, bottom: 30, left: 50 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
+
+  // Compute summary for screen readers
+  let summaryText = $derived.by(() => {
+    if (!data.length) return '';
+    const avgP50 = Math.round(data.reduce((s, d) => s + (d.p50_ms || 0), 0) / data.length);
+    const avgP95 = Math.round(data.reduce((s, d) => s + (d.p95_ms || 0), 0) / data.length);
+    const maxP95 = Math.round(Math.max(...data.map(d => d.p95_ms || 0)));
+    return `Average P50 latency: ${avgP50}ms. Average P95 latency: ${avgP95}ms. Peak P95: ${maxP95}ms. Based on ${data.length} data points over the last ${range}.`;
+  });
 
   let chart = $derived.by(() => {
     if (!data.length) return null;
@@ -54,7 +63,7 @@
   });
 </script>
 
-{#if data === undefined}
+{#if loading || data === undefined}
   <div class="chart-skeleton">
     <div class="skeleton-bar" style="height: 60%"></div>
     <div class="skeleton-bar" style="height: 80%"></div>
@@ -66,7 +75,9 @@
   </div>
 {:else if chart}
   <div class="chart-container">
-    <svg viewBox="0 0 {W} {H}" class="latency-chart" role="img" aria-label="{range} latency chart showing P50 and P95 response times">
+    <svg viewBox="0 0 {W} {H}" class="latency-chart" role="img" aria-labelledby="latency-chart-title latency-chart-desc">
+      <title id="latency-chart-title">{range} Latency Chart — P50 and P95 Response Times</title>
+      <desc id="latency-chart-desc">{summaryText}</desc>
       <!-- Grid lines -->
       {#each chart.yTicks as tick}
         <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y} stroke="var(--color-border)" stroke-width="0.5" />

@@ -1,10 +1,13 @@
 <script>
   import { createClient } from "@supabase/supabase-js";
   import { goto, invalidateAll } from "$app/navigation";
+  import { navigating } from "$app/stores";
   import LatencyChart from "$lib/components/LatencyChart.svelte";
   import RegionBreakdown from "$lib/components/RegionBreakdown.svelte";
   import UptimeBar from "$lib/components/UptimeBar.svelte";
   import SEO from "$lib/components/SEO.svelte";
+
+  let isNavigating = $derived(!!$navigating);
 
   let { data } = $props();
   let api = $state(data.api);
@@ -528,7 +531,7 @@
   {/if}
 </div>
 
-<UptimeBar data={data.dailyUptime} />
+<UptimeBar data={data.dailyUptime} loading={isNavigating} />
 
 {#if data.maintenances.length > 0}
   <div class="maintenance-banner">
@@ -572,10 +575,10 @@
       {/each}
     </div>
   </div>
-  <LatencyChart data={latencyData} range={latencyRange} />
+  <LatencyChart data={latencyData} range={latencyRange} loading={isNavigating} />
 </section>
 
-<RegionBreakdown data={latencyData} />
+<RegionBreakdown data={latencyData} loading={isNavigating} />
 
 {#if api.status_page}
   <p class="vendor-link">

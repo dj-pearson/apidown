@@ -1,5 +1,5 @@
 <script>
-  let { data = [] } = $props();
+  let { data = [], loading = false } = $props();
 
   // Aggregate by region from the last 1 hour of data
   let regions = $derived.by(() => {
@@ -38,7 +38,7 @@
   }
 </script>
 
-{#if data === undefined}
+{#if loading || data === undefined}
   <section class="region-breakdown">
     <h2>Regional Status</h2>
     <div class="region-grid">
@@ -52,8 +52,11 @@
     </div>
   </section>
 {:else if regions.length > 0}
-  <section class="region-breakdown">
+  <section class="region-breakdown" aria-label="Regional status breakdown">
     <h2>Regional Status</h2>
+    <span class="sr-only">
+      {regions.length} regions reporting. {regions.filter(r => r.errorRate <= 5).length} healthy, {regions.filter(r => r.errorRate > 5 && r.errorRate <= 20).length} degraded, {regions.filter(r => r.errorRate > 20).length} down.
+    </span>
     <div class="region-grid">
       {#each regions as region}
         <div class="region-card">
@@ -129,6 +132,18 @@
     gap: 0.15rem;
     font-size: 0.75rem;
     color: var(--color-text-muted);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .skeleton-card {

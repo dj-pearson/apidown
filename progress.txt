@@ -108,6 +108,12 @@ US-069: DONE - Team incident annotations (incident_notes table, Internal Notes s
 US-071: DONE - Public embeddable status page (/status/[slug] route, dashboard settings for Pro+, iframe embed snippet)
 US-072: DONE - SLA target tracking with pass/fail (/sla report page, CSV export, dashboard summary widget)
 
+-- Phase 15: Critical Platform Improvements --
+US-093: DONE - Font loading optimization (font-display: swap, preconnect to Supabase, apple-touch-icon, prefers-reduced-motion media query)
+US-052: DONE - Add loading states to API detail page charts (loading prop on LatencyChart/UptimeBar/RegionBreakdown, wired to SvelteKit navigating store)
+US-055: DONE - SVG accessibility labels for all chart components (title/desc in LatencyChart SVG, sparkline screen reader summaries, UptimeBar sr-only data summary, RegionBreakdown sr-only region counts)
+US-053: DONE - Global error toast/banner component (toast store in lib/stores/toast.js, Toast wired into layout, hooks.client.js error handler)
+
 == Architecture Notes ==
 - svelte.config.js uses adapter-cloudflare (not adapter-node)
 - Supabase clients use lazy initialization (getSupabase/getSupabaseAdmin) to avoid build-time crashes
