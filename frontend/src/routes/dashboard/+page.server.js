@@ -91,6 +91,49 @@ export async function load({ cookies, platform }) {
     .eq('email', user.email)
     .order('created_at', { ascending: false });
 
+  // Get user's status pages
+  const { data: statusPages } = await supabase
+    .from('status_pages')
+    .select('id, slug, title, description, is_enabled, logo_url, accent_color, show_uptime_bars, show_latency_chart, show_incidents, show_subscriber_form, show_powered_by, incidents_count, uptime_days, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true });
+
+  // Get subscriber counts for each status page
+  let statusPageSubscriberCounts = {};
+  if (statusPages && statusPages.length > 0) {
+    for (const sp of statusPages) {
+      const { count } = await supabase
+        .from('status_page_subscribers')
+        .select('id', { count: 'exact', head: true })
+        .eq('status_page_id', sp.id)
+        .eq('verified', true);
+      statusPageSubscriberCounts[sp.id] = count || 0;
+    }
+  }
+
+  // Get all catalog APIs for the status page API picker
+  const { data: allApis } = await supabase
+    .from('apis')
+    .select('id, slug, name, logo_url, current_status')
+    .is('owner_id', null)
+    .order('name', { ascending: true });
+
+  // Get status page API assignments
+  let statusPageApiMap = {};
+  if (statusPages && statusPages.length > 0) {
+    const spIds = statusPages.map(sp => sp.id);
+    const { data: spApis } = await supabase
+      .from('status_page_apis')
+      .select('status_page_id, api_id, display_order, custom_label')
+      .in('status_page_id', spIds)
+      .order('display_order', { ascending: true });
+
+    for (const spa of (spApis || [])) {
+      if (!statusPageApiMap[spa.status_page_id]) statusPageApiMap[spa.status_page_id] = [];
+      statusPageApiMap[spa.status_page_id].push(spa);
+    }
+  }
+
   // SLA target summary for dashboard widget
   let slaSummary = { total: 0, passing: 0 };
   const userTier = syncedProfile?.tier || profile?.tier || 'free';
@@ -139,6 +182,10 @@ export async function load({ cookies, platform }) {
     customApis: customApis || [],
     subscriptions: subscriptions || [],
     slaSummary,
+    statusPages: statusPages || [],
+    statusPageSubscriberCounts,
+    statusPageApiMap,
+    allApis: allApis || [],
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
     supabaseUrl: getEnv('PUBLIC_SUPABASE_URL') || getEnv('SUPABASE_URL'),
     supabaseAnonKey: getEnv('PUBLIC_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY'),

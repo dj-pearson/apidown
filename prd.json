@@ -1624,6 +1624,313 @@
       "priority": 101,
       "passes": true,
       "notes": "Added 5-point scoring system, visual strength bar, and requirement hint checkmarks"
+    },
+
+    {
+      "id": "US-102",
+      "title": "Status Page as a Service — Database schema and migration",
+      "description": "As a platform operator, I want a dedicated status_pages table with branding, component toggles, and subscriber support so that the status page feature scales as a standalone product.",
+      "acceptanceCriteria": [
+        "Migration 022 creates status_pages table with slug, title, description, branding columns, component toggles",
+        "Creates status_page_apis junction table with display_order and custom_label",
+        "Creates status_page_subscribers table with email verification",
+        "All tables have RLS policies (owner write, public read for enabled pages)",
+        "Migration includes data migration from legacy user-column status pages",
+        "Tier limits updated: Free=0, Pro=1, Team=3 status pages"
+      ],
+      "priority": 102,
+      "passes": true,
+      "notes": "Migration 022_status_pages_service.sql created. Tier limits updated in tier-limits.js."
+    },
+    {
+      "id": "US-103",
+      "title": "Status Page as a Service — Enhanced public page with uptime, latency, incidents",
+      "description": "As a status page visitor, I want to see uptime bars, latency sparklines, recent incidents, and an overall uptime percentage so that I get a comprehensive view of service health.",
+      "acceptanceCriteria": [
+        "Public status page at /status/[slug] loads from status_pages table with legacy fallback",
+        "Shows 90-day uptime bars per API with color-coded daily cells",
+        "Shows 24h latency sparklines (P50 + P95) per API",
+        "Shows recent incidents section with severity badges and timestamps",
+        "Shows overall 30-day uptime percentage in the banner",
+        "All components are toggle-able via page config (show_uptime_bars, show_latency_chart, etc.)",
+        "Custom accent color applied via CSS variable",
+        "Custom logo displayed in header",
+        "Page is SEO-optimized with Schema.org structured data"
+      ],
+      "priority": 103,
+      "passes": true,
+      "notes": "Enhanced +page.server.js with uptime/latency/incident data loading. Enhanced +page.svelte with full visualization components."
+    },
+    {
+      "id": "US-104",
+      "title": "Status Page as a Service — Dashboard management UI",
+      "description": "As a Pro/Team user, I want to create, configure, and manage my status pages from the dashboard including branding, component selection, and API assignment.",
+      "acceptanceCriteria": [
+        "Dashboard shows list of user's status pages with enable/disable status and subscriber count",
+        "Expandable editor for each page: title, slug, description, enable toggle",
+        "Branding section: logo URL, accent color picker, show/hide powered-by toggle",
+        "Component toggles: uptime bars, latency charts, incidents, subscriber form",
+        "API picker: add/remove APIs from the page with chip UI and dropdown selector",
+        "Embed code and public URL with copy buttons",
+        "Create new page form with title + slug + description",
+        "Delete page with confirmation",
+        "Tier-limited: Free=0, Pro=1, Team=3 pages",
+        "White-label (hide powered-by) enforced as Team-only"
+      ],
+      "priority": 104,
+      "passes": true,
+      "notes": "Full status page management section added to dashboard with create/edit/delete and API assignment."
+    },
+    {
+      "id": "US-105",
+      "title": "Status Page as a Service — Subscriber signup and notification endpoint",
+      "description": "As a status page visitor, I want to subscribe to email notifications so that I get alerted when a monitored service has issues.",
+      "acceptanceCriteria": [
+        "Subscribe form on public status page collects email",
+        "POST /api/status-page/subscribe endpoint validates email and page existence",
+        "Subscriber stored in status_page_subscribers table",
+        "Duplicate subscriptions handled gracefully via upsert",
+        "Success/error feedback shown to user",
+        "Page owners can see subscriber count in dashboard"
+      ],
+      "priority": 105,
+      "passes": true,
+      "notes": "Subscribe endpoint created at /api/status-page/subscribe. Auto-verifies for now; email verification can be added later."
+    },
+    {
+      "id": "US-106",
+      "title": "Status Page as a Service — Pricing page updates",
+      "description": "As a potential customer, I want to see status pages listed as a feature on the pricing page so I understand the value of upgrading.",
+      "acceptanceCriteria": [
+        "Pro plan card shows '1 public status page' feature",
+        "Team plan card shows '3 public status pages' and 'White-label status pages'",
+        "Comparison table includes rows for status pages, uptime bars, latency charts, subscribers, white-label",
+        "Free tier correctly shows no status pages"
+      ],
+      "priority": 106,
+      "passes": true,
+      "notes": "Pricing page updated with status page features in both plan cards and comparison table."
+    },
+
+    {
+      "id": "US-110",
+      "title": "Dependency Risk Scores — API report card generation",
+      "description": "As a developer evaluating API vendors, I want to see a reliability score and report card for each API so I can make informed vendor selection decisions.",
+      "acceptanceCriteria": [
+        "New /api/[slug]/report-card route that generates a risk score",
+        "Score calculated from: uptime % (30d), average P95 latency, incident count (90d), average resolution time",
+        "Letter grade (A+ to F) displayed with color coding",
+        "Breakdown shows individual metrics contributing to score",
+        "Historical trend indicator (improving/stable/degrading) based on 90d vs previous 90d",
+        "Basic report card visible to all users",
+        "Detailed export (PDF/CSV) gated behind Pro tier",
+        "API comparison mode: select 2-3 APIs and compare side-by-side",
+        "SEO-optimized with structured data for search discovery",
+        "Report card page linked from API detail page"
+      ],
+      "priority": 110,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-111",
+      "title": "Dependency Risk Scores — Homepage score badges",
+      "description": "As a homepage visitor, I want to see reliability scores on each API card so I can quickly assess vendor health.",
+      "acceptanceCriteria": [
+        "Each StatusCard on homepage shows a small letter grade badge",
+        "Grade color-coded (green for A/B, yellow for C, red for D/F)",
+        "Badge links to full report card page",
+        "Score computed from cached daily aggregation (not realtime queries)"
+      ],
+      "priority": 111,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-112",
+      "title": "Dependency Risk Scores — Weekly digest email with scores",
+      "description": "As a subscribed user, I want to receive a weekly email summarizing the reliability scores of my pinned APIs so I stay informed passively.",
+      "acceptanceCriteria": [
+        "Weekly worker job generates score digests for users with digest_frequency set",
+        "Email includes: each pinned API name, grade, 7d uptime %, incident count",
+        "Highlight any APIs that dropped a grade since last week",
+        "Link to full report card for each API",
+        "Unsubscribe link in email footer"
+      ],
+      "priority": 112,
+      "passes": false,
+      "notes": ""
+    },
+
+    {
+      "id": "US-115",
+      "title": "Postmortem / Incident Intelligence — Auto-generated postmortem reports",
+      "description": "As an engineering manager, I want auto-generated postmortem summaries after incidents resolve so I can share impact data with stakeholders without manual effort.",
+      "acceptanceCriteria": [
+        "New /incidents/[id]/postmortem route auto-generates summary after incident resolves",
+        "Report includes: timeline (detection → updates → resolution), total duration, affected regions, peak error rate",
+        "Shows correlated incidents (other APIs that had issues in overlapping time window)",
+        "Displays estimated impact (based on signal volume and error rates)",
+        "Exportable as PDF with company branding (Pro+)",
+        "Shareable via public link (toggleable by incident owner)",
+        "Included in Team tier, $3/report for Pro tier"
+      ],
+      "priority": 115,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-116",
+      "title": "Postmortem / Incident Intelligence — Incident correlation engine",
+      "description": "As an SRE, I want to see which APIs experienced issues at the same time as a given incident so I can identify cascading failures.",
+      "acceptanceCriteria": [
+        "Correlation algorithm checks for overlapping incidents within ±15 minute window",
+        "Incident detail page shows 'Related Incidents' section",
+        "Each related incident shows API name, severity, overlap duration",
+        "Correlation data included in postmortem reports",
+        "Worker computes correlations on incident resolution and caches results"
+      ],
+      "priority": 116,
+      "passes": false,
+      "notes": ""
+    },
+
+    {
+      "id": "US-120",
+      "title": "Embeddable Widgets — Status badge and mini-widget endpoints",
+      "description": "As a developer, I want embeddable status widgets beyond the existing SVG badge so I can show live dependency status in my own docs and dashboards.",
+      "acceptanceCriteria": [
+        "New /api/[slug]/widget.html endpoint renders a self-contained mini status card",
+        "Widget shows: API name, current status, 24h uptime %, sparkline",
+        "Widget is responsive and works in iframes from 200px to full width",
+        "Dark and light theme variants via query param (?theme=dark|light)",
+        "Custom accent color via query param (?color=hex)",
+        "Free tier: 'Powered by APIdown' branding shown",
+        "Pro/Team tier: white-label option available",
+        "Widget auto-refreshes every 60 seconds via script injection",
+        "CORS headers allow embedding from any origin"
+      ],
+      "priority": 120,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-121",
+      "title": "Embeddable Widgets — Multi-API dashboard widget",
+      "description": "As a developer, I want a multi-API status widget I can embed in my internal dashboard showing all my pinned APIs at once.",
+      "acceptanceCriteria": [
+        "New /status/[slug]/widget.html renders a compact multi-API status card",
+        "Shows each API with status dot and name in a list format",
+        "Overall banner at top (All Operational / Issues Detected)",
+        "Embeddable via iframe or script tag",
+        "Links back to full status page",
+        "Configurable height and max APIs shown"
+      ],
+      "priority": 121,
+      "passes": false,
+      "notes": ""
+    },
+
+    {
+      "id": "US-125",
+      "title": "Slack/Teams Bot — Interactive Slack app with status commands",
+      "description": "As a developer team, I want a Slack bot that responds to /apidown commands so we can check API status without leaving Slack.",
+      "acceptanceCriteria": [
+        "Slack app with slash command /apidown status [api-name]",
+        "Returns current status, uptime %, latest P95 latency in a formatted Slack block",
+        "/apidown stack — shows status of all pinned APIs",
+        "/apidown subscribe [api] — adds Slack channel as alert destination",
+        "OAuth2 installation flow for workspaces",
+        "Rate limited to prevent abuse (10 commands/min per workspace)",
+        "Priced at $9/mo per workspace as separate add-on"
+      ],
+      "priority": 125,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-126",
+      "title": "Slack/Teams Bot — Daily morning briefing",
+      "description": "As a team lead, I want a daily status briefing posted to our Slack channel each morning so the team starts the day informed about API health.",
+      "acceptanceCriteria": [
+        "Configurable daily briefing time (default 9am in workspace timezone)",
+        "Briefing includes: overall health summary, any active incidents, APIs with degraded uptime",
+        "Highlight any new incidents from the last 24 hours",
+        "Configurable channel selection per workspace",
+        "Can be enabled/disabled from dashboard or Slack /apidown briefing command"
+      ],
+      "priority": 126,
+      "passes": false,
+      "notes": ""
+    },
+
+    {
+      "id": "US-130",
+      "title": "API Vendor Reports — Aggregated reliability benchmarking data product",
+      "description": "As a platform operator, I want to sell anonymized reliability benchmark reports to API vendors so they can compare their real-world performance against competitors.",
+      "acceptanceCriteria": [
+        "Admin dashboard section for generating vendor reports",
+        "Report includes: real-world uptime %, P50/P95 latency benchmarks, incident frequency, resolution time",
+        "Data anonymized and aggregated (no individual user data exposed)",
+        "Comparison against category peers (e.g., Stripe vs Square vs Adyen)",
+        "Regional performance breakdown",
+        "Exportable as PDF and JSON",
+        "Vendor self-service portal for purchasing reports (future phase)",
+        "Data accuracy validated against minimum signal threshold per API"
+      ],
+      "priority": 130,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-131",
+      "title": "API Vendor Reports — Public API reliability leaderboard",
+      "description": "As a developer browsing APIdown, I want to see a category-based reliability leaderboard so I can discover the most reliable APIs in each category.",
+      "acceptanceCriteria": [
+        "New /leaderboard route showing APIs ranked by reliability score per category",
+        "Categories: Payments, Communication, Cloud/Infrastructure, Auth, AI/ML, etc.",
+        "Each entry shows: rank, name, grade, 30d uptime %, incident count",
+        "Sortable by different metrics (uptime, latency, incident frequency)",
+        "Free to view (SEO traffic driver), detailed metrics behind Pro tier",
+        "Updated daily via worker job"
+      ],
+      "priority": 131,
+      "passes": false,
+      "notes": ""
+    },
+
+    {
+      "id": "US-135",
+      "title": "Affiliate Marketplace — API alternative suggestions",
+      "description": "As a developer whose API dependency has poor reliability, I want to see suggested alternatives so I can evaluate switching to a more reliable vendor.",
+      "acceptanceCriteria": [
+        "API detail page shows 'Alternatives' section when API grade is C or below",
+        "Alternatives sourced from same category with better reliability scores",
+        "Each alternative shows: name, grade, uptime %, relative latency comparison",
+        "Affiliate links tracked via referral_source parameter",
+        "Admin can configure affiliate URLs and commission rates per API",
+        "Click-through tracking stored for revenue reporting",
+        "Clearly labeled as 'Suggested alternatives based on reliability data'"
+      ],
+      "priority": 135,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-136",
+      "title": "Affiliate Marketplace — Alternatives comparison page",
+      "description": "As a developer evaluating options, I want a dedicated comparison page where I can compare 2-3 APIs side by side across all reliability metrics.",
+      "acceptanceCriteria": [
+        "New /compare/[slug1]/vs/[slug2] route for head-to-head comparison",
+        "Side-by-side: uptime %, latency (P50/P95), incident frequency, resolution time, regional performance",
+        "Visual charts showing overlaid metrics",
+        "Winner highlight per metric category",
+        "SEO-optimized (e.g., 'Stripe vs Square Reliability Comparison')",
+        "Linked from API detail pages and alternatives section"
+      ],
+      "priority": 136,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

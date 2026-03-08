@@ -34,56 +34,143 @@
   let addingApi = $state(false);
   let confirmDeleteApiId = $state(null);
 
-  // Public Status Page state
-  let statusEnabled = $state(data.profile.public_status_enabled || false);
-  let statusTitle = $state(data.profile.public_status_title || '');
-  let statusDescription = $state(data.profile.public_status_description || '');
-  let statusSlug = $state(data.profile.public_status_slug || '');
-  let statusSaving = $state(false);
-  let statusSaved = $state(false);
-  let statusError = $state('');
+  // Status Pages state
+  let statusPages = $state(data.statusPages || []);
+  let statusPageApiMap = $state(data.statusPageApiMap || {});
+  let allApis = $state(data.allApis || []);
+  let subscriberCounts = $state(data.statusPageSubscriberCounts || {});
+  let editingPageId = $state(null);
+  let spSaving = $state(false);
+  let spSaved = $state(false);
+  let spError = $state('');
+  let showCreatePage = $state(false);
   let copiedEmbed = $state(false);
   let copiedUrl = $state(false);
 
+  // New page form state
+  let newPageTitle = $state('');
+  let newPageSlug = $state('');
+  let newPageDescription = $state('');
+
   const isPro = $derived(tier === 'pro' || tier === 'team');
-  const publicUrl = $derived(statusSlug ? `https://apidown.net/status/${statusSlug}` : '');
-  const embedSnippet = $derived(statusSlug ? `<iframe src="${publicUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:8px;"></iframe>` : '');
 
-  async function saveStatusPage() {
-    statusSaving = true;
-    statusError = '';
-    statusSaved = false;
-    const supabase = getAuthClient();
-    if (!supabase) { statusSaving = false; return; }
-
-    // Validate slug
-    const slug = statusSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-    if (statusEnabled && !slug) {
-      statusError = 'Please enter a URL slug.';
-      statusSaving = false;
+  async function createStatusPage() {
+    const slug = newPageSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!slug || !newPageTitle.trim()) {
+      spError = 'Title and slug are required.';
       return;
     }
+    spSaving = true;
+    spError = '';
+    const supabase = getAuthClient();
+    if (!supabase) { spSaving = false; return; }
 
-    const { error: err } = await supabase
-      .from('users')
-      .update({
-        public_status_enabled: statusEnabled,
-        public_status_title: statusTitle.trim(),
-        public_status_description: statusDescription.trim(),
-        public_status_slug: slug || null,
+    const { data: newPage, error: err } = await supabase
+      .from('status_pages')
+      .insert({
+        user_id: data.profile.id,
+        slug,
+        title: newPageTitle.trim(),
+        description: newPageDescription.trim(),
+        is_enabled: false,
       })
-      .eq('id', data.profile.id || '');
+      .select()
+      .single();
 
     if (err) {
-      statusError = err.message?.includes('unique') || err.message?.includes('duplicate')
-        ? 'That slug is already taken. Please choose a different one.'
-        : 'Failed to save. Please try again.';
+      spError = err.message?.includes('unique') || err.message?.includes('duplicate')
+        ? 'That slug is already taken.'
+        : 'Failed to create. ' + (err.message || '');
     } else {
-      statusSlug = slug;
-      statusSaved = true;
-      setTimeout(() => statusSaved = false, 3000);
+      statusPages = [...statusPages, newPage];
+      statusPageApiMap[newPage.id] = [];
+      subscriberCounts[newPage.id] = 0;
+      showCreatePage = false;
+      newPageTitle = '';
+      newPageSlug = '';
+      newPageDescription = '';
+      editingPageId = newPage.id;
     }
-    statusSaving = false;
+    spSaving = false;
+  }
+
+  async function saveStatusPage(page) {
+    spSaving = true;
+    spError = '';
+    spSaved = false;
+    const supabase = getAuthClient();
+    if (!supabase) { spSaving = false; return; }
+
+    const slug = page.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!slug) { spError = 'Slug is required.'; spSaving = false; return; }
+
+    const { error: err } = await supabase
+      .from('status_pages')
+      .update({
+        slug,
+        title: page.title?.trim() || 'Status',
+        description: page.description?.trim() || '',
+        is_enabled: page.is_enabled,
+        logo_url: page.logo_url || null,
+        accent_color: page.accent_color || '#06b4d4',
+        show_uptime_bars: page.show_uptime_bars ?? true,
+        show_latency_chart: page.show_latency_chart ?? true,
+        show_incidents: page.show_incidents ?? true,
+        show_subscriber_form: page.show_subscriber_form ?? true,
+        show_powered_by: page.show_powered_by ?? true,
+        incidents_count: page.incidents_count || 5,
+        uptime_days: page.uptime_days || 90,
+      })
+      .eq('id', page.id);
+
+    if (err) {
+      spError = err.message?.includes('unique') || err.message?.includes('duplicate')
+        ? 'That slug is already taken.'
+        : 'Failed to save. ' + (err.message || '');
+    } else {
+      statusPages = statusPages.map(sp => sp.id === page.id ? { ...sp, ...page, slug } : sp);
+      spSaved = true;
+      setTimeout(() => spSaved = false, 3000);
+    }
+    spSaving = false;
+  }
+
+  async function deleteStatusPage(pageId) {
+    const supabase = getAuthClient();
+    if (!supabase) return;
+    const { error: err } = await supabase.from('status_pages').delete().eq('id', pageId);
+    if (!err) {
+      statusPages = statusPages.filter(sp => sp.id !== pageId);
+      if (editingPageId === pageId) editingPageId = null;
+    }
+  }
+
+  async function addApiToPage(pageId, apiId) {
+    const supabase = getAuthClient();
+    if (!supabase) return;
+    const current = statusPageApiMap[pageId] || [];
+    const order = current.length;
+    const { error: err } = await supabase
+      .from('status_page_apis')
+      .insert({ status_page_id: pageId, api_id: apiId, display_order: order });
+    if (!err) {
+      statusPageApiMap[pageId] = [...current, { status_page_id: pageId, api_id: apiId, display_order: order }];
+      statusPageApiMap = { ...statusPageApiMap };
+    }
+  }
+
+  async function removeApiFromPage(pageId, apiId) {
+    const supabase = getAuthClient();
+    if (!supabase) return;
+    const { error: err } = await supabase
+      .from('status_page_apis')
+      .delete()
+      .eq('status_page_id', pageId)
+      .eq('api_id', apiId);
+    if (!err) {
+      statusPageApiMap[pageId] = (statusPageApiMap[pageId] || []).filter(a => a.api_id !== apiId);
+      statusPageApiMap = { ...statusPageApiMap };
+    }
   }
 
   // 2FA / TOTP state
@@ -821,83 +908,219 @@
 
 {#if isPro}
 <section class="section">
-  <h2>Public Status Page</h2>
-  <p class="section-desc">Share a public status page showing your pinned APIs. Requires Pro or Team plan.</p>
+  <h2>Status Pages</h2>
+  <p class="section-desc">Create public status pages showing your monitored APIs with uptime bars, latency charts, and incident history. {tier === 'pro' ? '1 page included' : 'Up to 3 pages'} on your {tier} plan.</p>
 
-  <div class="status-page-form">
-    <div class="status-toggle-row">
-      <label class="status-toggle-label" for="status-enabled">Enable public status page</label>
-      <button
-        id="status-enabled"
-        class="toggle-btn"
-        class:toggle-on={statusEnabled}
-        onclick={() => statusEnabled = !statusEnabled}
-        role="switch"
-        aria-checked={statusEnabled}
-      >
-        <span class="toggle-knob"></span>
-      </button>
+  <!-- Existing Status Pages -->
+  {#each statusPages as page (page.id)}
+    <div class="sp-card" class:sp-card-editing={editingPageId === page.id}>
+      <div class="sp-card-header">
+        <div class="sp-card-title-row">
+          <span class="sp-status-dot" class:sp-dot-on={page.is_enabled} class:sp-dot-off={!page.is_enabled}></span>
+          <strong>{page.title}</strong>
+          <span class="sp-slug-badge">/status/{page.slug}</span>
+          {#if subscriberCounts[page.id] > 0}
+            <span class="sp-sub-count">{subscriberCounts[page.id]} subscriber{subscriberCounts[page.id] === 1 ? '' : 's'}</span>
+          {/if}
+        </div>
+        <div class="sp-card-actions">
+          {#if page.is_enabled}
+            <a href="/status/{page.slug}" target="_blank" rel="noopener" class="btn-sm">View</a>
+          {/if}
+          <button class="btn-sm" onclick={() => editingPageId = editingPageId === page.id ? null : page.id}>
+            {editingPageId === page.id ? 'Collapse' : 'Edit'}
+          </button>
+        </div>
+      </div>
+
+      {#if editingPageId === page.id}
+        <div class="sp-edit-body">
+          <!-- Basic Settings -->
+          <div class="sp-edit-grid">
+            <div class="status-field">
+              <label>Enabled</label>
+              <button
+                class="toggle-btn"
+                class:toggle-on={page.is_enabled}
+                onclick={() => { page.is_enabled = !page.is_enabled; statusPages = [...statusPages]; }}
+                role="switch"
+                aria-checked={page.is_enabled}
+              >
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+
+            <div class="status-field">
+              <label>Title</label>
+              <input type="text" bind:value={page.title} placeholder="My Status Page" maxlength="100" />
+            </div>
+
+            <div class="status-field">
+              <label>Description</label>
+              <input type="text" bind:value={page.description} placeholder="Current status of our dependencies" maxlength="200" />
+            </div>
+
+            <div class="status-field">
+              <label>URL Slug</label>
+              <div class="slug-input-row">
+                <span class="slug-prefix">apidown.net/status/</span>
+                <input type="text" bind:value={page.slug} placeholder="my-company" maxlength="60" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Branding -->
+          <h4 class="sp-sub-heading">Branding</h4>
+          <div class="sp-edit-grid">
+            <div class="status-field">
+              <label>Logo URL</label>
+              <input type="url" bind:value={page.logo_url} placeholder="https://example.com/logo.png" />
+            </div>
+
+            <div class="status-field">
+              <label>Accent Color</label>
+              <div class="color-input-row">
+                <input type="color" bind:value={page.accent_color} class="color-picker" />
+                <input type="text" bind:value={page.accent_color} placeholder="#06b4d4" maxlength="7" class="color-text" />
+              </div>
+            </div>
+
+            <div class="status-field">
+              <label>Show "Powered by APIdown"</label>
+              <button
+                class="toggle-btn"
+                class:toggle-on={page.show_powered_by}
+                onclick={() => { page.show_powered_by = !page.show_powered_by; statusPages = [...statusPages]; }}
+                role="switch"
+                aria-checked={page.show_powered_by}
+              >
+                <span class="toggle-knob"></span>
+              </button>
+              {#if page.show_powered_by === false && tier !== 'team'}
+                <span class="field-hint" style="color: var(--color-degraded)">White-label requires Team plan</span>
+              {/if}
+            </div>
+          </div>
+
+          <!-- Components -->
+          <h4 class="sp-sub-heading">Components</h4>
+          <div class="sp-toggles-row">
+            {#each [
+              { key: 'show_uptime_bars', label: 'Uptime Bars' },
+              { key: 'show_latency_chart', label: 'Latency Charts' },
+              { key: 'show_incidents', label: 'Incidents' },
+              { key: 'show_subscriber_form', label: 'Subscribe Form' },
+            ] as toggle}
+              <label class="sp-toggle-item">
+                <input type="checkbox" bind:checked={page[toggle.key]} />
+                <span>{toggle.label}</span>
+              </label>
+            {/each}
+          </div>
+
+          <!-- APIs on this page -->
+          <h4 class="sp-sub-heading">APIs on this page</h4>
+          <div class="sp-api-list">
+            {#each (statusPageApiMap[page.id] || []) as spa}
+              {@const apiInfo = allApis.find(a => a.id === spa.api_id)}
+              {#if apiInfo}
+                <div class="sp-api-chip">
+                  {#if apiInfo.logo_url}
+                    <img src={apiInfo.logo_url} alt="" width="16" height="16" class="sp-api-chip-logo" />
+                  {/if}
+                  <span>{apiInfo.name}</span>
+                  <button class="sp-api-chip-remove" onclick={() => removeApiFromPage(page.id, spa.api_id)} aria-label="Remove {apiInfo.name}">&times;</button>
+                </div>
+              {/if}
+            {/each}
+          </div>
+
+          <div class="sp-add-api-row">
+            <select class="sp-api-select" onchange={(e) => { if (e.target.value) { addApiToPage(page.id, e.target.value); e.target.value = ''; } }}>
+              <option value="">+ Add API...</option>
+              {#each allApis.filter(a => !(statusPageApiMap[page.id] || []).some(spa => spa.api_id === a.id)) as api}
+                <option value={api.id}>{api.name}</option>
+              {/each}
+            </select>
+          </div>
+
+          <!-- Embed Info -->
+          {#if page.is_enabled && page.slug}
+            {@const pUrl = `https://apidown.net/status/${page.slug}`}
+            {@const embed = `<iframe src="${pUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:8px;"></iframe>`}
+            <div class="status-embed-info">
+              <div class="status-url-row">
+                <label>Public URL</label>
+                <div class="status-url-display">
+                  <a href={pUrl} target="_blank" rel="noopener">{pUrl}</a>
+                  <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(pUrl); copiedUrl = true; setTimeout(() => copiedUrl = false, 2000); }}>
+                    {copiedUrl ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+              <div class="status-url-row">
+                <label>Embed Snippet</label>
+                <div class="embed-code-wrap">
+                  <code class="embed-code">{embed}</code>
+                  <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(embed); copiedEmbed = true; setTimeout(() => copiedEmbed = false, 2000); }}>
+                    {copiedEmbed ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Save / Delete -->
+          <div class="sp-edit-actions">
+            <button class="btn-primary" onclick={() => saveStatusPage(page)} disabled={spSaving}>
+              {spSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button class="btn-danger-sm" onclick={() => { if (confirm('Delete this status page? This cannot be undone.')) deleteStatusPage(page.id); }}>
+              Delete Page
+            </button>
+            {#if spSaved}<span class="status-saved-msg">Saved!</span>{/if}
+            {#if spError}<span class="status-error-msg">{spError}</span>{/if}
+          </div>
+        </div>
+      {/if}
     </div>
+  {/each}
 
-    {#if statusEnabled}
-      <div class="status-fields">
+  <!-- Create New Page -->
+  {#if statusPages.length < limits.statusPages}
+    {#if showCreatePage}
+      <div class="sp-create-form">
         <div class="status-field">
-          <label for="status-title">Page Title</label>
-          <input id="status-title" type="text" bind:value={statusTitle} placeholder="My API Status" maxlength="100" />
+          <label>Title</label>
+          <input type="text" bind:value={newPageTitle} placeholder="My Status Page" maxlength="100" />
         </div>
-
         <div class="status-field">
-          <label for="status-desc-input">Description</label>
-          <input id="status-desc-input" type="text" bind:value={statusDescription} placeholder="Current status of our API dependencies" maxlength="200" />
-        </div>
-
-        <div class="status-field">
-          <label for="status-slug">URL Slug</label>
+          <label>URL Slug</label>
           <div class="slug-input-row">
             <span class="slug-prefix">apidown.net/status/</span>
-            <input id="status-slug" type="text" bind:value={statusSlug} placeholder="my-company" maxlength="60" pattern="[a-z0-9-]+" />
+            <input type="text" bind:value={newPageSlug} placeholder="my-company" maxlength="60" />
           </div>
-          <span class="field-hint">Lowercase letters, numbers, and hyphens only.</span>
+        </div>
+        <div class="status-field">
+          <label>Description (optional)</label>
+          <input type="text" bind:value={newPageDescription} placeholder="Live status of our API dependencies" maxlength="200" />
+        </div>
+        <div class="sp-create-actions">
+          <button class="btn-primary" onclick={createStatusPage} disabled={spSaving}>
+            {spSaving ? 'Creating...' : 'Create Page'}
+          </button>
+          <button class="btn-sm" onclick={() => showCreatePage = false}>Cancel</button>
+          {#if spError}<span class="status-error-msg">{spError}</span>{/if}
         </div>
       </div>
-    {/if}
-
-    <div class="status-actions">
-      <button class="btn-primary" onclick={saveStatusPage} disabled={statusSaving}>
-        {statusSaving ? 'Saving...' : 'Save'}
+    {:else}
+      <button class="btn-add-page" onclick={() => { showCreatePage = true; spError = ''; }}>
+        + Create Status Page
       </button>
-      {#if statusSaved}
-        <span class="status-saved-msg">Saved!</span>
-      {/if}
-      {#if statusError}
-        <span class="status-error-msg">{statusError}</span>
-      {/if}
-    </div>
-
-    {#if statusEnabled && statusSlug}
-      <div class="status-embed-info">
-        <div class="status-url-row">
-          <label>Public URL</label>
-          <div class="status-url-display">
-            <a href={publicUrl} target="_blank" rel="noopener">{publicUrl}</a>
-            <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(publicUrl); copiedUrl = true; setTimeout(() => copiedUrl = false, 2000); }}>
-              {copiedUrl ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        </div>
-
-        <div class="status-url-row">
-          <label>Embed Snippet</label>
-          <div class="embed-code-wrap">
-            <code class="embed-code">{embedSnippet}</code>
-            <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(embedSnippet); copiedEmbed = true; setTimeout(() => copiedEmbed = false, 2000); }}>
-              {copiedEmbed ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        </div>
-      </div>
     {/if}
-  </div>
+  {:else if statusPages.length > 0}
+    <p class="sp-limit-msg">You've reached the status page limit for your {tier} plan. {#if tier === 'pro'}Upgrade to Team for up to 3 pages.{/if}</p>
+  {/if}
 </section>
 {/if}
 
@@ -1433,6 +1656,23 @@
   .btn-primary:hover { opacity: 0.9; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  .btn-sm {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 0.3rem 0.6rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .btn-sm:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
   .btn-secondary {
     background: var(--color-surface);
     color: var(--color-text);
@@ -1954,23 +2194,241 @@
     .embed-code { font-size: 0.65rem; }
   }
 
-  /* Public Status Page */
-  .status-page-form {
-    padding: 1rem;
+  /* Status Pages */
+  .sp-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
   }
 
-  .status-toggle-row {
+  .sp-card-editing {
+    border-color: var(--color-primary);
+  }
+
+  .sp-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
   }
 
-  .status-toggle-label {
+  .sp-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .sp-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .sp-dot-on { background: var(--color-operational, #4ade80); }
+  .sp-dot-off { background: var(--color-text-muted); opacity: 0.4; }
+
+  .sp-slug-badge {
+    font-size: 0.7rem;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  .sp-sub-count {
+    font-size: 0.7rem;
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  .sp-card-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .sp-edit-body {
+    padding: 0 1rem 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .sp-edit-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .sp-sub-heading {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+    color: var(--color-text);
+  }
+
+  .color-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .color-picker {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 2px;
+    background: transparent;
+  }
+
+  .color-text {
+    width: 90px;
+  }
+
+  .sp-toggles-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .sp-toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .sp-toggle-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-primary);
+  }
+
+  .sp-api-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+
+  .sp-api-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .sp-api-chip-logo {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+  }
+
+  .sp-api-chip-remove {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 0.15rem;
+    line-height: 1;
+  }
+
+  .sp-api-chip-remove:hover { color: var(--color-down); }
+
+  .sp-add-api-row {
+    margin-top: 0.5rem;
+  }
+
+  .sp-api-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.8rem;
+    min-width: 200px;
+  }
+
+  .sp-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .btn-danger-sm {
+    background: transparent;
+    border: 1px solid var(--color-down, #ef4444);
+    color: var(--color-down, #ef4444);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .btn-danger-sm:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  .sp-create-form {
+    background: var(--color-surface);
+    border: 1px solid var(--color-primary);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sp-create-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .btn-add-page {
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    border: 2px dashed var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text-muted);
     font-size: 0.9rem;
     font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .btn-add-page:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .sp-limit-msg {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: 0.75rem;
   }
 
   .toggle-btn {

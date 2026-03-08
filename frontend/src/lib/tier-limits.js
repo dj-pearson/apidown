@@ -3,18 +3,21 @@ export const TIER_LIMITS = {
     apiKeys: 1,
     subscriptions: 5,
     customApis: 1,
+    statusPages: 0,
     channels: ['email'],
   },
   pro: {
     apiKeys: 10,
     subscriptions: 50,
     customApis: 5,
+    statusPages: 1,
     channels: ['email', 'slack', 'pagerduty', 'discord', 'teams'],
   },
   team: {
     apiKeys: Infinity,
     subscriptions: Infinity,
     customApis: Infinity,
+    statusPages: 3,
     channels: ['email', 'slack', 'pagerduty', 'discord', 'teams'],
   },
 };
@@ -24,8 +27,8 @@ export function getTierLimits(tier) {
 }
 
 export const TIER_INFO = {
-  pro: { name: 'Pro', price: '$19/mo', apiKeys: 10, subscriptions: 50, customApis: 5 },
-  team: { name: 'Team', price: '$49/mo', apiKeys: 'Unlimited', subscriptions: 'Unlimited', customApis: 'Unlimited' },
+  pro: { name: 'Pro', price: '$19/mo', apiKeys: 10, subscriptions: 50, customApis: 5, statusPages: 1 },
+  team: { name: 'Team', price: '$49/mo', apiKeys: 'Unlimited', subscriptions: 'Unlimited', customApis: 'Unlimited', statusPages: 3 },
 };
 
 export function getNextTier(tier) {
