@@ -3,3 +3,6 @@ US-068 - Custom anomaly detection thresholds per subscription
 US-069 - Team incident annotations
 US-071 - Public embeddable status page for Pro users
 US-072 - SLA target tracking with pass/fail reporting
+US-096 - Wire newsletter signup form to backend storage
+US-098 - Add PWA manifest and service worker for offline support
+US-141 - Enhanced error page with API search and popular links

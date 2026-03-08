@@ -1,5 +1,6 @@
 <script>
   import { getSupabase } from '$lib/supabase.js';
+  import SEO from '$lib/components/SEO.svelte';
 
   let { data } = $props();
   let incident = $state(data.incident);
@@ -63,10 +64,11 @@
   });
 </script>
 
-<svelte:head>
-  <title>{incident.title} — APIdown.net</title>
-  <meta name="description" content="{incident.severity.toUpperCase()} incident: {incident.title} affecting {incident.apis?.name || 'API'}. Status: {incident.status}. Duration: {duration}. View full timeline and resolution details." />
-  {@html `<script type="application/ld+json">${JSON.stringify([
+<SEO
+  title="{incident.title} — APIdown.net"
+  description="{incident.severity.toUpperCase()} incident: {incident.title} affecting {incident.apis?.name || 'API'}. Status: {incident.status}. Duration: {duration}. View full timeline and resolution details."
+  canonical="https://apidown.net/incidents/{incident.id}"
+  schema={[
     {
       "@context": "https://schema.org",
       "@type": "NewsArticle",
@@ -89,8 +91,8 @@
         { "@type": "ListItem", "position": 3, "name": incident.title, "item": `https://apidown.net/incidents/${incident.id}` }
       ]
     }
-  ])}</script>`}
-</svelte:head>
+  ]}
+/>
 
 <a href="/incidents" class="back">&larr; All Incidents</a>
 

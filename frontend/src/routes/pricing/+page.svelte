@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
   let loading = $state(null);
   let billingPeriod = $state('monthly');
@@ -167,10 +168,11 @@
   }
 </script>
 
-<svelte:head>
-  <title>Pricing — APIdown.net</title>
-  <meta name="description" content="Simple, transparent pricing for API health monitoring. Free forever for individual developers. Pro $19/mo, Team $49/mo." />
-  {@html `<script type="application/ld+json">${JSON.stringify([
+<SEO
+  title="Pricing — APIdown.net"
+  description="Simple, transparent pricing for API health monitoring. Free forever for individual developers. Pro $19/mo, Team $49/mo."
+  canonical="https://apidown.net/pricing"
+  schema={[
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
@@ -208,8 +210,8 @@
         { "@type": "Question", "name": "Can I get a refund?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. If you're not satisfied within the first 14 days of a paid plan, contact us for a full refund. After 14 days, you can cancel anytime and your plan will remain active until the end of the billing period." } }
       ]
     }
-  ])}</script>`}
-</svelte:head>
+  ]}
+/>
 
 <div class="pricing-page">
   <nav class="breadcrumb" aria-label="Breadcrumb">

@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let copiedIndex = $state(null);
   let copiedTimeout;
 
@@ -61,10 +62,11 @@
   });
 </script>
 
-<svelte:head>
-  <title>SDK Documentation — APIdown.net</title>
-  <meta name="description" content="Integrate the APIdown SDK into your JavaScript, Node.js, or Python application to contribute real-time API health signals. One-line setup for Express, Next.js, SvelteKit, Django, and FastAPI." />
-  {@html `<script type="application/ld+json">${JSON.stringify([
+<SEO
+  title="SDK Documentation — APIdown.net"
+  description="Integrate the APIdown SDK into your JavaScript, Node.js, or Python application to contribute real-time API health signals. One-line setup for Express, Next.js, SvelteKit, Django, and FastAPI."
+  canonical="https://apidown.net/docs"
+  schema={[
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
@@ -100,8 +102,8 @@
         { "@type": "ListItem", "position": 2, "name": "Documentation", "item": "https://apidown.net/docs" }
       ]
     }
-  ])}</script>`}
-</svelte:head>
+  ]}
+/>
 
 <!-- Mobile TOC dropdown -->
 <div class="toc-mobile">

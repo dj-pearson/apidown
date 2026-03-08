@@ -2,6 +2,7 @@
   import { createClient } from '@supabase/supabase-js';
   import StatusCard from '$lib/components/StatusCard.svelte';
   import SkeletonCard from '$lib/components/SkeletonCard.svelte';
+  import SEO from '$lib/components/SEO.svelte';
 
   let { data } = $props();
   let apis = $state(data.apis);
@@ -94,9 +95,13 @@
   });
 </script>
 
+<SEO
+  title="APIdown.net — Real API Status from Real Traffic"
+  description="Real-time API health status powered by crowd-sourced production traffic. Is the API actually down — or is it your code?"
+  canonical="https://apidown.net"
+/>
+
 <svelte:head>
-  <title>APIdown.net — Real API Status from Real Traffic</title>
-  <meta name="description" content="Real-time API health status powered by crowd-sourced production traffic. Is the API actually down — or is it your code?" />
   {@html `<script type="application/ld+json">${JSON.stringify([
     {
       "@context": "https://schema.org",
