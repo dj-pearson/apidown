@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '$lib/supabase-server.js';
+import { computeReliabilityScore, metricsFromRaw } from '$lib/reliability-score.js';
 
 export async function load() {
   try {
@@ -64,11 +65,49 @@ export async function load() {
       api_logo: apiLookup[inc.api_id]?.logo_url || '',
     }));
 
+    // Compute reliability grades for each API
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Batch-fetch 90d incidents for all APIs
+    const { data: allIncidents90d } = await supabaseAdmin
+      .from('incidents')
+      .select('api_id, started_at, resolved_at')
+      .gte('started_at', ninetyDaysAgo);
+
+    // Batch-fetch 30d latency for score computation
+    const { data: latency30d } = await supabaseAdmin
+      .from('signals_1min')
+      .select('api_id, p95_ms')
+      .gte('bucket', thirtyDaysAgo);
+
+    const gradeData = {};
+    for (const api of (apis || [])) {
+      const apiIncidents = (allIncidents90d || []).filter(i => i.api_id === api.id);
+      const apiLatency = (latency30d || []).filter(l => l.api_id === api.id);
+
+      // 30-day uptime
+      let downMs = 0;
+      const now = Date.now();
+      const cutoff30 = now - 30 * 24 * 60 * 60 * 1000;
+      for (const inc of apiIncidents) {
+        const start = Math.max(new Date(inc.started_at).getTime(), cutoff30);
+        const end = inc.resolved_at ? new Date(inc.resolved_at).getTime() : now;
+        if (start < end && start >= cutoff30) downMs += end - start;
+      }
+      const uptimePct = ((1 - downMs / (30 * 24 * 60 * 60 * 1000)) * 100);
+
+      const metrics = metricsFromRaw({ uptimePct, latencyData: apiLatency, incidents: apiIncidents });
+      const { grade, gradeColor } = computeReliabilityScore(metrics);
+      gradeData[api.id] = { grade, gradeColor };
+    }
+
     return {
       apis: apis || [],
       activeIncidents: incidents || [],
       sparklineData,
       recentDetected,
+      gradeData,
     };
   } catch (err) {
     console.error('Homepage load error:', err);

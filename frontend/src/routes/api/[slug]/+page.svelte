@@ -513,6 +513,11 @@
   </div>
 {/if}
 
+<!-- Report Card Link -->
+<div class="report-card-link">
+  <a href="/api/{api.slug}/report-card">View Reliability Report Card</a>
+</div>
+
 <!-- Community Pulse -->
 <div class="community-pulse">
   {#if (data.subscriberCount || 0) > 5}
@@ -849,6 +854,28 @@
     font-weight: 500;
     color: var(--color-text-muted);
     display: block;
+  }
+
+  .report-card-link {
+    margin-bottom: 1rem;
+  }
+
+  .report-card-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-primary);
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  .report-card-link a:hover {
+    background: rgba(6, 180, 212, 0.1);
   }
 
   .community-pulse {

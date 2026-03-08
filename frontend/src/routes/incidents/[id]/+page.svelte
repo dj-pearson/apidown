@@ -116,6 +116,8 @@
       <span>·</span>
       <span>{incident.report_count} user report{incident.report_count !== 1 ? 's' : ''}</span>
     {/if}
+    <span>·</span>
+    <a href="/incidents/{incident.id}/postmortem" class="postmortem-link">View Postmortem</a>
   </div>
 
   {#if estimatedCost}
@@ -256,6 +258,16 @@
 
   .api-link {
     font-weight: 600;
+  }
+
+  .postmortem-link {
+    color: var(--color-primary);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .postmortem-link:hover {
+    text-decoration: underline;
   }
 
   .cost-estimate {

@@ -8,6 +8,7 @@
   let activeIncidents = $state(data.activeIncidents);
   let recentDetected = data.recentDetected || [];
   let sparklineData = data.sparklineData || {};
+  let gradeData = data.gradeData || {};
   let searchQuery = $state('');
   let sortMode = $state(typeof localStorage !== 'undefined' ? localStorage.getItem('apidown-sort') || 'category' : 'category');
 
@@ -254,7 +255,7 @@
   {#if groupedApis.__flat}
     <div class="grid">
       {#each groupedApis.__flat as api (api.id)}
-        <StatusCard {api} sparkline={sparklineData[api.id] || []} />
+        <StatusCard {api} sparkline={sparklineData[api.id] || []} grade={gradeData[api.id]?.grade} gradeColor={gradeData[api.id]?.gradeColor} />
       {/each}
     </div>
   {:else}
@@ -263,7 +264,7 @@
         <h2>{categoryLabels[category] || category}</h2>
         <div class="grid">
           {#each categoryApis as api (api.id)}
-            <StatusCard {api} sparkline={sparklineData[api.id] || []} />
+            <StatusCard {api} sparkline={sparklineData[api.id] || []} grade={gradeData[api.id]?.grade} gradeColor={gradeData[api.id]?.gradeColor} />
           {/each}
         </div>
       </section>

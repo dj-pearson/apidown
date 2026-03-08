@@ -1,7 +1,7 @@
 <script>
   import Sparkline from './Sparkline.svelte';
 
-  let { api, sparkline = [] } = $props();
+  let { api, sparkline = [], grade = null, gradeColor = null } = $props();
   let logoFailed = $state(false);
 
   const statusColors = {
@@ -35,6 +35,11 @@
   <div class="card-status">
     <span class="dot" style="background: {dotColor}"></span>
     <span class="label" style="color: {dotColor}">{label}</span>
+    {#if grade}
+      <a href="/api/{api.slug}/report-card" class="grade-badge" style="background: {gradeColor}20; color: {gradeColor}; border-color: {gradeColor}40" title="Reliability grade — click for report card" onclick={(e) => e.stopPropagation()}>
+        {grade}
+      </a>
+    {/if}
   </div>
 </a>
 
@@ -111,5 +116,21 @@
   .label {
     font-size: 0.8rem;
     font-weight: 500;
+  }
+
+  .grade-badge {
+    margin-left: auto;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    border: 1px solid;
+    text-decoration: none;
+    line-height: 1.2;
+    transition: opacity 0.15s;
+  }
+
+  .grade-badge:hover {
+    opacity: 0.8;
   }
 </style>

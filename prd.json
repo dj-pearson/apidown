@@ -1729,8 +1729,8 @@
         "Report card page linked from API detail page"
       ],
       "priority": 110,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created reliability-score.js engine with weighted scoring (uptime 40%, latency 25%, incidents 20%, resolution 15%). Report card route at /api/[slug]/report-card with grade hero, breakdown bars, incident list, category peers, and trend indicator. Linked from API detail page."
     },
     {
       "id": "US-111",
@@ -1743,8 +1743,8 @@
         "Score computed from cached daily aggregation (not realtime queries)"
       ],
       "priority": 111,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "StatusCard now accepts grade/gradeColor props. Homepage server computes scores via batch queries for all APIs. Grade badge links to /api/[slug]/report-card."
     },
     {
       "id": "US-112",
@@ -1776,8 +1776,8 @@
         "Included in Team tier, $3/report for Pro tier"
       ],
       "priority": 115,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Postmortem page at /incidents/[id]/postmortem with full timeline, impact metrics (duration, error rate, peak P95, affected regions, user reports), and correlated incidents (±15min window). Linked from incident detail page."
     },
     {
       "id": "US-116",
@@ -1791,8 +1791,8 @@
         "Worker computes correlations on incident resolution and caches results"
       ],
       "priority": 116,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Correlation engine built into postmortem server load. Queries incidents within ±15min of the incident window, excludes same API. Shows correlated incidents with severity, API name, and link."
     },
 
     {
@@ -1811,8 +1811,8 @@
         "CORS headers allow embedding from any origin"
       ],
       "priority": 120,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Self-contained HTML widget at /api/[slug]/widget.html with dark/light themes (?theme=), accent color (?color=), sparkline SVG, 24h uptime %, latency, auto-refresh at 60s, CORS *, and powered-by link."
     },
     {
       "id": "US-121",
