@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
   let viewMode = $state('all'); // 'all' or category name
   let sortBy = $state('score'); // 'score', 'uptime', 'latency', 'incidents'
@@ -26,21 +27,19 @@
   });
 </script>
 
-<svelte:head>
-  <title>API Reliability Leaderboard — APIdown.net</title>
-  <meta name="description" content="Independent API reliability rankings based on crowd-sourced production monitoring data. Compare uptime, latency, and incident frequency across 40+ APIs." />
-  <link rel="canonical" href="https://apidown.net/leaderboard" />
-  <meta property="og:title" content="API Reliability Leaderboard" />
-  <meta property="og:description" content="See which APIs are most reliable. Independent rankings from real production traffic data." />
-  {@html `<script type="application/ld+json">${JSON.stringify({
+<SEO
+  title="API Reliability Leaderboard — APIdown.net"
+  description="Independent API reliability rankings based on crowd-sourced production monitoring data. Compare uptime, latency, and incident frequency across 40+ APIs."
+  canonical="https://apidown.net/leaderboard"
+  schema={{
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "API Reliability Leaderboard",
     "description": "Independent API reliability rankings based on crowd-sourced production monitoring.",
     "url": "https://apidown.net/leaderboard",
     "isPartOf": { "@type": "WebSite", "name": "APIdown.net", "url": "https://apidown.net" }
-  })}</script>`}
-</svelte:head>
+  }}
+/>
 
 <div class="leaderboard">
   <div class="lb-header">

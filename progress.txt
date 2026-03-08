@@ -120,6 +120,12 @@ US-100: DONE - Incident filter persistence via URL query params (severity, statu
 US-101: DONE - Password strength indicator on registration (5-point scoring, visual meter bar, requirement hints with checkmarks)
 US-099: DONE - Real-time incident list updates (Supabase postgres_changes subscription for INSERT/UPDATE on incidents table, live indicator dot)
 
+-- Phase 17: Critical Platform Improvements (Round 2) --
+US-096: DONE - Wire newsletter signup form to Supabase storage (POST /api/newsletter endpoint, newsletter_subscribers table migration 023, footer form wired with error/success states)
+US-098: DONE - PWA manifest and service worker (manifest.json with icons/theme, sw.js with static asset caching, link rel=manifest in app.html, SW registration in hooks.client.js)
+US-141: DONE - Enhanced error page with API search and popular links (redesigned +error.svelte with search form, popular API chips, contextual headings, navigation links)
+SEO-FIX: DONE - SEO component Svelte 5 migration and adoption across 7 key pages (homepage, incidents, incident detail, pricing, docs, leaderboard, API detail — adds canonical URLs, OG tags, Twitter cards to pages that were missing them)
+
 == Architecture Notes ==
 - svelte.config.js uses adapter-cloudflare (not adapter-node)
 - Supabase clients use lazy initialization (getSupabase/getSupabaseAdmin) to avoid build-time crashes

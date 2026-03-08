@@ -21,6 +21,7 @@
   let newsletterEmail = $state('');
   let newsletterSubmitting = $state(false);
   let newsletterMsg = $state('');
+  let newsletterMsgError = $state(false);
 
   function isActive(href) {
     if (href === '/') return page.url.pathname === '/';
@@ -55,11 +56,23 @@
     newsletterSubmitting = true;
     newsletterMsg = '';
     try {
-      // Store in Supabase or handle as needed
-      newsletterMsg = 'Subscribed! Check your inbox for a confirmation.';
-      newsletterEmail = '';
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        newsletterMsg = result.error || 'Something went wrong. Please try again.';
+        newsletterMsgError = true;
+      } else {
+        newsletterMsg = 'Subscribed! You\'ll receive weekly API reliability insights.';
+        newsletterMsgError = false;
+        newsletterEmail = '';
+      }
     } catch {
       newsletterMsg = 'Something went wrong. Please try again.';
+      newsletterMsgError = true;
     }
     newsletterSubmitting = false;
   }
@@ -219,7 +232,7 @@
         <button type="submit" disabled={newsletterSubmitting}>{newsletterSubmitting ? 'Subscribing...' : 'Subscribe'}</button>
       </form>
       {#if newsletterMsg}
-        <p class="newsletter-msg">{newsletterMsg}</p>
+        <p class="newsletter-msg" class:newsletter-error={newsletterMsgError}>{newsletterMsg}</p>
       {/if}
     </div>
 
@@ -504,6 +517,10 @@
     font-size: 0.8rem;
     color: var(--color-operational);
     margin-top: 0.25rem;
+  }
+
+  .newsletter-error {
+    color: var(--color-down);
   }
 
   @media (max-width: 640px) {

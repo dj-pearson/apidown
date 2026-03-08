@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { createClient } from '@supabase/supabase-js';
+  import SEO from '$lib/components/SEO.svelte';
 
   let { data } = $props();
   let incidents = $state(data.incidents);
@@ -118,11 +119,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>API Incidents — APIdown.net</title>
-  <meta name="description" content="Active and recent API incidents detected from real production traffic. View outage timelines, affected regions, and resolution status for {totalCount} tracked incidents." />
-  <link rel="alternate" type="application/rss+xml" title="APIdown.net Incident Feed" href="/incidents/rss" />
-  {@html `<script type="application/ld+json">${JSON.stringify([
+<SEO
+  title="API Incidents — APIdown.net"
+  description="Active and recent API incidents detected from real production traffic. View outage timelines, affected regions, and resolution status for {totalCount} tracked incidents."
+  canonical="https://apidown.net/incidents"
+  alternates={[{ type: 'application/rss+xml', href: '/incidents/rss', title: 'APIdown.net Incident Feed' }]}
+  schema={[
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
@@ -139,8 +141,8 @@
         { "@type": "ListItem", "position": 2, "name": "Incidents", "item": "https://apidown.net/incidents" }
       ]
     }
-  ])}</script>`}
-</svelte:head>
+  ]}
+/>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <ol>

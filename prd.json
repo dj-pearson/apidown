@@ -1551,8 +1551,8 @@
         "Typecheck passes"
       ],
       "priority": 96,
-      "passes": false,
-      "notes": "Footer newsletter form currently shows success message without storing the email"
+      "passes": true,
+      "notes": "Created POST /api/newsletter SvelteKit endpoint that upserts to newsletter_subscribers table. Migration 023 creates table with RLS. Footer form wired with proper error/success states."
     },
     {
       "id": "US-097",
@@ -1580,8 +1580,8 @@
         "Typecheck passes"
       ],
       "priority": 98,
-      "passes": false,
-      "notes": "Monitoring app is a natural PWA candidate for mobile users"
+      "passes": true,
+      "notes": "Added manifest.json with app icons and theme, sw.js with static asset caching and offline fallback, link rel=manifest in app.html, SW registration in hooks.client.js"
     },
     {
       "id": "US-099",
@@ -1931,6 +1931,36 @@
       "priority": 136,
       "passes": true,
       "notes": "Implemented: /compare/[slug1]/vs/[slug2] route with head-to-head comparison. Shows hero cards with grades, metric-by-metric rows (score, grade, uptime, P50, P95, incidents, resolution, regions) with win/lose highlighting, severity breakdown, and links to full report cards. SEO optimized with structured data."
+    },
+
+    {
+      "id": "US-140",
+      "title": "SEO component adoption across remaining pages",
+      "description": "As a platform operator, I want all remaining pages (compare, status, login, dashboard, admin, SLA, unsubscribe, postmortem, report-card, checkout) to use the SEO component for consistent canonical URLs, Open Graph tags, and Twitter cards.",
+      "acceptanceCriteria": [
+        "All public pages use SEO component with proper title, description, and canonical URL",
+        "Admin/dashboard pages use SEO component with noindex=true",
+        "All pages have consistent OG tags for social sharing",
+        "Typecheck passes"
+      ],
+      "priority": 140,
+      "passes": false,
+      "notes": "SEO component upgraded to Svelte 5 and adopted on 7 key pages (homepage, incidents, incident detail, pricing, docs, leaderboard, API detail). Remaining pages still need migration."
+    },
+    {
+      "id": "US-141",
+      "title": "Enhanced error page with API search and popular links",
+      "description": "As a user who lands on a 404 or error page, I want to see a search bar and popular API links so I can quickly find what I'm looking for.",
+      "acceptanceCriteria": [
+        "Error page shows contextual heading based on status code",
+        "Search bar lets users search for APIs directly from error page",
+        "Popular API chips link to top monitored APIs",
+        "Navigation links to key sections (dashboard, incidents, docs, pricing)",
+        "Typecheck passes"
+      ],
+      "priority": 141,
+      "passes": true,
+      "notes": "Redesigned +error.svelte with API search form, popular API chips (Stripe, OpenAI, AWS S3, Twilio, GitHub, Cloudflare), and navigation links. Contextual headings for 404 vs 500."
     }
   ]
 }
