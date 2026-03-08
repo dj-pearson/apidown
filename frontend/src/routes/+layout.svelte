@@ -125,6 +125,7 @@
     <div id="nav-links" class="nav-links" class:mobile-open={mobileMenuOpen} bind:this={navLinksRef} onkeydown={handleMenuKeydown}>
       <a href="/" class:active={isActive('/')} onclick={() => mobileMenuOpen = false}>Status</a>
       <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false}>Incidents</a>
+      <a href="/leaderboard" class:active={isActive('/leaderboard')} onclick={() => mobileMenuOpen = false}>Leaderboard</a>
       <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false}>Docs</a>
       <a href="/pricing" class:active={isActive('/pricing')} onclick={() => mobileMenuOpen = false}>Pricing</a>
       {#if user}
@@ -174,6 +175,7 @@
         <ul>
           <li><a href="/">Status Dashboard</a></li>
           <li><a href="/incidents">Incidents</a></li>
+          <li><a href="/leaderboard">Leaderboard</a></li>
           <li><a href="/pricing">Pricing</a></li>
           <li><a href="/dashboard">Dashboard</a></li>
           <li><a href="/compare">Why APIdown</a></li>

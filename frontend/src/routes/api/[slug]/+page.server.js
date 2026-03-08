@@ -190,6 +190,64 @@ export async function load({ params, cookies, url }) {
     .select('*', { count: 'exact', head: true })
     .eq('api_id', api.id);
 
+  // Compute reliability grade for this API
+  const { computeReliabilityScore, metricsFromRaw } = await import('$lib/reliability-score.js');
+  const ninetyDaysAgoStr = ninetyDaysAgo;
+  const metrics = metricsFromRaw({ uptimePct: uptimePercent, latencyData: latencyData, incidents: uptimeIncidents });
+  const reliabilityScore = computeReliabilityScore(metrics);
+
+  // If grade is C or below, suggest alternatives from same category
+  let alternatives = [];
+  if (reliabilityScore.score < 77 && api.category) {
+    const { data: peers } = await supabaseAdmin
+      .from('apis')
+      .select('id, slug, name, logo_url, current_status, category')
+      .eq('category', api.category)
+      .neq('id', api.id)
+      .is('owner_id', null)
+      .order('name')
+      .limit(10);
+
+    if (peers && peers.length > 0) {
+      // Compute scores for peers and pick the top ones that score higher
+      const thirtyDaysAgoStr = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const peerIds = peers.map(p => p.id);
+
+      const { data: peerIncidents } = await supabaseAdmin
+        .from('incidents')
+        .select('api_id, started_at, resolved_at')
+        .in('api_id', peerIds)
+        .gte('started_at', ninetyDaysAgoStr);
+
+      const { data: peerLatency } = await supabaseAdmin
+        .from('signals_1min')
+        .select('api_id, p95_ms')
+        .in('api_id', peerIds)
+        .gte('bucket', thirtyDaysAgoStr);
+
+      const scoredPeers = peers.map(peer => {
+        const pInc = (peerIncidents || []).filter(i => i.api_id === peer.id);
+        const pLat = (peerLatency || []).filter(l => l.api_id === peer.id);
+        let pDown = 0;
+        const cut30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        for (const inc of pInc) {
+          const s = Math.max(new Date(inc.started_at).getTime(), cut30);
+          const e = inc.resolved_at ? new Date(inc.resolved_at).getTime() : Date.now();
+          if (s < e && s >= cut30) pDown += e - s;
+        }
+        const pUptime = (1 - pDown / (30 * 24 * 60 * 60 * 1000)) * 100;
+        const pMetrics = metricsFromRaw({ uptimePct: pUptime, latencyData: pLat, incidents: pInc });
+        const pScore = computeReliabilityScore(pMetrics);
+        return { ...peer, score: pScore.score, grade: pScore.grade, gradeColor: pScore.gradeColor, uptimePct: pUptime.toFixed(3) };
+      })
+      .filter(p => p.score > reliabilityScore.score)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+      alternatives = scoredPeers;
+    }
+  }
+
   return {
     api,
     incidents: incidents || [],
@@ -202,6 +260,8 @@ export async function load({ params, cookies, url }) {
     maintenances: maintenances || [],
     subscriberCount: subscriberCount || 0,
     reportCount: reportCount || 0,
+    reliabilityScore,
+    alternatives,
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
   };
 }

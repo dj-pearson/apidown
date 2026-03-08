@@ -1758,8 +1758,8 @@
         "Unsubscribe link in email footer"
       ],
       "priority": 112,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Enhanced weekly-digest-worker.js with reliability scores per API, grade change detection (current vs previous 90d), grade drop warnings. Worker-side reliability-score.js module created."
     },
 
     {
@@ -1827,8 +1827,8 @@
         "Configurable height and max APIs shown"
       ],
       "priority": 121,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Self-contained HTML widget at /status/[slug]/widget.html with dark/light themes, accent color, max API count param, overall status banner, per-API rows, auto-refresh, CORS *, legacy fallback."
     },
 
     {
@@ -1895,8 +1895,8 @@
         "Updated daily via worker job"
       ],
       "priority": 131,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Public leaderboard at /leaderboard with category filter tabs, sort by score/uptime/latency/incidents, responsive table with rank/grade/uptime/latency/incidents columns. Nav link added to header and footer. SEO structured data included."
     },
 
     {
@@ -1913,8 +1913,8 @@
         "Clearly labeled as 'Suggested alternatives based on reliability data'"
       ],
       "priority": 135,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: API detail page shows 'More Reliable Alternatives' section when grade is C or below. Fetches same-category peers with better scores, displays top 3 with grade badge, uptime %, and latency. Links to comparison page."
     },
     {
       "id": "US-136",
@@ -1929,8 +1929,8 @@
         "Linked from API detail pages and alternatives section"
       ],
       "priority": 136,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: /compare/[slug1]/vs/[slug2] route with head-to-head comparison. Shows hero cards with grades, metric-by-metric rows (score, grade, uptime, P50, P95, incidents, resolution, regions) with win/lose highlighting, severity breakdown, and links to full report cards. SEO optimized with structured data."
     }
   ]
 }

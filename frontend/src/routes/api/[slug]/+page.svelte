@@ -717,6 +717,33 @@
   {/if}
 </section>
 
+{#if data.alternatives && data.alternatives.length > 0}
+<section class="alternatives-section">
+  <h2>More Reliable Alternatives</h2>
+  <p class="alt-desc">Based on reliability data, these {api.category} APIs have higher reliability scores.</p>
+  <div class="alt-grid">
+    {#each data.alternatives as alt}
+      <a href="/api/{alt.slug}/report-card" class="alt-card">
+        <div class="alt-card-header">
+          {#if alt.logo_url}
+            <img src={alt.logo_url} alt="" width="24" height="24" class="alt-logo" />
+          {:else}
+            <div class="alt-logo-ph">{alt.name[0]}</div>
+          {/if}
+          <span class="alt-name">{alt.name}</span>
+          <span class="alt-grade" style="background: {alt.gradeColor}20; color: {alt.gradeColor}; border-color: {alt.gradeColor}40">{alt.grade}</span>
+        </div>
+        <div class="alt-metrics">
+          <span>{alt.uptimePct}% uptime</span>
+          <span>·</span>
+          <span>{alt.current_status === 'operational' ? 'Operational' : alt.current_status}</span>
+        </div>
+      </a>
+    {/each}
+  </div>
+</section>
+{/if}
+
 <section class="faq-section">
   <h2>Frequently Asked Questions</h2>
 
@@ -1412,6 +1439,90 @@
 
   .breadcrumb a:hover {
     color: var(--color-primary);
+  }
+
+  /* Alternatives Section */
+  .alternatives-section {
+    margin-bottom: 2rem;
+  }
+
+  .alternatives-section h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .alt-desc {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .alt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .alt-card {
+    padding: 0.85rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--color-text);
+    transition: border-color 0.15s;
+  }
+
+  .alt-card:hover {
+    border-color: var(--color-primary);
+  }
+
+  .alt-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .alt-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+  }
+
+  .alt-logo-ph {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .alt-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex: 1;
+  }
+
+  .alt-grade {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+
+  .alt-metrics {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    display: flex;
+    gap: 0.4rem;
   }
 
   /* FAQ Section */
