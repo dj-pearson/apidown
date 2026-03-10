@@ -1,8 +1,12 @@
-<svelte:head>
-  <title>Privacy Policy — APIdown.net</title>
-  <meta name="description" content="APIdown.net privacy policy. Learn how we collect, use, and protect your data." />
-  <meta name="robots" content="noindex" />
-</svelte:head>
+<script>
+  import SEO from '$lib/components/SEO.svelte';
+</script>
+
+<SEO
+  title="Privacy Policy — APIdown.net"
+  description="APIdown.net privacy policy. Learn how we collect, use, and protect your data."
+  noindex={true}
+/>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <ol>

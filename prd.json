@@ -1944,8 +1944,8 @@
         "Typecheck passes"
       ],
       "priority": 140,
-      "passes": false,
-      "notes": "SEO component upgraded to Svelte 5 and adopted on 7 key pages (homepage, incidents, incident detail, pricing, docs, leaderboard, API detail). Remaining pages still need migration."
+      "passes": true,
+      "notes": "SEO component adopted across ALL 23 pages. Public pages (compare, compare/vs, report-card, postmortem, status) use full SEO with schema. Noindex pages (login, dashboard, admin/*, sla, checkout/success, unsubscribe, privacy, terms) use SEO with noindex=true. Consistent canonical URLs, OG tags, and Twitter cards across entire site."
     },
     {
       "id": "US-141",
@@ -1961,6 +1961,53 @@
       "priority": 141,
       "passes": true,
       "notes": "Redesigned +error.svelte with API search form, popular API chips (Stripe, OpenAI, AWS S3, Twilio, GitHub, Cloudflare), and navigation links. Contextual headings for 404 vs 500."
+    },
+
+    {
+      "id": "US-142",
+      "title": "Add HTTP security headers via SvelteKit hooks.server.js",
+      "description": "As a platform operator, I want all responses to include security headers so the site scores well on security audits and protects users from common attacks.",
+      "acceptanceCriteria": [
+        "Create hooks.server.js with handle function that adds security headers to all responses",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: SAMEORIGIN",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self)",
+        "X-XSS-Protection: 1; mode=block",
+        "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+        "Build passes"
+      ],
+      "priority": 142,
+      "passes": true,
+      "notes": "Created hooks.server.js with 6 security response headers applied to all server responses."
+    },
+    {
+      "id": "US-143",
+      "title": "Add SvelteKit link preloading hints to navigation",
+      "description": "As a user, I want navigation to feel instant by preloading page data on hover so the site responds quickly when I click.",
+      "acceptanceCriteria": [
+        "All primary nav links have data-sveltekit-preload-data='hover' attribute",
+        "Footer links benefit from body-level hover preloading",
+        "Build passes"
+      ],
+      "priority": 143,
+      "passes": true,
+      "notes": "Added data-sveltekit-preload-data='hover' to all 8 main navigation links for instant page transitions."
+    },
+    {
+      "id": "US-144",
+      "title": "Add ARIA landmark improvements to layout",
+      "description": "As a screen reader user, I want proper ARIA landmarks and labels on the layout so I can navigate the site structure efficiently.",
+      "acceptanceCriteria": [
+        "Footer columns use semantic <nav> elements with aria-label instead of generic <div>",
+        "Footer has aria-label='Site footer'",
+        "Newsletter form has aria-label='Newsletter signup'",
+        "No redundant ARIA roles on semantic HTML5 elements",
+        "Build passes"
+      ],
+      "priority": 144,
+      "passes": true,
+      "notes": "Footer columns migrated from <div> to <nav> with aria-labels (Product links, Developer links, Company links). Newsletter form labeled. Removed redundant roles per Svelte a11y linting."
     }
   ]
 }

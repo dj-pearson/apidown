@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
   const { page, apis, uptimeData, latencyData, recentIncidents, overallUptime } = data;
 
@@ -81,15 +82,11 @@
   }
 </script>
 
-<svelte:head>
-  <title>{page.title} — Status | APIdown.net</title>
-  <meta name="description" content={page.description || `Live status page for ${page.title}. Real-time monitoring powered by APIdown.net.`} />
-  <link rel="canonical" href={`https://apidown.net/status/${page.slug || ''}`} />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content={`${page.title} — Status`} />
-  <meta property="og:description" content={page.description || `Live status page for ${page.title}.`} />
-  <meta property="og:url" content={`https://apidown.net/status/${page.slug || ''}`} />
-  {@html `<script type="application/ld+json">${JSON.stringify([
+<SEO
+  title="{page.title} — Status | APIdown.net"
+  description={page.description || `Live status page for ${page.title}. Real-time monitoring powered by APIdown.net.`}
+  canonical={`https://apidown.net/status/${page.slug || ''}`}
+  schema={[
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
@@ -117,7 +114,9 @@
         { "@type": "ListItem", "position": 2, "name": page.title, "item": `https://apidown.net/status/${page.slug || ''}` }
       ]
     }
-  ])}</script>`}
+  ]}
+/>
+<svelte:head>
   <style>
     :root {
       --sp-accent: {page.accentColor};

@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   import { getSupabase } from '$lib/supabase.js';
 
   let { data } = $props();
@@ -16,10 +17,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>Manage Incidents — Admin — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO title="Manage Incidents — Admin — APIdown.net" noindex={true} />
 
 <h1>Manage Incidents</h1>
 <nav class="admin-nav">

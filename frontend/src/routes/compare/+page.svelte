@@ -1,5 +1,6 @@
 <script>
   import { page } from '$app/state';
+  import SEO from '$lib/components/SEO.svelte';
 
   const comparisonRows = [
     {
@@ -59,24 +60,16 @@
   ];
 </script>
 
-<svelte:head>
-  <title>APIdown vs Traditional Vendor Status Pages | APIdown</title>
-  <meta name="description" content="Compare APIdown's crowd-sourced API monitoring with traditional vendor status pages. Faster detection, independent verification, and real production traffic analysis." />
-  <meta name="keywords" content="API monitoring, status page comparison, crowd-sourced monitoring, vendor status page, APIdown" />
-  <meta property="og:title" content="APIdown vs Traditional Vendor Status Pages" />
-  <meta property="og:description" content="See why developers trust crowd-sourced monitoring over vendor self-reported status pages. Detect outages in seconds, not hours." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="{page.url.href}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="APIdown vs Traditional Vendor Status Pages" />
-  <meta name="twitter:description" content="Crowd-sourced API monitoring vs vendor status pages. Faster detection, independent verification, real production data." />
-  <link rel="canonical" href="{page.url.href}" />
-  {@html `<script type="application/ld+json">${JSON.stringify({
+<SEO
+  title="APIdown vs Traditional Vendor Status Pages | APIdown"
+  description="Compare APIdown's crowd-sourced API monitoring with traditional vendor status pages. Faster detection, independent verification, and real production traffic analysis."
+  canonical="https://apidown.net/compare"
+  schema={{
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "APIdown vs Traditional Vendor Status Pages",
     "description": "Compare APIdown's crowd-sourced API monitoring with traditional vendor status pages.",
-    "url": page.url.href,
+    "url": "https://apidown.net/compare",
     "mainEntity": {
       "@type": "Table",
       "about": "Comparison of APIdown and traditional vendor status pages"
@@ -84,10 +77,10 @@
     "publisher": {
       "@type": "Organization",
       "name": "APIdown",
-      "url": page.url.origin
+      "url": "https://apidown.net"
     }
-  })}</script>`}
-</svelte:head>
+  }}
+/>
 
 <div class="compare-page">
   <nav class="breadcrumb" aria-label="Breadcrumb">

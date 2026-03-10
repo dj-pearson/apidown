@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   import { friendlyAuthError } from '$lib/auth-errors.js';
   import { createClient } from '@supabase/supabase-js';
 
@@ -141,11 +142,11 @@
   }
 </script>
 
-<svelte:head>
-  <title>{mfaRequired ? 'Verify 2FA' : mode === 'login' ? 'Log In' : 'Sign Up'} — APIdown.net</title>
-  <meta name="description" content="Sign in or create a free APIdown.net account to manage API keys, set up alerts, and monitor your API dependencies." />
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO
+  title="{mfaRequired ? 'Verify 2FA' : mode === 'login' ? 'Log In' : 'Sign Up'} — APIdown.net"
+  description="Sign in or create a free APIdown.net account to manage API keys, set up alerts, and monitor your API dependencies."
+  noindex={true}
+/>
 
 <div class="auth-page">
   <!-- Benefits panel (left on desktop, top on mobile) -->

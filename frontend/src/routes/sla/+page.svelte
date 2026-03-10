@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   import { createClient } from '@supabase/supabase-js';
 
   let { data } = $props();
@@ -85,10 +86,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>SLA Tracking & Uptime Targets — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO title="SLA Tracking & Uptime Targets — APIdown.net" noindex={true} />
 
 <a href="/dashboard" class="back">&larr; Dashboard</a>
 

@@ -1,8 +1,12 @@
-<svelte:head>
-  <title>Terms of Service — APIdown.net</title>
-  <meta name="description" content="APIdown.net terms of service. Read our terms and conditions for using the platform." />
-  <meta name="robots" content="noindex" />
-</svelte:head>
+<script>
+  import SEO from '$lib/components/SEO.svelte';
+</script>
+
+<SEO
+  title="Terms of Service — APIdown.net"
+  description="APIdown.net terms of service. Read our terms and conditions for using the platform."
+  noindex={true}
+/>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <ol>

@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   import { enhance } from '$app/forms';
 
   let { data, form: actionResult } = $props();
@@ -33,10 +34,7 @@
   function closeCreate() { showCreate = false; }
 </script>
 
-<svelte:head>
-  <title>Manage APIs — Admin — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO title="Manage APIs — Admin — APIdown.net" noindex={true} />
 
 <h1>Manage APIs</h1>
 <nav class="admin-nav">

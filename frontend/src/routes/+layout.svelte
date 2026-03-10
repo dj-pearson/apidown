@@ -136,18 +136,18 @@
     </button>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div id="nav-links" class="nav-links" class:mobile-open={mobileMenuOpen} bind:this={navLinksRef} onkeydown={handleMenuKeydown}>
-      <a href="/" class:active={isActive('/')} onclick={() => mobileMenuOpen = false}>Status</a>
-      <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false}>Incidents</a>
-      <a href="/leaderboard" class:active={isActive('/leaderboard')} onclick={() => mobileMenuOpen = false}>Leaderboard</a>
-      <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false}>Docs</a>
-      <a href="/pricing" class:active={isActive('/pricing')} onclick={() => mobileMenuOpen = false}>Pricing</a>
+      <a href="/" class:active={isActive('/')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Status</a>
+      <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Incidents</a>
+      <a href="/leaderboard" class:active={isActive('/leaderboard')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Leaderboard</a>
+      <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Docs</a>
+      <a href="/pricing" class:active={isActive('/pricing')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Pricing</a>
       {#if user}
         {#if user.isAdmin}
-          <a href="/admin" class:active={isActive('/admin')} onclick={() => mobileMenuOpen = false}>Admin</a>
+          <a href="/admin" class:active={isActive('/admin')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Admin</a>
         {/if}
-        <a href="/dashboard" class:active={isActive('/dashboard')} onclick={() => mobileMenuOpen = false}>Dashboard</a>
+        <a href="/dashboard" class:active={isActive('/dashboard')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Dashboard</a>
       {:else}
-        <a href="/login" class="nav-cta-btn" onclick={() => mobileMenuOpen = false}>Get Started</a>
+        <a href="/login" class="nav-cta-btn" onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Get Started</a>
       {/if}
     </div>
   </nav>
@@ -157,7 +157,7 @@
   {@render props.children()}
 </main>
 
-<footer>
+<footer aria-label="Site footer">
   <div class="footer-inner">
     <div class="footer-grid">
       <!-- Brand column -->
@@ -183,7 +183,7 @@
       </div>
 
       <!-- Product -->
-      <div class="footer-col">
+      <nav class="footer-col" aria-label="Product links">
         <h4>Product</h4>
         <ul>
           <li><a href="/">Status Dashboard</a></li>
@@ -193,10 +193,10 @@
           <li><a href="/dashboard">Dashboard</a></li>
           <li><a href="/compare">Why APIdown</a></li>
         </ul>
-      </div>
+      </nav>
 
       <!-- Developers -->
-      <div class="footer-col">
+      <nav class="footer-col" aria-label="Developer links">
         <h4>Developers</h4>
         <ul>
           <li><a href="/docs">Documentation</a></li>
@@ -205,10 +205,10 @@
           <li><a href="/docs#sdks">SDKs</a></li>
           <li><a href="/incidents/rss">RSS Feed</a></li>
         </ul>
-      </div>
+      </nav>
 
       <!-- Company -->
-      <div class="footer-col">
+      <nav class="footer-col" aria-label="Company links">
         <h4>Company</h4>
         <ul>
           <li><a href="/login">Log In / Sign Up</a></li>
@@ -218,7 +218,7 @@
           <li><a href="/llms.txt">LLMs.txt</a></li>
           <li><a href="/robots.txt">Robots.txt</a></li>
         </ul>
-      </div>
+      </nav>
     </div>
 
     <!-- Newsletter -->
@@ -227,7 +227,7 @@
         <strong>Get weekly API reliability insights</strong>
         <p>Stay updated on outages, trends, and platform news.</p>
       </div>
-      <form class="newsletter-form" onsubmit={submitNewsletter}>
+      <form class="newsletter-form" onsubmit={submitNewsletter} aria-label="Newsletter signup">
         <input type="email" bind:value={newsletterEmail} placeholder="you@example.com" required disabled={newsletterSubmitting} />
         <button type="submit" disabled={newsletterSubmitting}>{newsletterSubmitting ? 'Subscribing...' : 'Subscribe'}</button>
       </form>

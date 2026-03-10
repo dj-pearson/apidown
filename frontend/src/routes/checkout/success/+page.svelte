@@ -1,7 +1,8 @@
-<svelte:head>
-  <title>Subscription Active — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<script>
+  import SEO from '$lib/components/SEO.svelte';
+</script>
+
+<SEO title="Subscription Active — APIdown.net" noindex={true} />
 
 <div class="success-page">
   <div class="success-card">
