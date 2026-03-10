@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
   const [a, b] = data.comparisons;
 
@@ -30,20 +31,18 @@
   const overallWinner = aWins > bWins ? 'a' : bWins > aWins ? 'b' : 'tie';
 </script>
 
-<svelte:head>
-  <title>{a.api.name} vs {b.api.name} — API Reliability Comparison — APIdown.net</title>
-  <meta name="description" content="Compare {a.api.name} vs {b.api.name} reliability: uptime, latency, incidents, and more. Independent data from APIdown.net." />
-  <link rel="canonical" href="https://apidown.net/compare/{a.api.slug}/vs/{b.api.slug}" />
-  <meta property="og:title" content="{a.api.name} vs {b.api.name} Reliability" />
-  <meta property="og:description" content="Head-to-head API reliability comparison. {a.api.name}: {a.score.grade} ({a.uptimePct}% uptime) vs {b.api.name}: {b.score.grade} ({b.uptimePct}% uptime)" />
-  {@html `<script type="application/ld+json">${JSON.stringify({
+<SEO
+  title="{a.api.name} vs {b.api.name} — API Reliability Comparison — APIdown.net"
+  description="Compare {a.api.name} vs {b.api.name} reliability: uptime, latency, incidents, and more. Independent data from APIdown.net."
+  canonical="https://apidown.net/compare/{a.api.slug}/vs/{b.api.slug}"
+  schema={{
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": `${a.api.name} vs ${b.api.name} — Reliability Comparison`,
     "url": `https://apidown.net/compare/${a.api.slug}/vs/${b.api.slug}`,
     "isPartOf": { "@type": "WebSite", "name": "APIdown.net", "url": "https://apidown.net" }
-  })}</script>`}
-</svelte:head>
+  }}
+/>
 
 <div class="comparison">
   <nav class="breadcrumb" aria-label="Breadcrumb">

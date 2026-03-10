@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   import { createClient } from '@supabase/supabase-js';
   import { goto } from '$app/navigation';
   import { getTierLimits, getNextTier } from '$lib/tier-limits.js';
@@ -537,10 +538,11 @@
   }
 </script>
 
-<svelte:head>
-  <title>Dashboard — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO
+  title="Dashboard — APIdown.net"
+  description="Manage your API keys, alert subscriptions, and monitoring settings."
+  noindex={true}
+/>
 
 <div class="dashboard-header">
   <div>

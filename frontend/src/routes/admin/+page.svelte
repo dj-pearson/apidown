@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
   let stats = data.stats;
   let recentIncidents = data.recentIncidents;
@@ -10,10 +11,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>Admin Dashboard — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO title="Admin Dashboard — APIdown.net" noindex={true} />
 
 <h1>Admin Dashboard</h1>
 

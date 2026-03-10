@@ -1,4 +1,5 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
   const { api, score, metrics, trend, scoreDelta, incidents, peers } = data;
 
@@ -38,22 +39,19 @@
   }
 </script>
 
-<svelte:head>
-  <title>{api.name} Reliability Report Card — APIdown.net</title>
-  <meta name="description" content="{api.name} reliability score: {score.grade} ({score.score}/100). 30-day uptime: {metrics.uptimePct}%. Independent data from APIdown.net." />
-  <link rel="canonical" href="https://apidown.net/api/{api.slug}/report-card" />
-  <meta property="og:title" content="{api.name} Reliability: {score.grade}" />
-  <meta property="og:description" content="Independent reliability report card for {api.name}. Score: {score.score}/100, Uptime: {metrics.uptimePct}%, P95: {metrics.p95Ms}ms" />
-  <meta property="og:url" content="https://apidown.net/api/{api.slug}/report-card" />
-  {@html `<script type="application/ld+json">${JSON.stringify({
+<SEO
+  title="{api.name} Reliability Report Card — APIdown.net"
+  description="{api.name} reliability score: {score.grade} ({score.score}/100). 30-day uptime: {metrics.uptimePct}%. Independent data from APIdown.net."
+  canonical="https://apidown.net/api/{api.slug}/report-card"
+  schema={{
     "@context": "https://schema.org",
     "@type": "Review",
     "itemReviewed": { "@type": "WebAPI", "name": api.name, "url": `https://apidown.net/api/${api.slug}` },
     "reviewRating": { "@type": "Rating", "ratingValue": score.score, "bestRating": 100, "worstRating": 0 },
     "author": { "@type": "Organization", "name": "APIdown.net" },
     "reviewBody": `${api.name} reliability score: ${score.grade} (${score.score}/100). Based on crowd-sourced production monitoring data.`
-  })}</script>`}
-</svelte:head>
+  }}
+/>
 
 <div class="report-card">
   <nav class="breadcrumb" aria-label="Breadcrumb">

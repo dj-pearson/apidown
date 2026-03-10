@@ -1,11 +1,9 @@
 <script>
+  import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
 </script>
 
-<svelte:head>
-  <title>Unsubscribe — APIdown.net</title>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<SEO title="Unsubscribe — APIdown.net" noindex={true} />
 
 <div class="container">
   {#if data.status === 'success'}
