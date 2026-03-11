@@ -3,16 +3,24 @@
   "short_name": "APIdown",
   "description": "Real-time API health monitoring powered by crowd-sourced production traffic. Is the API actually down — or is it your code?",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0F172A",
   "theme_color": "#0F172A",
   "orientation": "any",
+  "id": "/",
   "icons": [
     {
       "src": "/favicon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/logo-primary.png",
@@ -21,5 +29,8 @@
       "purpose": "any"
     }
   ],
-  "categories": ["developer", "utilities", "productivity"]
+  "categories": ["developer", "utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }

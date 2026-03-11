@@ -5,36 +5,52 @@ export async function load() {
   try {
     const supabaseAdmin = getSupabaseAdmin();
 
-    const { data: apis } = await supabaseAdmin
-      .from('apis')
-      .select('id, slug, name, category, current_status, logo_url')
-      .order('category')
-      .order('name');
-
-    const { data: incidents } = await supabaseAdmin
-      .from('incidents')
-      .select('id, api_id, severity, status, title, started_at')
-      .neq('status', 'resolved')
-      .order('started_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent resolved/active incidents for the "Recently Detected" widget
-    const { data: recentIncidents } = await supabaseAdmin
-      .from('incidents')
-      .select('id, api_id, severity, status, title, started_at, resolved_at')
-      .in('severity', ['critical', 'major'])
-      .order('started_at', { ascending: false })
-      .limit(5);
-
-    // Fetch 24h sparkline data for all APIs (hourly avg latency)
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: sparklineRaw } = await supabaseAdmin
-      .from('signals_1min')
-      .select('api_id, bucket, avg_duration_ms')
-      .gte('bucket', since)
-      .order('bucket', { ascending: true });
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Group into hourly buckets per API
+    // Fetch all independent queries in parallel for faster TTFB
+    const [
+      { data: apis },
+      { data: incidents },
+      { data: recentIncidents },
+      { data: sparklineRaw },
+      { data: allIncidents90d },
+      { data: latency30d },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('apis')
+        .select('id, slug, name, category, current_status, logo_url')
+        .order('category')
+        .order('name'),
+      supabaseAdmin
+        .from('incidents')
+        .select('id, api_id, severity, status, title, started_at')
+        .neq('status', 'resolved')
+        .order('started_at', { ascending: false })
+        .limit(10),
+      supabaseAdmin
+        .from('incidents')
+        .select('id, api_id, severity, status, title, started_at, resolved_at')
+        .in('severity', ['critical', 'major'])
+        .order('started_at', { ascending: false })
+        .limit(5),
+      supabaseAdmin
+        .from('signals_1min')
+        .select('api_id, bucket, avg_duration_ms')
+        .gte('bucket', since)
+        .order('bucket', { ascending: true }),
+      supabaseAdmin
+        .from('incidents')
+        .select('api_id, started_at, resolved_at')
+        .gte('started_at', ninetyDaysAgo),
+      supabaseAdmin
+        .from('signals_1min')
+        .select('api_id, p95_ms')
+        .gte('bucket', thirtyDaysAgo),
+    ]);
+
+    // Group sparkline data into hourly buckets per API
     const sparklines = {};
     for (const row of (sparklineRaw || [])) {
       if (!sparklines[row.api_id]) sparklines[row.api_id] = {};
@@ -66,21 +82,6 @@ export async function load() {
     }));
 
     // Compute reliability grades for each API
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-
-    // Batch-fetch 90d incidents for all APIs
-    const { data: allIncidents90d } = await supabaseAdmin
-      .from('incidents')
-      .select('api_id, started_at, resolved_at')
-      .gte('started_at', ninetyDaysAgo);
-
-    // Batch-fetch 30d latency for score computation
-    const { data: latency30d } = await supabaseAdmin
-      .from('signals_1min')
-      .select('api_id, p95_ms')
-      .gte('bucket', thirtyDaysAgo);
-
     const gradeData = {};
     for (const api of (apis || [])) {
       const apiIncidents = (allIncidents90d || []).filter(i => i.api_id === api.id);
