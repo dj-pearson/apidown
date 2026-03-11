@@ -132,6 +132,18 @@ US-142: DONE - HTTP security headers via hooks.server.js (X-Content-Type-Options
 US-143: DONE - SvelteKit link preloading hints on navigation (data-sveltekit-preload-data='hover' on all 8 main nav links for instant page transitions)
 US-144: DONE - ARIA landmark improvements to layout (footer columns migrated from div to nav with aria-labels, newsletter form labeled, redundant roles removed per Svelte a11y linting)
 
+-- Phase 19: Critical Platform Improvements (Round 4) --
+US-145: DONE - Fix service worker operator precedence bug (sw.js cached failed logo responses due to missing parens — `response.ok && url.includes('/favicon') || url.includes('/logo')` now correctly grouped)
+US-146: DONE - Content-Security-Policy header added to hooks.server.js (covers self, gtag, Google Fonts, Supabase REST+WS, Stripe iframe, https images — completes security header suite)
+US-147: DONE - Parallelize homepage data fetching (6 sequential Supabase queries refactored to Promise.all — apis, incidents, recentIncidents, sparklines, 90d incidents, 30d latency all fetched concurrently)
+US-148: DONE - Fix PWA manifest icon purpose and fields (split invalid "any maskable" into separate entries per W3C spec, added scope, id, lang, dir, prefer_related_applications)
+
+-- Backlog: Discovered Issues (for future Ralph loops) --
+US-149: BACKLOG - Add error logging to service worker registration (hooks.client.js silently swallows SW errors)
+US-150: BACKLOG - Add error logging to layout server load catch block (+layout.server.js bare catch hides auth/session errors)
+US-151: BACKLOG - Add error handling to login MFA callback fetch (login page doesn't check /auth/callback response status)
+US-152: BACKLOG - Parallelize API detail page data fetching (8+ sequential queries like homepage had before US-147)
+
 == Architecture Notes ==
 - svelte.config.js uses adapter-cloudflare (not adapter-node)
 - Supabase clients use lazy initialization (getSupabase/getSupabaseAdmin) to avoid build-time crashes

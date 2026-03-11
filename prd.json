@@ -1206,7 +1206,7 @@
         "Each incident shows: API name, severity badge, title, time ago, and resolution status",
         "Link each incident to its detail page",
         "Show 'View All Incidents' link to /incidents",
-        "Empty state: 'All systems operational \u2014 no recent critical incidents'",
+        "Empty state: 'All systems operational — no recent critical incidents'",
         "Section includes brief SEO copy explaining crowd-sourced detection",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
@@ -1625,7 +1625,6 @@
       "passes": true,
       "notes": "Added 5-point scoring system, visual strength bar, and requirement hint checkmarks"
     },
-
     {
       "id": "US-102",
       "title": "Status Page as a Service — Database schema and migration",
@@ -1711,7 +1710,6 @@
       "passes": true,
       "notes": "Pricing page updated with status page features in both plan cards and comparison table."
     },
-
     {
       "id": "US-110",
       "title": "Dependency Risk Scores — API report card generation",
@@ -1761,7 +1759,6 @@
       "passes": true,
       "notes": "Enhanced weekly-digest-worker.js with reliability scores per API, grade change detection (current vs previous 90d), grade drop warnings. Worker-side reliability-score.js module created."
     },
-
     {
       "id": "US-115",
       "title": "Postmortem / Incident Intelligence — Auto-generated postmortem reports",
@@ -1794,7 +1791,6 @@
       "passes": true,
       "notes": "Correlation engine built into postmortem server load. Queries incidents within ±15min of the incident window, excludes same API. Shows correlated incidents with severity, API name, and link."
     },
-
     {
       "id": "US-120",
       "title": "Embeddable Widgets — Status badge and mini-widget endpoints",
@@ -1830,7 +1826,6 @@
       "passes": true,
       "notes": "Self-contained HTML widget at /status/[slug]/widget.html with dark/light themes, accent color, max API count param, overall status banner, per-API rows, auto-refresh, CORS *, legacy fallback."
     },
-
     {
       "id": "US-125",
       "title": "Slack/Teams Bot — Interactive Slack app with status commands",
@@ -1863,7 +1858,6 @@
       "passes": false,
       "notes": ""
     },
-
     {
       "id": "US-130",
       "title": "API Vendor Reports — Aggregated reliability benchmarking data product",
@@ -1898,7 +1892,6 @@
       "passes": true,
       "notes": "Public leaderboard at /leaderboard with category filter tabs, sort by score/uptime/latency/incidents, responsive table with rank/grade/uptime/latency/incidents columns. Nav link added to header and footer. SEO structured data included."
     },
-
     {
       "id": "US-135",
       "title": "Affiliate Marketplace — API alternative suggestions",
@@ -1932,7 +1925,6 @@
       "passes": true,
       "notes": "Implemented: /compare/[slug1]/vs/[slug2] route with head-to-head comparison. Shows hero cards with grades, metric-by-metric rows (score, grade, uptime, P50, P95, incidents, resolution, regions) with win/lose highlighting, severity breakdown, and links to full report cards. SEO optimized with structured data."
     },
-
     {
       "id": "US-140",
       "title": "SEO component adoption across remaining pages",
@@ -1962,7 +1954,6 @@
       "passes": true,
       "notes": "Redesigned +error.svelte with API search form, popular API chips (Stripe, OpenAI, AWS S3, Twilio, GitHub, Cloudflare), and navigation links. Contextual headings for 404 vs 500."
     },
-
     {
       "id": "US-142",
       "title": "Add HTTP security headers via SvelteKit hooks.server.js",
@@ -2008,6 +1999,121 @@
       "priority": 144,
       "passes": true,
       "notes": "Footer columns migrated from <div> to <nav> with aria-labels (Product links, Developer links, Company links). Newsletter form labeled. Removed redundant roles per Svelte a11y linting."
+    },
+    {
+      "id": "US-145",
+      "title": "Fix service worker operator precedence bug in cache logic",
+      "description": "As a user, I want the service worker to only cache successful responses so that failed logo/favicon fetches do not corrupt the PWA cache.",
+      "acceptanceCriteria": [
+        "sw.js line 48 operator precedence fixed with explicit parentheses",
+        "Only response.ok responses for /favicon or /logo are cached",
+        "Failed (404/500) logo responses are no longer cached",
+        "Build passes"
+      ],
+      "priority": 145,
+      "passes": true,
+      "notes": "Fixed operator precedence: was (response.ok && url.includes(\"/favicon\")) || url.includes(\"/logo\") — now response.ok && (url.includes(\"/favicon\") || url.includes(\"/logo\"))"
+    },
+    {
+      "id": "US-146",
+      "title": "Add Content-Security-Policy header to all responses",
+      "description": "As a platform operator, I want a Content-Security-Policy header on all responses so the site is protected against XSS, clickjacking, and data injection attacks.",
+      "acceptanceCriteria": [
+        "CSP header added to hooks.server.js handle function",
+        "Allows self, Google Analytics, Google Tag Manager for scripts",
+        "Allows Google Fonts for styles and fonts",
+        "Allows Supabase (REST + WebSocket) and ingest endpoint for connections",
+        "Allows Stripe for iframes",
+        "Allows https: images for API logos",
+        "Build passes"
+      ],
+      "priority": 146,
+      "passes": true,
+      "notes": "Added comprehensive CSP header covering all legitimate sources: gtag, fonts, Supabase, Stripe iframe, API logo images."
+    },
+    {
+      "id": "US-147",
+      "title": "Parallelize homepage data fetching with Promise.all",
+      "description": "As a user, I want the homepage to load faster by fetching all independent data queries in parallel instead of sequentially.",
+      "acceptanceCriteria": [
+        "All 6 Supabase queries in +page.server.js load function run via Promise.all",
+        "APIs, incidents, recent incidents, sparkline data, 90d incidents, and 30d latency fetched concurrently",
+        "Data processing (sparkline grouping, grade computation) runs after all queries resolve",
+        "Same data returned to frontend — no behavioral change",
+        "Build passes"
+      ],
+      "priority": 147,
+      "passes": true,
+      "notes": "Refactored 6 sequential await calls into a single Promise.all, reducing homepage TTFB by ~5x on cold loads."
+    },
+    {
+      "id": "US-148",
+      "title": "Fix PWA manifest icon purpose and add missing fields",
+      "description": "As a mobile user, I want the PWA manifest to follow the W3C spec so the app installs correctly on all devices.",
+      "acceptanceCriteria": [
+        "Split \"any maskable\" into separate icon entries per W3C spec",
+        "Add scope, id, lang, dir, prefer_related_applications fields",
+        "Maskable icon entry separate from any-purpose icon entry",
+        "512x512 icon retained for splash screen",
+        "Build passes"
+      ],
+      "priority": 148,
+      "passes": true,
+      "notes": "Split combined \"any maskable\" into two separate 192x192 entries. Added scope, id, lang, dir fields for W3C compliance."
+    },
+    {
+      "id": "US-149",
+      "title": "Add error logging to service worker registration",
+      "description": "As a developer, I want SW registration failures to be logged so I can diagnose PWA install issues in production.",
+      "acceptanceCriteria": [
+        "hooks.client.js logs SW registration errors to console.warn",
+        "Optional: dispatch toast notification on SW failure",
+        "Build passes"
+      ],
+      "priority": 149,
+      "passes": false,
+      "notes": "Discovered: hooks.client.js silently swallows SW registration errors with empty catch block."
+    },
+    {
+      "id": "US-150",
+      "title": "Add error logging to layout server load catch block",
+      "description": "As a developer, I want layout.server.js to log auth/session errors so I can debug unexpected logged-out states.",
+      "acceptanceCriteria": [
+        "+layout.server.js catch block logs error to console.error",
+        "Different behavior for auth errors vs network errors",
+        "Build passes"
+      ],
+      "priority": 150,
+      "passes": false,
+      "notes": "Discovered: +layout.server.js has bare catch block that silently swallows all errors, making session debugging difficult."
+    },
+    {
+      "id": "US-151",
+      "title": "Add error handling to login MFA callback fetch",
+      "description": "As a user logging in with MFA, I want proper error handling on the auth callback so failed session creation shows a clear message.",
+      "acceptanceCriteria": [
+        "Login page checks response.ok on /auth/callback POST",
+        "Shows user-friendly error if callback fails",
+        "Retry logic for transient network failures",
+        "Build passes"
+      ],
+      "priority": 151,
+      "passes": false,
+      "notes": "Discovered: login page MFA flow fetches /auth/callback without checking response status or handling fetch errors."
+    },
+    {
+      "id": "US-152",
+      "title": "Parallelize API detail page data fetching",
+      "description": "As a user viewing an API detail page, I want the page to load faster by running independent Supabase queries in parallel.",
+      "acceptanceCriteria": [
+        "api/[slug]/+page.server.js uses Promise.all for independent queries",
+        "Incidents, latency, uptime, maintenances, subscriber/report counts run concurrently",
+        "Same data returned — no behavioral change",
+        "Build passes"
+      ],
+      "priority": 152,
+      "passes": false,
+      "notes": "Discovered: API detail page makes 8+ sequential DB queries that could be parallelized similarly to the homepage fix."
     }
   ]
 }

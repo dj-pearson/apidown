@@ -45,7 +45,7 @@ self.addEventListener('fetch', (event) => {
       if (cached) return cached;
       return fetch(request).then((response) => {
         // Cache static assets on first fetch
-        if (response.ok && request.url.includes('/favicon') || request.url.includes('/logo')) {
+        if (response.ok && (request.url.includes('/favicon') || request.url.includes('/logo'))) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
