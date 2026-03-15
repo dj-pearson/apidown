@@ -9,7 +9,7 @@ export function handleError({ error, message }) {
 
 // Register service worker for PWA support
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {
-    // SW registration failed — not critical
+  navigator.serviceWorker.register('/sw.js').catch((err) => {
+    console.warn('[APIdown] Service worker registration failed:', err?.message || err);
   });
 }

@@ -40,7 +40,8 @@ export async function load({ cookies, platform }) {
       supabaseAnonKey,
       ingestUrl,
     };
-  } catch {
+  } catch (err) {
+    console.error('[APIdown] Layout auth/session error:', err?.message || err);
     return { user: null, supabaseUrl, supabaseAnonKey, ingestUrl };
   }
 }

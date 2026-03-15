@@ -122,7 +122,7 @@
       const { data: sessionData } = await supabaseClient.auth.getSession();
       const session = sessionData?.session;
       if (session) {
-        await fetch('/auth/callback', {
+        const callbackRes = await fetch('/auth/callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -130,6 +130,11 @@
             refresh_token: session.refresh_token,
           }),
         });
+        if (!callbackRes.ok) {
+          errorMsg = 'Failed to create session. Please try logging in again.';
+          mfaVerifying = false;
+          return;
+        }
         window.location.href = '/dashboard';
         return;
       }

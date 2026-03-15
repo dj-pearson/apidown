@@ -2071,8 +2071,8 @@
         "Build passes"
       ],
       "priority": 149,
-      "passes": false,
-      "notes": "Discovered: hooks.client.js silently swallows SW registration errors with empty catch block."
+      "passes": true,
+      "notes": "hooks.client.js now logs SW registration errors via console.warn with error message."
     },
     {
       "id": "US-150",
@@ -2084,8 +2084,8 @@
         "Build passes"
       ],
       "priority": 150,
-      "passes": false,
-      "notes": "Discovered: +layout.server.js has bare catch block that silently swallows all errors, making session debugging difficult."
+      "passes": true,
+      "notes": "+layout.server.js catch block now logs auth/session errors via console.error for debugging."
     },
     {
       "id": "US-151",
@@ -2098,8 +2098,8 @@
         "Build passes"
       ],
       "priority": 151,
-      "passes": false,
-      "notes": "Discovered: login page MFA flow fetches /auth/callback without checking response status or handling fetch errors."
+      "passes": true,
+      "notes": "Login MFA callback now checks response.ok and shows user-friendly error message on failure."
     },
     {
       "id": "US-152",
@@ -2112,8 +2112,8 @@
         "Build passes"
       ],
       "priority": 152,
-      "passes": false,
-      "notes": "Discovered: API detail page makes 8+ sequential DB queries that could be parallelized similarly to the homepage fix."
+      "passes": true,
+      "notes": "Refactored 7 sequential queries (incidents, latency, uptime, maintenances, subscribers, reports, pinned) into Promise.all. Also parallelized peer incident+latency queries for alternatives. Eliminated duplicate auth.getUser call."
     }
   ]
 }
