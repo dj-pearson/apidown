@@ -5,6 +5,7 @@ export async function load({ params, cookies, url }) {
   const supabaseAdmin = getSupabaseAdmin();
   const { slug } = params;
 
+  // Step 1: Fetch the API record (everything depends on api.id)
   const { data: api } = await supabaseAdmin
     .from('apis')
     .select('*')
@@ -13,27 +14,19 @@ export async function load({ params, cookies, url }) {
 
   if (!api) throw error(404, 'API not found');
 
-  // Get recent incidents
-  const { data: incidents } = await supabaseAdmin
-    .from('incidents')
-    .select('*')
-    .eq('api_id', api.id)
-    .order('started_at', { ascending: false })
-    .limit(20);
-
-  // Determine latency range from URL param (default 24h)
+  // Step 2: Resolve user tier (needed for latency range gating)
   const VALID_RANGES = ['24h', '7d', '30d'];
   const rangeParam = url.searchParams.get('range') || '24h';
   const latencyRange = VALID_RANGES.includes(rangeParam) ? rangeParam : '24h';
 
-  // Check user tier to enforce free-tier restriction
-  // (userTier is resolved below, so we peek at it early here)
   let resolvedUserTier = null;
-  const accessTokenEarly = cookies.get('sb-access-token');
-  if (accessTokenEarly) {
+  let resolvedUserId = null;
+  const accessToken = cookies.get('sb-access-token');
+  if (accessToken) {
     try {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(accessTokenEarly);
+      const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
       if (user) {
+        resolvedUserId = user.id;
         const { data: profile } = await supabaseAdmin
           .from('users')
           .select('tier')
@@ -56,16 +49,71 @@ export async function load({ params, cookies, url }) {
   };
 
   const cutoff = new Date(Date.now() - rangeMs[effectiveRange]).toISOString();
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Get latency data from signals_1min
-  const { data: rawLatencyData } = await supabaseAdmin
-    .from('signals_1min')
-    .select('bucket, total_signals, error_count, avg_duration_ms, p50_ms, p95_ms, region')
-    .eq('api_id', api.id)
-    .gte('bucket', cutoff)
-    .order('bucket', { ascending: true });
+  // Step 3: Fetch all independent queries in parallel
+  const [
+    { data: incidents },
+    { data: rawLatencyData },
+    { data: uptimeIncidents },
+    { data: maintenances },
+    { count: subscriberCount },
+    { count: reportCount },
+    pinnedResult,
+  ] = await Promise.all([
+    // Recent incidents
+    supabaseAdmin
+      .from('incidents')
+      .select('*')
+      .eq('api_id', api.id)
+      .order('started_at', { ascending: false })
+      .limit(20),
+    // Latency data from signals_1min
+    supabaseAdmin
+      .from('signals_1min')
+      .select('bucket, total_signals, error_count, avg_duration_ms, p50_ms, p95_ms, region')
+      .eq('api_id', api.id)
+      .gte('bucket', cutoff)
+      .order('bucket', { ascending: true }),
+    // 90-day uptime incidents
+    supabaseAdmin
+      .from('incidents')
+      .select('started_at, resolved_at')
+      .eq('api_id', api.id)
+      .gte('started_at', ninetyDaysAgo),
+    // Upcoming scheduled maintenances
+    supabaseAdmin
+      .from('scheduled_maintenances')
+      .select('title, description, scheduled_for, scheduled_until, status')
+      .eq('api_id', api.id)
+      .in('status', ['scheduled', 'in_progress'])
+      .gte('scheduled_until', new Date().toISOString())
+      .order('scheduled_for', { ascending: true })
+      .limit(5),
+    // Community pulse: subscriber count
+    supabaseAdmin
+      .from('alert_subscriptions')
+      .select('*', { count: 'exact', head: true })
+      .eq('api_id', api.id),
+    // Community pulse: report count
+    supabaseAdmin
+      .from('manual_reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('api_id', api.id),
+    // Check if user has this API pinned
+    resolvedUserId
+      ? supabaseAdmin
+          .from('pinned_apis')
+          .select('id')
+          .eq('user_id', resolvedUserId)
+          .eq('api_id', api.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
-  // For 7d/30d, bucket by hour to reduce data points
+  const isPinned = !!pinnedResult?.data;
+
+  // Process latency data — for 7d/30d, bucket by hour to reduce data points
   let latencyData;
   if (effectiveRange === '24h') {
     latencyData = rawLatencyData || [];
@@ -97,13 +145,6 @@ export async function load({ params, cookies, url }) {
   }
 
   // Calculate 90-day uptime
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: uptimeIncidents } = await supabaseAdmin
-    .from('incidents')
-    .select('started_at, resolved_at')
-    .eq('api_id', api.id)
-    .gte('started_at', ninetyDaysAgo);
-
   let downtimeMs = 0;
   for (const inc of (uptimeIncidents || [])) {
     const start = new Date(inc.started_at).getTime();
@@ -139,60 +180,8 @@ export async function load({ params, cookies, url }) {
     });
   }
 
-  // Fetch upcoming scheduled maintenances
-  const { data: maintenances } = await supabaseAdmin
-    .from('scheduled_maintenances')
-    .select('title, description, scheduled_for, scheduled_until, status')
-    .eq('api_id', api.id)
-    .in('status', ['scheduled', 'in_progress'])
-    .gte('scheduled_until', new Date().toISOString())
-    .order('scheduled_for', { ascending: true })
-    .limit(5);
-
-  // Check if user is logged in and has this API pinned
-  let userTier = resolvedUserTier;
-  let isPinned = false;
-  const accessToken = cookies.get('sb-access-token');
-  if (accessToken) {
-    try {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
-      if (user) {
-        if (!userTier) {
-          const { data: profile } = await supabaseAdmin
-            .from('users')
-            .select('tier')
-            .eq('id', user.id)
-            .single();
-          userTier = profile?.tier || 'free';
-        }
-
-        const { data: pin } = await supabaseAdmin
-          .from('pinned_apis')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('api_id', api.id)
-          .maybeSingle();
-        isPinned = !!pin;
-      }
-    } catch {
-      // Not logged in or error — that's fine
-    }
-  }
-
-  // Community pulse: subscriber count and report count
-  const { count: subscriberCount } = await supabaseAdmin
-    .from('alert_subscriptions')
-    .select('*', { count: 'exact', head: true })
-    .eq('api_id', api.id);
-
-  const { count: reportCount } = await supabaseAdmin
-    .from('manual_reports')
-    .select('*', { count: 'exact', head: true })
-    .eq('api_id', api.id);
-
   // Compute reliability grade for this API
   const { computeReliabilityScore, metricsFromRaw } = await import('$lib/reliability-score.js');
-  const ninetyDaysAgoStr = ninetyDaysAgo;
   const metrics = metricsFromRaw({ uptimePct: uptimePercent, latencyData: latencyData, incidents: uptimeIncidents });
   const reliabilityScore = computeReliabilityScore(metrics);
 
@@ -209,21 +198,22 @@ export async function load({ params, cookies, url }) {
       .limit(10);
 
     if (peers && peers.length > 0) {
-      // Compute scores for peers and pick the top ones that score higher
       const thirtyDaysAgoStr = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const peerIds = peers.map(p => p.id);
 
-      const { data: peerIncidents } = await supabaseAdmin
-        .from('incidents')
-        .select('api_id, started_at, resolved_at')
-        .in('api_id', peerIds)
-        .gte('started_at', ninetyDaysAgoStr);
-
-      const { data: peerLatency } = await supabaseAdmin
-        .from('signals_1min')
-        .select('api_id, p95_ms')
-        .in('api_id', peerIds)
-        .gte('bucket', thirtyDaysAgoStr);
+      // Fetch peer data in parallel
+      const [{ data: peerIncidents }, { data: peerLatency }] = await Promise.all([
+        supabaseAdmin
+          .from('incidents')
+          .select('api_id, started_at, resolved_at')
+          .in('api_id', peerIds)
+          .gte('started_at', ninetyDaysAgo),
+        supabaseAdmin
+          .from('signals_1min')
+          .select('api_id, p95_ms')
+          .in('api_id', peerIds)
+          .gte('bucket', thirtyDaysAgoStr),
+      ]);
 
       const scoredPeers = peers.map(peer => {
         const pInc = (peerIncidents || []).filter(i => i.api_id === peer.id);
@@ -255,7 +245,7 @@ export async function load({ params, cookies, url }) {
     latencyRange: effectiveRange,
     uptimePercent,
     dailyUptime,
-    userTier,
+    userTier: resolvedUserTier,
     isPinned,
     maintenances: maintenances || [],
     subscriberCount: subscriberCount || 0,

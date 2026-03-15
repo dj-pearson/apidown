@@ -138,11 +138,11 @@ US-146: DONE - Content-Security-Policy header added to hooks.server.js (covers s
 US-147: DONE - Parallelize homepage data fetching (6 sequential Supabase queries refactored to Promise.all — apis, incidents, recentIncidents, sparklines, 90d incidents, 30d latency all fetched concurrently)
 US-148: DONE - Fix PWA manifest icon purpose and fields (split invalid "any maskable" into separate entries per W3C spec, added scope, id, lang, dir, prefer_related_applications)
 
--- Backlog: Discovered Issues (for future Ralph loops) --
-US-149: BACKLOG - Add error logging to service worker registration (hooks.client.js silently swallows SW errors)
-US-150: BACKLOG - Add error logging to layout server load catch block (+layout.server.js bare catch hides auth/session errors)
-US-151: BACKLOG - Add error handling to login MFA callback fetch (login page doesn't check /auth/callback response status)
-US-152: BACKLOG - Parallelize API detail page data fetching (8+ sequential queries like homepage had before US-147)
+-- Phase 20: Critical Platform Improvements (Round 5) --
+US-149: DONE - Add error logging to service worker registration (hooks.client.js now logs SW errors via console.warn instead of silently swallowing)
+US-150: DONE - Add error logging to layout server load catch block (+layout.server.js catch block now logs auth/session errors via console.error for debugging)
+US-151: DONE - Add error handling to login MFA callback fetch (login page now checks response.ok on /auth/callback POST, shows user-friendly error on failure)
+US-152: DONE - Parallelize API detail page data fetching (7 sequential queries refactored to Promise.all — incidents, latency, uptime, maintenances, subscribers, reports, pinned all fetched concurrently; peer queries also parallelized; duplicate auth.getUser call eliminated)
 
 == Architecture Notes ==
 - svelte.config.js uses adapter-cloudflare (not adapter-node)
