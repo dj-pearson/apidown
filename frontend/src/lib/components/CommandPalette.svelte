@@ -19,6 +19,8 @@
     { label: 'Leaderboard', href: '/leaderboard', keywords: 'leaderboard ranking reliability grades' },
     { label: 'Compare APIs', href: '/compare', keywords: 'compare versus alternatives' },
     { label: 'Documentation', href: '/docs', keywords: 'docs sdk integration api reference' },
+    { label: 'SLA Receipts', href: '/sla-receipts', keywords: 'sla receipts uptime promise missed target' },
+    { label: 'Open Data', href: '/data', keywords: 'data download csv json dataset export' },
     { label: 'Pricing', href: '/pricing', keywords: 'pricing plans upgrade billing' },
     { label: 'Dashboard', href: '/dashboard', keywords: 'dashboard account alerts subscriptions' },
   ];

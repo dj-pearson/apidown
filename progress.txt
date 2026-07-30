@@ -164,3 +164,10 @@ US-157: DONE - Per-API incident archive: /api/[slug]/history (18-month uptime ta
 US-158: DONE - Category latency race pages /category/[category] — live p95 ranking with p50, error rate, 30d uptime, 90d incidents, reliability grade; sortable with aria-sort; linked from homepage category headers
 US-163: DONE - Per-API (/api/[slug]/rss) and per-category (/category/[category]/rss) incident feeds; shared RSS builder extracted to lib/server/rss.js and the global feed refactored onto it; autodiscovery tags added
 REFACTOR: Shared lib/api-history.js (uptime/downtime windows with overlap merging, month keys, monthly rollups) and lib/categories.js (single source of category labels — replaced three duplicated maps in homepage, stack, palette, live radar)
+
+-- Phase 22: Reasons to Visit (Round 2) --
+US-162: DONE - MCP endpoint at /mcp (Streamable HTTP, JSON-RPC 2.0) exposing four read-only tools so AI agents can check API status before blaming your code; full protocol surface verified against a running dev server
+US-164: DONE - packages/cli published as `apidown`, runnable via npx; status/list/incidents commands, --json, status-reflecting exit codes (0/2/3) for scripting, reads the public /v1 API
+US-160: DONE - Open data at /data with incidents and monthly-uptime datasets in CSV and JSON, documented schema, attribution terms, row caps, and Dataset JSON-LD
+US-159: DONE - /sla-receipts comparing published vendor SLA vs measured uptime for the last complete month; migration 024 adds published_sla_pct/url/note to apis with a CHECK constraint requiring a source URL, seeded only for the five vendors with per-service published commitments
+DOCS: Added /v1 API, MCP, CLI, and Open Data & Feeds sections to /docs with copy-paste examples; footer and command palette updated

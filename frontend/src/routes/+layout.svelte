@@ -198,6 +198,7 @@
           <li><a href="/live">Live Radar</a></li>
           <li><a href="/incidents">Incidents</a></li>
           <li><a href="/leaderboard">Leaderboard</a></li>
+          <li><a href="/sla-receipts">SLA Receipts</a></li>
           <li><a href="/pricing">Pricing</a></li>
           <li><a href="/dashboard">Dashboard</a></li>
           <li><a href="/compare">Why APIdown</a></li>
@@ -209,6 +210,10 @@
         <h4>Developers</h4>
         <ul>
           <li><a href="/docs">Documentation</a></li>
+          <li><a href="/docs#v1-api">Public /v1 API</a></li>
+          <li><a href="/docs#mcp">MCP Server</a></li>
+          <li><a href="/docs#cli">Terminal CLI</a></li>
+          <li><a href="/data">Open Data</a></li>
           <li><a href="/api-status">API Reference</a></li>
           <li><a href="https://github.com/dj-pearson/apidown" target="_blank" rel="noopener">GitHub</a></li>
           <li><a href="/docs#sdks">SDKs</a></li>

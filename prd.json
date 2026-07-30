@@ -2230,8 +2230,8 @@
         "Build passes"
       ],
       "priority": 159,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /sla-receipts page comparing vendor published SLA vs APIdown-measured uptime for the last COMPLETE calendar month. Migration 024 adds apis.published_sla_pct/url/note with a CHECK constraint requiring a source URL for any stored percentage; seeded only the five vendors with per-service published commitments (4x AWS, Twilio). APIs without a sourced target are listed separately, not shown as failures. Full methodology section states plainly that figures are crowd-sourced client-side measurements, not vendor accounting."
     },
     {
       "id": "US-160",
@@ -2246,8 +2246,8 @@
         "Build passes"
       ],
       "priority": 160,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /data page documenting two datasets with per-column schema, licence, and attribution. Endpoints: /data/incidents.{csv,json} (5000 row cap) and /data/uptime.{csv,json} (24 months, one row per API-month). RFC 4180 CSV quoting, Content-Disposition filenames, 1h cache, CORS. Only public apis+incidents tables are read; no user/subscriber/key data. Dataset JSON-LD, linked from footer and docs."
     },
     {
       "id": "US-161",
@@ -2278,8 +2278,8 @@
         "Build passes"
       ],
       "priority": 162,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /mcp Streamable HTTP endpoint. JSON-RPC 2.0 with initialize, ping, tools/list, tools/call; notifications return 202 with no body; batches rejected -32600; parse errors -32700; unknown method -32601; unknown tool -32602. Four read-only tools (list_apis, get_api_status, list_incidents, get_api_history) with agent-oriented descriptions and enum-constrained inputs. Tool failures return isError results rather than protocol errors. Verified end to end against a running dev server."
     },
     {
       "id": "US-163",
@@ -2310,8 +2310,8 @@
         "README with install and usage; documented on the docs page"
       ],
       "priority": 164,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New packages/cli published as apidown, runnable via npx. Commands: <slug>, list [--down], incidents [slug]; flags --json, --limit, --version, --help. Reads the public /v1 API, no key. Exit codes 0 operational / 2 degraded / 3 down / 1 usage-or-request error so it can gate scripts. Colour suppressed when not a TTY or NO_COLOR is set. README with install, usage, exit codes, and measurement caveats; documented on the docs page. Smoke-tested against a stub of /v1."
     },
     {
       "id": "US-165",

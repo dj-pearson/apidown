@@ -10,11 +10,14 @@
 
   const STORAGE_KEY = 'apidown-stack';
 
+  // Slugs are filtered against the live API list before use, so a starter stack
+  // never shows a broken entry if an API is renamed or removed.
   const STARTER_STACKS = [
-    { label: 'AI stack', slugs: ['openai', 'anthropic', 'google-gemini', 'pinecone', 'replicate'] },
-    { label: 'Payments stack', slugs: ['stripe', 'paypal', 'plaid', 'shopify'] },
-    { label: 'Cloud stack', slugs: ['aws-s3', 'aws-ec2', 'cloudflare', 'vercel', 'github'] },
-    { label: 'Comms stack', slugs: ['twilio', 'sendgrid', 'slack', 'discord'] },
+    { label: 'AI stack', slugs: ['openai', 'anthropic', 'google-gemini', 'groq', 'replicate'] },
+    { label: 'Payments stack', slugs: ['stripe', 'paypal', 'square', 'braintree'] },
+    { label: 'Cloud & hosting', slugs: ['aws-s3', 'aws-lambda', 'cloudflare', 'vercel', 'github'] },
+    { label: 'Comms stack', slugs: ['twilio', 'sendgrid', 'postmark', 'mailgun'] },
+    { label: 'Modern SaaS', slugs: ['supabase', 'clerk', 'vercel', 'stripe', 'openai'] },
   ];
 
 

@@ -33,6 +33,8 @@ export async function GET({ platform }) {
     { path: "/live", freq: "hourly", priority: "0.8" },
     { path: "/stack", freq: "weekly", priority: "0.7" },
     { path: "/leaderboard", freq: "daily", priority: "0.8" },
+    { path: "/sla-receipts", freq: "weekly", priority: "0.8" },
+    { path: "/data", freq: "weekly", priority: "0.7" },
     { path: "/docs", freq: "weekly", priority: "0.7" },
     { path: "/pricing", freq: "monthly", priority: "0.7" },
   ];

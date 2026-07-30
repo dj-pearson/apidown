@@ -1,7 +1,3 @@
 US-156 - Browser push notifications for watched APIs
-US-159 - SLA receipts (published SLA vs measured uptime)
-US-160 - Open data downloads
-US-162 - MCP endpoint for AI agents
-US-164 - npx apidown CLI
 US-165 - Public "I'm seeing this too" report feed
 US-166 - Weekly API Weather Report digest
