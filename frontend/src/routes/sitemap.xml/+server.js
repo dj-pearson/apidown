@@ -1,5 +1,6 @@
 import { getSupabaseAdmin, setPlatform } from "$lib/supabase-server.js";
 import { recentMonthKeys } from "$lib/api-history.js";
+import { recentWeekKeys } from "$lib/weekly-digest.js";
 
 export async function GET({ platform }) {
   setPlatform(platform);
@@ -35,6 +36,7 @@ export async function GET({ platform }) {
     { path: "/leaderboard", freq: "daily", priority: "0.8" },
     { path: "/sla-receipts", freq: "weekly", priority: "0.8" },
     { path: "/data", freq: "weekly", priority: "0.7" },
+    { path: "/weekly", freq: "weekly", priority: "0.8" },
     { path: "/docs", freq: "weekly", priority: "0.7" },
     { path: "/pricing", freq: "monthly", priority: "0.7" },
   ];
@@ -58,6 +60,11 @@ export async function GET({ platform }) {
       // Only the current month keeps changing; older archives are stable.
       urls.push(urlEntry(`${base}/api/${a.slug}/history/${m}`, now, i === 0 ? "daily" : "monthly", i === 0 ? "0.6" : "0.5"));
     }
+  }
+
+  // Weekly digest archive  /weekly/[yyyy-Www]
+  for (const [i, w] of recentWeekKeys(12).entries()) {
+    urls.push(urlEntry(`${base}/weekly/${w}`, now, i === 0 ? "daily" : "monthly", i === 0 ? "0.7" : "0.5"));
   }
 
   // Category latency race pages  /category/[category]

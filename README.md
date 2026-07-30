@@ -98,6 +98,29 @@ apidown.init({ key: 'YOUR_SDK_KEY' });
 // All fetch() and axios calls are now automatically monitored
 ```
 
+## Testing
+
+The calculation-heavy modules are covered by unit tests using Node's built-in
+test runner — no test framework dependency:
+
+```bash
+cd frontend
+npm test          # run once
+npm run test:watch
+```
+
+What's covered:
+
+| Module | Guarantees under test |
+|--------|----------------------|
+| `src/lib/api-history.js` | Overlapping incidents merge instead of double-counting, unresolved incidents run to `now`, month boundaries clip, in-progress months prorate, future months return `null` |
+| `src/lib/weekly-digest.js` | ISO week keys across year boundaries, window round-trips, latency-mover noise floor, deterministic output for a given week, quiet-week output |
+| `src/lib/reliability-score.js` | Grade boundaries, weighting, metric derivation from raw rows |
+| `src/lib/palette-search.js` | Command palette ranking: exact/prefix/substring/subsequence order, archive queries, every destination reachable |
+
+These cover the maths that silently produces wrong numbers rather than crashing,
+so treat a failure here as a correctness bug, not a flaky test.
+
 ## Services
 
 | Service | Port | Description |

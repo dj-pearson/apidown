@@ -199,6 +199,7 @@
           <li><a href="/incidents">Incidents</a></li>
           <li><a href="/leaderboard">Leaderboard</a></li>
           <li><a href="/sla-receipts">SLA Receipts</a></li>
+          <li><a href="/weekly">Weekly Report</a></li>
           <li><a href="/pricing">Pricing</a></li>
           <li><a href="/dashboard">Dashboard</a></li>
           <li><a href="/compare">Why APIdown</a></li>
@@ -239,7 +240,7 @@
     <div class="footer-newsletter">
       <div class="newsletter-content">
         <strong>Get weekly API reliability insights</strong>
-        <p>Stay updated on outages, trends, and platform news.</p>
+        <p>The API Weather Report, every Monday. <a href="/weekly">Read the latest edition</a> first.</p>
       </div>
       <form class="newsletter-form" onsubmit={submitNewsletter} aria-label="Newsletter signup">
         <input type="email" bind:value={newsletterEmail} placeholder="you@example.com" required disabled={newsletterSubmitting} />

@@ -1,5 +1,5 @@
 <script>
-  import { categoryLabel } from '$lib/categories.js';
+  import { paletteResults } from '$lib/palette-search.js';
   import { goto } from '$app/navigation';
 
   let { apis = [] } = $props();
@@ -11,19 +11,6 @@
   };
 
 
-  const pages = [
-    { label: 'Status Dashboard', href: '/', keywords: 'home status grid all apis' },
-    { label: 'My Stack', href: '/stack', keywords: 'watchlist favorites personal my stack' },
-    { label: 'Live Radar', href: '/live', keywords: 'live radar feed realtime firehose monitor' },
-    { label: 'Incidents', href: '/incidents', keywords: 'incidents outages history' },
-    { label: 'Leaderboard', href: '/leaderboard', keywords: 'leaderboard ranking reliability grades' },
-    { label: 'Compare APIs', href: '/compare', keywords: 'compare versus alternatives' },
-    { label: 'Documentation', href: '/docs', keywords: 'docs sdk integration api reference' },
-    { label: 'SLA Receipts', href: '/sla-receipts', keywords: 'sla receipts uptime promise missed target' },
-    { label: 'Open Data', href: '/data', keywords: 'data download csv json dataset export' },
-    { label: 'Pricing', href: '/pricing', keywords: 'pricing plans upgrade billing' },
-    { label: 'Dashboard', href: '/dashboard', keywords: 'dashboard account alerts subscriptions' },
-  ];
 
   let open = $state(false);
   let query = $state('');
@@ -37,57 +24,7 @@
     isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   });
 
-  /**
-   * Subsequence match — every character of the needle must appear in order.
-   * Scores exact prefix matches highest so typing "str" surfaces Stripe first.
-   */
-  function score(needle, haystack) {
-    if (!needle) return 0;
-    const h = haystack.toLowerCase();
-    const n = needle.toLowerCase();
-    if (h === n) return 1000;
-    if (h.startsWith(n)) return 900 - h.length;
-    const idx = h.indexOf(n);
-    if (idx !== -1) return 700 - idx - h.length * 0.1;
-
-    let hi = 0;
-    for (const ch of n) {
-      hi = h.indexOf(ch, hi);
-      if (hi === -1) return -1;
-      hi++;
-    }
-    return 400 - h.length * 0.1;
-  }
-
-  let results = $derived.by(() => {
-    const items = [];
-
-    for (const api of apis) {
-      const best = Math.max(
-        score(query, api.name),
-        score(query, api.slug),
-        score(query, categoryLabel(api.category) || ''),
-      );
-      if (best < 0) continue;
-      items.push({
-        kind: 'api',
-        label: api.name,
-        hint: categoryLabel(api.category),
-        status: api.current_status || 'operational',
-        href: `/api/${api.slug}`,
-        score: best,
-      });
-    }
-
-    for (const p of pages) {
-      const best = Math.max(score(query, p.label), score(query, p.keywords));
-      if (best < 0) continue;
-      items.push({ kind: 'page', label: p.label, hint: 'Page', href: p.href, score: best - 50 });
-    }
-
-    items.sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-    return items.slice(0, 40);
-  });
+  let results = $derived(paletteResults(query, apis));
 
   // Keep the highlight inside the result list as it shrinks while typing.
   $effect(() => {
@@ -224,6 +161,8 @@
           >
             {#if item.kind === 'api'}
               <span class="dot" style="background: {statusColors[item.status] || statusColors.operational}"></span>
+            {:else if item.kind === 'history'}
+              <span class="page-icon" aria-hidden="true">⏱</span>
             {:else}
               <span class="page-icon" aria-hidden="true">→</span>
             {/if}

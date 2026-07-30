@@ -2344,6 +2344,70 @@
       "priority": 166,
       "passes": true,
       "notes": "lib/weekly-digest.js: pure deterministic builder (ISO week keys verified against year-boundary cases, biggest outages, >=10% latency movers both directions, per-category downtime, clean sheet). lib/server/digest-query.js shared by the web pages and the API so email and web cannot drift. /weekly and /weekly/[yyyy-Www] archive with prev/next nav, Report JSON-LD, and immutable caching for finished weeks. /v1/weekly/[week] (accepts \"latest\") for the sender. worker newsletter-digest.js renders HTML + plain text (escaped, no external assets, verified on populated and quiet weeks), sends via SMTP with List-Unsubscribe headers, and stamps last_digest_week only after success so retries are idempotent. Migration 026 adds per-subscriber unsubscribe tokens; /newsletter/unsubscribe handles one-click opt-out. Worker fires Mondays 10:00 UTC."
+    },
+    {
+      "id": "US-167",
+      "title": "Fix per-user digest so it actually sends email",
+      "description": "As a user who set a digest frequency, I want to actually receive the digest, so that a preference I set in the dashboard does something.",
+      "acceptanceCriteria": [
+        "weekly-digest-worker.js sends the digest it composes via SMTP instead of only console.logging it",
+        "Both plain-text and HTML bodies are produced",
+        "Sends are recorded so a repeated run inside the same period does not double-send",
+        "A send failure for one user does not abort the run for the others",
+        "Unsubscribe/manage link points at the dashboard digest settings",
+        "No behavioural change to which users are selected or what the digest contains"
+      ],
+      "priority": 167,
+      "passes": true,
+      "notes": "weekly-digest-worker.js now actually delivers: nodemailer transport, plain-text plus a new HTML body, and a send per selected user. Idempotency reworked \u2014 migration 028 adds users.last_digest_period/last_digest_sent_at, the worker skips anyone already served this period (daily-YYYY-MM-DD or weekly-YYYY-Www) and stamps only after a successful send, so a failure retries next run. Removed the old bogus alert_log insert that tied a digest to an arbitrary incident and deduplicated nothing. Per-user failures no longer abort the run. Selection and digest content unchanged. Verified end to end with a fake supabase and a captured transport: one send, one skip, one stamp."
+    },
+    {
+      "id": "US-168",
+      "title": "Wire the weekly digest and archives into site navigation",
+      "description": "As a visitor, I want to be able to find the weekly report and the outage archives from the site itself, so that the pages built last round are actually reachable.",
+      "acceptanceCriteria": [
+        "/weekly linked from the footer",
+        "/weekly and the recent week archive URLs present in sitemap.xml",
+        "Command palette includes Weekly Report, SLA Receipts, Open Data, and Live Radar destinations",
+        "Command palette can jump to an API's outage history, not just its status page",
+        "Newsletter footer copy links to the archive so people can read an edition before subscribing",
+        "Build passes"
+      ],
+      "priority": 168,
+      "passes": true,
+      "notes": "/weekly added to the footer Product column and to sitemap.xml along with 12 week archive URLs. Newsletter footer copy now links to the latest edition so people can read before subscribing. Command palette gained Weekly Report plus per-API outage-history entries. Found and fixed a bug in the first cut of this: the history entry sat behind the name-match guard, so \"stripe history\" returned nothing at all. Ranking logic extracted to lib/palette-search.js and unit tested."
+    },
+    {
+      "id": "US-169",
+      "title": "Lead the homepage with the question people arrive asking",
+      "description": "As a developer who just hit a failing API call, I want the homepage to answer 'is it them or me' immediately, so that I do not have to scan a 40-API grid to find out.",
+      "acceptanceCriteria": [
+        "Homepage headline states the current global verdict: everything operational, or which APIs are down/degraded",
+        "Affected APIs surfaced as direct links above the grid when anything is impaired",
+        "Entry points to My Stack and Live Radar presented as the next action",
+        "Verdict updates live with the existing realtime subscription",
+        "Existing search, sort, and category grid all still work unchanged",
+        "Build passes"
+      ],
+      "priority": 169,
+      "passes": true,
+      "notes": "Homepage now leads with the global verdict \u2014 \"All 30 APIs we track are operational\" or which are down/degraded \u2014 with affected APIs as direct links above the grid. Derived from the existing realtime-updated apis state, so it updates live with no new subscription. Hero CTAs changed from sign-up-first to My Stack and Live Radar, with account creation as secondary. Search, sort, and the category grid are untouched."
+    },
+    {
+      "id": "US-170",
+      "title": "Test suite for the uptime, digest, and scoring logic",
+      "description": "As a maintainer, I want the pure calculation modules under test, so that the uptime and week-boundary maths cannot silently regress.",
+      "acceptanceCriteria": [
+        "Runnable with npm test, using the Node built-in test runner so no new dependency is added",
+        "api-history.js covered: overlapping incidents merged, unresolved incidents run to now, month-boundary clipping, in-progress month proration, future months return null",
+        "weekly-digest.js covered: ISO week keys across year boundaries, window round-trips, mover threshold filtering, determinism regardless of input order, quiet-week output",
+        "reliability-score.js covered: grade boundaries and metric derivation",
+        "Tests fail loudly if any of the above regresses",
+        "Documented in the README"
+      ],
+      "priority": 170,
+      "passes": true,
+      "notes": "npm test via the Node built-in runner \u2014 no new dependency. 75 tests across api-history (overlap merging, unresolved incidents, boundary clipping, proration, future months), weekly-digest (ISO week keys at year boundaries, window round-trips, mover noise floor, determinism, quiet weeks, list caps), reliability-score (grade monotonicity, weighting, metric derivation), and palette-search. Mutation-checked: breaking overlap merging fails 2 tests, removing the digest sort tie-break fails the determinism test, reintroducing the palette guard bug fails its regression test. Documented in the README."
     }
   ]
 }
