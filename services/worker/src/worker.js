@@ -8,6 +8,7 @@ import { runDigestAlerts } from './lib/digest-worker.js';
 import { runSyntheticProbes } from './lib/synthetic-probe.js';
 import { runStatusPageScraper } from './lib/statuspage-scraper.js';
 import { runWeeklyDigest } from './lib/weekly-digest-worker.js';
+import { sendWeeklyDigest } from './lib/newsletter-digest.js';
 import { runGoogleIndexing } from './lib/google-indexing.js';
 
 const SIGNAL_INTERVAL = 10_000;   // Drain signals every 10s
@@ -20,6 +21,7 @@ const PROBE_INTERVAL   = 60_000;  // Synthetic probes every 60s
 const SCRAPE_INTERVAL  = 5 * 60 * 1000; // Status page scraping every 5min
 const WEEKLY_DIGEST_INTERVAL = 60 * 60 * 1000; // Check hourly (only fires at 9am UTC)
 const INDEXING_INTERVAL = 10 * 60 * 1000; // Google indexing every 10min
+const NEWSLETTER_INTERVAL = 60 * 60 * 1000; // Check hourly (only fires Monday 10am UTC)
 
 async function start() {
   console.log('[worker] Starting APIdown worker...');
@@ -111,6 +113,20 @@ async function start() {
     }
   }
 
+  // Public "API Weather Report" newsletter loop.
+  // Fires Monday 10:00 UTC — an hour after the per-user digest, and after the
+  // week has definitively closed. Sending is idempotent per week, so a missed
+  // or repeated firing is harmless.
+  async function newsletterDigestLoop() {
+    const now = new Date();
+    if (now.getUTCDay() !== 1 || now.getUTCHours() !== 10) return;
+    try {
+      await sendWeeklyDigest({ supabase });
+    } catch (err) {
+      console.error('[worker] Newsletter digest error:', err.message);
+    }
+  }
+
   // Google indexing loop
   async function indexingLoop() {
     try {
@@ -135,6 +151,7 @@ async function start() {
   setInterval(probeLoop, PROBE_INTERVAL);
   setInterval(scrapeLoop, SCRAPE_INTERVAL);
   setInterval(weeklyDigestLoop, WEEKLY_DIGEST_INTERVAL);
+  setInterval(newsletterDigestLoop, NEWSLETTER_INTERVAL);
   setInterval(indexingLoop, INDEXING_INTERVAL);
 
   // Simple health HTTP server for container probes

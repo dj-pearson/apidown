@@ -154,3 +154,42 @@ US-152: DONE - Parallelize API detail page data fetching (7 sequential queries r
 - Auth uses Supabase Auth with @supabase/ssr for cookie-based sessions on Cloudflare Pages
 - Stripe billing: Pro ($19/mo), Team ($49/mo) - products created in Stripe dashboard
 - Admin access: is_admin flag on users table, no role-based system
+
+-- Phase 21: Reasons to Visit (Round 1) --
+US-155: DONE - Command palette (Cmd/Ctrl+K, or bare "/") with fuzzy search across all APIs + 9 site destinations; API index added to +layout.server.js so the palette works on every route; header trigger shows the shortcut
+US-153: DONE - My Stack (/stack) personalized watchlist — localStorage + ?apis= URL encoding for shareable/bookmarkable stacks, searchable picker, starter stacks, single aggregate verdict, realtime status, open-incident list, no account needed
+US-154: DONE - Live Radar (/live) always-on feed — 48h incident seed merged from opened/resolved/update events, realtime apis+incidents subscriptions, down/degraded/24h counters, category filter, aria-live + reduced-motion support
+US-161: DONE - Public /v1 read API (apis, apis/[slug], apis/[slug]/history, incidents) with shared envelope/CORS/paging helpers in lib/server/v1.js and an OpenAPI 3.1 spec at /v1/openapi.json — no API key needed
+US-157: DONE - Per-API incident archive: /api/[slug]/history (18-month uptime table) and /api/[slug]/history/[yyyy-mm] dated permalinks with JSON-LD, prev/next nav, clean-month state, and sitemap coverage for 12 months per API
+US-158: DONE - Category latency race pages /category/[category] — live p95 ranking with p50, error rate, 30d uptime, 90d incidents, reliability grade; sortable with aria-sort; linked from homepage category headers
+US-163: DONE - Per-API (/api/[slug]/rss) and per-category (/category/[category]/rss) incident feeds; shared RSS builder extracted to lib/server/rss.js and the global feed refactored onto it; autodiscovery tags added
+REFACTOR: Shared lib/api-history.js (uptime/downtime windows with overlap merging, month keys, monthly rollups) and lib/categories.js (single source of category labels — replaced three duplicated maps in homepage, stack, palette, live radar)
+
+-- Phase 22: Reasons to Visit (Round 2) --
+US-162: DONE - MCP endpoint at /mcp (Streamable HTTP, JSON-RPC 2.0) exposing four read-only tools so AI agents can check API status before blaming your code; full protocol surface verified against a running dev server
+US-164: DONE - packages/cli published as `apidown`, runnable via npx; status/list/incidents commands, --json, status-reflecting exit codes (0/2/3) for scripting, reads the public /v1 API
+US-160: DONE - Open data at /data with incidents and monthly-uptime datasets in CSV and JSON, documented schema, attribution terms, row caps, and Dataset JSON-LD
+US-159: DONE - /sla-receipts comparing published vendor SLA vs measured uptime for the last complete month; migration 024 adds published_sla_pct/url/note to apis with a CHECK constraint requiring a source URL, seeded only for the five vendors with per-service published commitments
+DOCS: Added /v1 API, MCP, CLI, and Open Data & Feeds sections to /docs with copy-paste examples; footer and command palette updated
+
+-- Phase 23: Reasons to Visit (Round 3) --
+US-165: DONE - Public "I'm seeing this too" report feed on API pages — last-hour count, one-click submit with error-type picker, 24h trend bars, recent-report list, server-side per-IP-hash rate limit; migration 025 adds error_type + country-only region; replaced the old ingest report button
+US-166: DONE - Weekly "API Weather Report" — deterministic pure builder (lib/weekly-digest.js), /weekly + /weekly/[yyyy-Www] archive, /v1/weekly/[week] JSON, worker newsletter-digest.js sending HTML+text via SMTP with List-Unsubscribe and idempotent per-week stamping; migration 026 adds per-subscriber unsubscribe tokens and /newsletter/unsubscribe
+US-156: DONE - Browser push notifications for watched APIs (no account needed) — migration 027 push_subscriptions, /api/push/subscribe GET/POST/DELETE, lib/push.js + PushToggle on API pages and /stack, sw.js push/notificationclick handlers, worker push-sender.js with severity filtering and dead-endpoint pruning; cleanly disabled without VAPID keys
+DOCS: Browser Notifications + weekly digest sections added; .env.example documents VAPID and digest vars
+
+== Notes for follow-up ==
+- database/migrations/024 seeds published SLA targets for only 5 vendors (4x AWS, Twilio). The
+  remaining tracked APIs need their published figure entered WITH a source URL — the schema
+  CHECK constraint refuses a percentage without one. /sla-receipts lists them separately until then.
+- Browser notifications need VAPID keys (npx web-push generate-vapid-keys) and `npm i` in
+  services/worker to pick up the new web-push dependency. Until then the feature self-disables.
+- Pre-existing, untouched: services/worker/src/lib/weekly-digest-worker.js (the per-user digest)
+  builds its email body but never calls a mail transport — it only console.logs. Separate from the
+  new public newsletter, which does send.
+
+-- Phase 24: Follow-through --
+US-167: DONE - Per-user digest actually sends now (was composing email and only console.logging it). Real SMTP send with text + HTML bodies; migration 028 adds last_digest_period/last_digest_sent_at for genuine per-period idempotency, replacing an alert_log insert that deduplicated nothing
+US-170: DONE - Test suite via `npm test` (Node built-in runner, no new deps): 75 tests over api-history, weekly-digest, reliability-score, and palette-search. Mutation-checked to confirm the tests actually fail when the logic breaks
+US-168: DONE - /weekly wired into footer, sitemap (+12 week archives), and command palette; per-API outage-history entries added to the palette. Fixed a bug in the first cut where "stripe history" matched nothing; ranking logic extracted to lib/palette-search.js so it is testable
+US-169: DONE - Homepage leads with the live global verdict and affected-API links above the grid; hero CTAs now point at My Stack and Live Radar instead of sign-up first

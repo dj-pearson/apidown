@@ -48,8 +48,9 @@ export async function load({ params, cookies, url }) {
     '30d': 30 * 24 * 60 * 60 * 1000,
   };
 
-  const cutoff = new Date(Date.now() - rangeMs[effectiveRange]).toISOString();
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const loadedAt = Date.now();
+  const cutoff = new Date(loadedAt - rangeMs[effectiveRange]).toISOString();
+  const ninetyDaysAgo = new Date(loadedAt - 90 * 24 * 60 * 60 * 1000).toISOString();
 
   // Step 3: Fetch all independent queries in parallel
   const [
@@ -60,6 +61,7 @@ export async function load({ params, cookies, url }) {
     { count: subscriberCount },
     { count: reportCount },
     pinnedResult,
+    { data: recentReports },
   ] = await Promise.all([
     // Recent incidents
     supabaseAdmin
@@ -109,9 +111,29 @@ export async function load({ params, cookies, url }) {
           .eq('api_id', api.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    // Public report feed: last 24h of "I'm seeing this too" submissions
+    supabaseAdmin
+      .from('manual_reports')
+      .select('id, created_at, error_type, region')
+      .eq('api_id', api.id)
+      .gte('created_at', new Date(loadedAt - 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(500),
   ]);
 
   const isPinned = !!pinnedResult?.data;
+
+  // Reports per hour over the last 24h, oldest bucket first, for the trend bars.
+  const reports24h = recentReports || [];
+  const reportTrend = Array.from({ length: 24 }, (_, i) => {
+    const bucketStart = loadedAt - (24 - i) * 60 * 60 * 1000;
+    const bucketEnd = bucketStart + 60 * 60 * 1000;
+    return reports24h.filter(r => {
+      const t = new Date(r.created_at).getTime();
+      return t >= bucketStart && t < bucketEnd;
+    }).length;
+  });
+  const reportsLastHour = reportTrend[23];
 
   // Process latency data — for 7d/30d, bucket by hour to reduce data points
   let latencyData;
@@ -156,7 +178,7 @@ export async function load({ params, cookies, url }) {
 
   // Build 90-day daily uptime data from incidents
   const dailyUptime = [];
-  const now = Date.now();
+  const now = loadedAt;
   for (let i = 89; i >= 0; i--) {
     const dayStart = new Date(now - i * 24 * 60 * 60 * 1000);
     dayStart.setHours(0, 0, 0, 0);
@@ -250,6 +272,15 @@ export async function load({ params, cookies, url }) {
     maintenances: maintenances || [],
     subscriberCount: subscriberCount || 0,
     reportCount: reportCount || 0,
+    reportsLastHour,
+    reportTrend,
+    // Only what the public feed renders — never the reporter hash.
+    recentReports: reports24h.slice(0, 25).map(r => ({
+      id: r.id,
+      created_at: r.created_at,
+      error_type: r.error_type,
+      region: r.region,
+    })),
     reliabilityScore,
     alternatives,
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',

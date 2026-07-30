@@ -1,0 +1,31 @@
+{
+  "name": "apidown",
+  "version": "1.0.0",
+  "description": "Check whether a third-party API is actually down, from your terminal",
+  "type": "module",
+  "bin": {
+    "apidown": "src/cli.js"
+  },
+  "files": [
+    "src/cli.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "api",
+    "status",
+    "uptime",
+    "outage",
+    "monitoring",
+    "cli",
+    "apidown"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dj-pearson/apidown"
+  },
+  "homepage": "https://apidown.net"
+}

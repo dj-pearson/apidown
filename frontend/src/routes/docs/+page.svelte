@@ -23,6 +23,11 @@
     { id: 'python', label: 'Python' },
     { id: 'configuration', label: 'Configuration Options' },
     { id: 'rest-api', label: 'REST API Reference' },
+    { id: 'v1-api', label: 'Public /v1 API' },
+    { id: 'mcp', label: 'MCP Server (AI agents)' },
+    { id: 'cli', label: 'Terminal CLI' },
+    { id: 'open-data', label: 'Open Data & Feeds' },
+    { id: 'notifications', label: 'Browser Notifications' },
     { id: 'privacy', label: 'Privacy' },
     { id: 'manual-recording', label: 'Manual Recording' },
     { id: 'troubleshooting', label: 'Troubleshooting' },
@@ -300,6 +305,179 @@
       <code>/v1/reports/sla?api_slug=&#123;slug&#125;</code>
     </div>
     <p>Download an SLA compliance report in JSON format. Requires Pro tier.</p>
+  </section>
+
+  <section id="v1-api">
+    <h2>Public /v1 API</h2>
+    <p>
+      Read-only status data, no API key and no account required. Every response uses the same
+      envelope — <code>&#123; data, meta &#125;</code> on success and
+      <code>&#123; error: &#123; code, message &#125; &#125;</code> on failure — and CORS is open
+      for <code>GET</code>, so you can call it straight from a browser.
+    </p>
+
+    <h3>List tracked APIs</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/v1/apis</code>
+    </div>
+    <p>
+      Optional query parameters: <code>category</code>, <code>status</code>
+      (<code>operational</code>, <code>degraded</code>, <code>down</code>), <code>limit</code>
+      (max 200), <code>offset</code>. Includes signal-weighted p50/p95 for the last hour and an
+      open-incident count per API.
+    </p>
+    <pre><code>curl https://apidown.net/v1/apis?status=down</code></pre>
+
+    <h3>Get one API</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/v1/apis/&#123;slug&#125;</code>
+    </div>
+    <p>Current status plus a 24-hour window (latency, error rate, uptime), 30-day uptime and incident count, and any open incidents.</p>
+    <pre><code>curl https://apidown.net/v1/apis/stripe</code></pre>
+
+    <h3>Monthly history</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/v1/apis/&#123;slug&#125;/history?months=12</code>
+    </div>
+    <p>Month-by-month uptime, incident count, total downtime, and longest outage. Up to 24 months.</p>
+    <pre><code>curl "https://apidown.net/v1/apis/aws-s3/history?months=6"</code></pre>
+
+    <h3>List incidents</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/v1/incidents</code>
+    </div>
+    <p>
+      Filter with <code>api</code>, <code>severity</code>, <code>status</code>, or
+      <code>open=true</code>. Paginate with <code>limit</code> (max 200) and <code>offset</code>.
+    </p>
+    <pre><code>curl "https://apidown.net/v1/incidents?open=true&amp;severity=critical"</code></pre>
+
+    <h3>OpenAPI specification</h3>
+    <div class="api-endpoint">
+      <span class="method get">GET</span>
+      <code>/v1/openapi.json</code>
+    </div>
+    <p>
+      The full OpenAPI 3.1 document, for generating a typed client or importing into Postman
+      or Insomnia.
+    </p>
+  </section>
+
+  <section id="mcp">
+    <h2>MCP Server — let your AI agent check API status</h2>
+    <p>
+      APIdown exposes a read-only
+      <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context
+      Protocol</a> endpoint, so an AI coding agent can check whether a third-party API is
+      actually down before it starts debugging your code.
+    </p>
+
+    <div class="api-endpoint">
+      <span class="method post">POST</span>
+      <code>/mcp</code>
+    </div>
+
+    <h3>Add it to Claude Code</h3>
+    <pre><code>claude mcp add --transport http apidown https://apidown.net/mcp</code></pre>
+
+    <h3>Or add it to any MCP client config</h3>
+    <pre><code>&#123;
+  "mcpServers": &#123;
+    "apidown": &#123;
+      "type": "http",
+      "url": "https://apidown.net/mcp"
+    &#125;
+  &#125;
+&#125;</code></pre>
+
+    <h3>Available tools</h3>
+    <ul>
+      <li><code>list_apis</code> — every tracked API and its live status; filter by status or category</li>
+      <li><code>get_api_status</code> — one API's status, 24-hour latency and error rate, 30-day uptime, open incidents</li>
+      <li><code>list_incidents</code> — recent incidents, filterable by API, severity, or open-only</li>
+      <li><code>get_api_history</code> — monthly uptime history for one API</li>
+    </ul>
+    <p>
+      No authentication is needed and there are no write tools — the endpoint can only read
+      public status data.
+    </p>
+  </section>
+
+  <section id="cli">
+    <h2>Terminal CLI</h2>
+    <p>
+      Check an API without leaving your shell. No install and no key — the CLI reads the public
+      <code>/v1</code> API.
+    </p>
+    <pre><code>npx apidown stripe</code></pre>
+    <p>Other commands:</p>
+    <pre><code>npx apidown list --down            # only APIs currently impaired
+npx apidown incidents openai       # recent incidents for one API
+npx apidown openai --json | jq .status</code></pre>
+    <p>
+      The exit code reflects status — <code>0</code> operational, <code>2</code> degraded,
+      <code>3</code> down, <code>1</code> usage error — so it can gate a script:
+    </p>
+    <pre><code>npx apidown stripe || echo "Holding the deploy"</code></pre>
+  </section>
+
+  <section id="open-data">
+    <h2>Open Data &amp; Feeds</h2>
+    <p>
+      Bulk downloads and subscribable feeds, all free and without an account.
+    </p>
+
+    <h3>Datasets</h3>
+    <ul>
+      <li><a href="/data">/data</a> — schema, licence, and attribution details</li>
+      <li><code>/data/incidents.csv</code> and <code>/data/incidents.json</code> — full incident history</li>
+      <li><code>/data/uptime.csv</code> and <code>/data/uptime.json</code> — monthly uptime per API, last 24 months</li>
+    </ul>
+    <p>Free to use commercially; please credit APIdown.net and link back.</p>
+
+    <h3>Feeds</h3>
+    <ul>
+      <li><code>/incidents/rss</code> — every incident across every API</li>
+      <li><code>/api/&#123;slug&#125;/rss</code> — one API only</li>
+      <li><code>/category/&#123;category&#125;/rss</code> — a whole category, e.g. <code>/category/ai/rss</code></li>
+    </ul>
+    <p>Point a feed reader, or a Slack/Discord RSS integration, at whichever scope you care about.</p>
+
+    <h3>Weekly digest</h3>
+    <ul>
+      <li><a href="/weekly">/weekly</a> — the API Weather Report, latest complete week</li>
+      <li><code>/weekly/&#123;YYYY-Www&#125;</code> — any archived week, e.g. <code>/weekly/2026-W31</code></li>
+      <li><code>/v1/weekly/latest</code> — the same digest as JSON</li>
+    </ul>
+    <p>Subscribe by email with the form in the site footer; every edition includes a one-click unsubscribe link.</p>
+  </section>
+
+  <section id="notifications">
+    <h2>Browser Notifications</h2>
+    <p>
+      Get a desktop or mobile notification when an API you watch goes down — no account and no
+      email address required. Turn it on from any API page, or from
+      <a href="/stack">My Stack</a> to cover your whole watchlist at once.
+    </p>
+    <p>
+      Notifications are tied to the browser you enable them in, not to a person: we store the
+      browser's opaque push endpoint and the API slugs you selected, nothing else. Revoke them
+      any time from the same button, or from your browser's site settings.
+    </p>
+    <p>
+      Default threshold is <strong>major</strong> and above, so a minor blip won't interrupt you.
+      Resolution notifications are always delivered if you were told about the outage.
+    </p>
+    <p>
+      Self-hosting APIdown? Browser notifications need a VAPID key pair
+      (<code>npx web-push generate-vapid-keys</code>) in
+      <code>PUBLIC_VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code>. Without them the
+      feature is cleanly disabled and the UI says so rather than failing.
+    </p>
   </section>
 
   <section id="manual-recording">

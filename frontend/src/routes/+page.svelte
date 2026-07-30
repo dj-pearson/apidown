@@ -3,6 +3,7 @@
   import StatusCard from '$lib/components/StatusCard.svelte';
   import SkeletonCard from '$lib/components/SkeletonCard.svelte';
   import SEO from '$lib/components/SEO.svelte';
+  import { categoryLabel } from '$lib/categories.js';
 
   let { data } = $props();
   let apis = $state(data.apis);
@@ -49,20 +50,38 @@
     return groups;
   });
 
-  const categoryLabels = {
-    payments: 'Payments',
-    ai: 'AI / LLM',
-    communications: 'Communications',
-    'cloud-aws': 'Cloud — AWS',
-    'cloud-gcp': 'Cloud — GCP',
-    'cloud-azure': 'Cloud — Azure',
-    auth: 'Auth & Identity',
-    database: 'Database / Storage',
-    devtools: 'Dev Tools & Hosting',
-    commerce: 'Commerce & Shipping',
-  };
 
   let operationalCount = $derived(apis.filter(a => a.current_status === 'operational').length);
+  let downApis = $derived(apis.filter(a => a.current_status === 'down'));
+  let degradedApis = $derived(apis.filter(a => a.current_status === 'degraded'));
+
+  // The question people actually arrive asking. Updates live with `apis`.
+  let verdict = $derived.by(() => {
+    if (apis.length === 0) return null;
+    if (downApis.length > 0) {
+      return {
+        tone: 'down',
+        text: downApis.length === 1
+          ? `${downApis[0].name} is down right now`
+          : `${downApis.length} APIs are down right now`,
+        affected: [...downApis, ...degradedApis],
+      };
+    }
+    if (degradedApis.length > 0) {
+      return {
+        tone: 'degraded',
+        text: degradedApis.length === 1
+          ? `${degradedApis[0].name} is degraded right now`
+          : `${degradedApis.length} APIs are degraded right now`,
+        affected: degradedApis,
+      };
+    }
+    return {
+      tone: 'operational',
+      text: `All ${apis.length} APIs we track are operational`,
+      affected: [],
+    };
+  });
   let connectionStatus = $state('connecting'); // 'live' | 'connecting' | 'offline'
 
   // Real-time subscription via $effect — runs after layout's $effect has set up Supabase config
@@ -195,6 +214,24 @@
   </div>
   <h1>Real-Time API Status Dashboard — Powered by Production Traffic</h1>
   <p class="subtitle">Is the API actually down — or is it your code? Find out in seconds with crowd-sourced health data from real applications.</p>
+
+  {#if verdict}
+    <div class="verdict verdict-{verdict.tone}" aria-live="polite">
+      <span class="verdict-dot"></span>
+      <strong>{verdict.text}</strong>
+      {#if verdict.affected.length > 0}
+        <span class="verdict-affected">
+          {#each verdict.affected.slice(0, 6) as api (api.id)}
+            <a href="/api/{api.slug}" class="affected-chip chip-{api.current_status}">{api.name}</a>
+          {/each}
+          {#if verdict.affected.length > 6}
+            <a href="#api-grid" class="affected-more">+{verdict.affected.length - 6} more</a>
+          {/if}
+        </span>
+      {/if}
+    </div>
+  {/if}
+
   <div class="stats">
     <span class="stat">{apis.length} APIs monitored</span>
     <span class="divider">·</span>
@@ -203,10 +240,13 @@
     <span class="stat stat-ok">{operationalCount}/{apis.length} operational</span>
   </div>
   <div class="hero-ctas">
-    <a href="/login" class="cta-primary">Get Started Free</a>
-    <a href="#api-grid" class="cta-secondary">View Live Status</a>
+    <a href="/stack" class="cta-primary">Build your stack watchlist</a>
+    <a href="/live" class="cta-secondary">Open the live radar</a>
   </div>
-  <p class="hero-subtext">No credit card required. Monitor {apis.length}+ APIs instantly.</p>
+  <p class="hero-subtext">
+    No account needed — your stack is saved in this browser and in the URL.
+    Or <a href="/login">create a free account</a> for alerts.
+  </p>
 </div>
 
 <!-- Trust Bar -->
@@ -266,7 +306,12 @@
   {:else}
     {#each Object.entries(groupedApis) as [category, categoryApis]}
       <section class="category">
-        <h2>{categoryLabels[category] || category}</h2>
+        <h2>
+          <a href="/category/{category}" class="category-link">
+            {categoryLabel(category)}
+            <span class="category-cta">Compare latency →</span>
+          </a>
+        </h2>
         <div class="grid">
           {#each categoryApis as api (api.id)}
             <StatusCard {api} sparkline={sparklineData[api.id] || []} grade={gradeData[api.id]?.grade} gradeColor={gradeData[api.id]?.gradeColor} />
@@ -696,6 +741,86 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.75rem;
+  }
+
+  .verdict {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    max-width: 760px;
+    margin: 1.25rem auto 0;
+    padding: 0.85rem 1.15rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-size: 1.05rem;
+  }
+
+  .verdict-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .verdict-operational { border-color: color-mix(in srgb, var(--color-operational) 40%, transparent); }
+  .verdict-operational .verdict-dot { background: var(--color-operational); }
+  .verdict-degraded { border-color: color-mix(in srgb, var(--color-degraded) 45%, transparent); }
+  .verdict-degraded .verdict-dot { background: var(--color-degraded); }
+  .verdict-down { border-color: color-mix(in srgb, var(--color-down) 50%, transparent); }
+  .verdict-down .verdict-dot { background: var(--color-down); }
+
+  .verdict-affected {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .affected-chip, .affected-more {
+    font-size: 0.78rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    text-decoration: none;
+    color: var(--color-text);
+  }
+
+  .affected-chip:hover, .affected-more:hover {
+    text-decoration: none;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .chip-down { border-color: color-mix(in srgb, var(--color-down) 50%, transparent); }
+  .chip-degraded { border-color: color-mix(in srgb, var(--color-degraded) 45%, transparent); }
+
+  .category-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .category-link:hover {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .category-cta {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--color-primary);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .category-link:hover .category-cta,
+  .category-link:focus-visible .category-cta {
+    opacity: 1;
   }
 
   .grid, .loading-grid {

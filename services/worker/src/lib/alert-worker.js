@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { sendPushForIncident } from './push-sender.js';
 
 const ALERTS_QUEUE = 'alerts:pending';
 const BATCH_SIZE = 50;
@@ -45,6 +46,19 @@ export async function drainAlerts(redis, supabase) {
 
 async function processAlert(supabase, alertJob) {
   const { incident_id, api_slug, api_name, severity, title, regions, event_type } = alertJob;
+
+  // Browser push first: it has its own subscriber table, so it must not be
+  // skipped by the "no email/webhook subscribers" early return below.
+  try {
+    await sendPushForIncident({
+      supabase,
+      api: { id: alertJob.api_id, slug: api_slug, name: api_name },
+      event: event_type === 'resolved' ? 'resolved' : 'opened',
+      incident: { id: incident_id, severity, title },
+    });
+  } catch (err) {
+    console.error('[alerts] Push notification error:', err.message);
+  }
 
   // Get subscribers for this API (include threshold_config for filtering)
   const { data: subs, error } = await supabase

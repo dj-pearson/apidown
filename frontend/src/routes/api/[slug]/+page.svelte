@@ -6,6 +6,8 @@
   import RegionBreakdown from "$lib/components/RegionBreakdown.svelte";
   import UptimeBar from "$lib/components/UptimeBar.svelte";
   import SEO from "$lib/components/SEO.svelte";
+  import ReportFeed from "$lib/components/ReportFeed.svelte";
+  import PushToggle from "$lib/components/PushToggle.svelte";
 
   let isNavigating = $derived(!!$navigating);
 
@@ -14,10 +16,6 @@
   let incidents = $state(data.incidents);
   let latencyData = $derived(data.latencyData);
   let logoFailed = $state(false);
-
-  // Report button state
-  let reportSubmitting = $state(false);
-  let reportMessage = $state("");
 
   // Subscribe form state
   let showSubscribe = $state(false);
@@ -182,26 +180,6 @@
     });
   }
 
-  async function reportIssue() {
-    reportSubmitting = true;
-    reportMessage = "";
-    try {
-      const res = await fetch(`${ingestUrl}/v1/reports`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_slug: api.slug }),
-      });
-      const body = await res.json();
-      if (res.ok) {
-        reportMessage = "Report submitted. Thank you!";
-      } else {
-        reportMessage = body.error || "Failed to submit report.";
-      }
-    } catch {
-      reportMessage = "Network error. Try again later.";
-    }
-    reportSubmitting = false;
-  }
 
   async function subscribe() {
     subSubmitting = true;
@@ -382,6 +360,7 @@
   let alternateLinks = $derived([
     { type: "text/plain", href: `https://apidown.net/api/${api.slug}.txt`, title: `${api.name} API Status (Plain Text)` },
     { type: "application/json", href: `https://apidown.net/api-status/${api.slug}`, title: `${api.name} API Status (JSON)` },
+    { type: "application/rss+xml", href: `https://apidown.net/api/${api.slug}/rss`, title: `${api.name} Incident Feed` },
   ]);
 </script>
 
@@ -518,6 +497,17 @@
   <a href="/api/{api.slug}/report-card">View Reliability Report Card</a>
 </div>
 
+<div class="push-row">
+  <PushToggle slugs={[api.slug]} label={api.name} />
+</div>
+
+<!-- Archive and feed entry points -->
+<div class="deep-links">
+  <a href="/api/{api.slug}/history">Outage history by month</a>
+  <a href="/category/{api.category}">Compare {api.category} latency</a>
+  <a href="/api/{api.slug}/rss">RSS feed</a>
+</div>
+
 <!-- Community Pulse -->
 <div class="community-pulse">
   {#if (data.subscriberCount || 0) > 5}
@@ -535,6 +525,14 @@
     </span>
   {/if}
 </div>
+
+<ReportFeed
+  apiSlug={api.slug}
+  apiName={api.name}
+  reportsLastHour={data.reportsLastHour || 0}
+  reportTrend={data.reportTrend || []}
+  recentReports={data.recentReports || []}
+/>
 
 <UptimeBar data={data.dailyUptime} loading={isNavigating} />
 
@@ -603,15 +601,10 @@
   <div class="action-card">
     <h3>Report an Issue</h3>
     <p>
-      Seeing problems with {api.name}? Submit a manual report to help the
-      community.
+      Seeing problems with {api.name}? Add your report and see how many others
+      are hitting the same thing right now.
     </p>
-    <button onclick={reportIssue} disabled={reportSubmitting}>
-      {reportSubmitting ? "Submitting..." : "Report Issue"}
-    </button>
-    {#if reportMessage}
-      <p class="action-message">{reportMessage}</p>
-    {/if}
+    <a href="#reports" class="action-link">Go to community reports</a>
   </div>
 
   <div class="action-card">
@@ -885,6 +878,29 @@
 
   .report-card-link {
     margin-bottom: 1rem;
+  }
+
+  .push-row {
+    margin-bottom: 1rem;
+  }
+
+  .deep-links {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  .deep-links a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--color-border);
+  }
+
+  .deep-links a:hover {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
   }
 
   .report-card-link a {
@@ -1207,6 +1223,22 @@
 
   .action-card button:hover {
     opacity: 0.85;
+  }
+  .action-link {
+    display: inline-block;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .action-link:hover {
+    opacity: 0.85;
+    color: #fff;
+    text-decoration: none;
   }
   .action-card button:disabled {
     opacity: 0.5;
