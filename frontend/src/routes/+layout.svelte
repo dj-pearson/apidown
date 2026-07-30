@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { initSupabase } from '$lib/supabase.js';
   import Toast from '$lib/components/Toast.svelte';
+  import CommandPalette from '$lib/components/CommandPalette.svelte';
   import { toast } from '$lib/stores/toast.js';
   let props = $props();
 
@@ -16,6 +17,7 @@
 
   let mobileMenuOpen = $state(false);
   let user = $derived(props.data?.user);
+  let apiIndex = $derived(props.data?.apiIndex || []);
   let hamburgerRef = $state(null);
   let navLinksRef = $state(null);
   let newsletterEmail = $state('');
@@ -122,6 +124,9 @@
     <a href="/" class="logo" style="display: flex; align-items: center;">
       <img src="/logo-white.svg" alt="APIdown.net - Home" height="28" style="height: 28px; width: auto;" />
     </a>
+    <div class="nav-search">
+      <CommandPalette apis={apiIndex} />
+    </div>
     <button
       class="hamburger"
       bind:this={hamburgerRef}
@@ -137,6 +142,8 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div id="nav-links" class="nav-links" class:mobile-open={mobileMenuOpen} bind:this={navLinksRef} onkeydown={handleMenuKeydown}>
       <a href="/" class:active={isActive('/')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Status</a>
+      <a href="/stack" class:active={isActive('/stack')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">My Stack</a>
+      <a href="/live" class:active={isActive('/live')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Live</a>
       <a href="/incidents" class:active={isActive('/incidents')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Incidents</a>
       <a href="/leaderboard" class:active={isActive('/leaderboard')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Leaderboard</a>
       <a href="/docs" class:active={isActive('/docs')} onclick={() => mobileMenuOpen = false} data-sveltekit-preload-data="hover">Docs</a>
@@ -187,6 +194,8 @@
         <h4>Product</h4>
         <ul>
           <li><a href="/">Status Dashboard</a></li>
+          <li><a href="/stack">My Stack</a></li>
+          <li><a href="/live">Live Radar</a></li>
           <li><a href="/incidents">Incidents</a></li>
           <li><a href="/leaderboard">Leaderboard</a></li>
           <li><a href="/pricing">Pricing</a></li>
@@ -301,9 +310,16 @@
     transform: translateY(-6px) rotate(-45deg);
   }
 
+  .nav-search {
+    margin-left: auto;
+    margin-right: 1.25rem;
+    display: flex;
+  }
+
   .nav-links {
     display: flex;
-    gap: 1.5rem;
+    gap: 1.15rem;
+    align-items: center;
   }
 
   .nav-links a {
@@ -526,6 +542,10 @@
   @media (max-width: 640px) {
     .hamburger {
       display: flex;
+    }
+
+    .nav-search {
+      margin-right: 0.6rem;
     }
 
     .nav-links {

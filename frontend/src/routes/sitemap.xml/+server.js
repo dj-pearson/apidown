@@ -29,6 +29,9 @@ export async function GET({ platform }) {
   const staticPages = [
     { path: "/", freq: "hourly", priority: "1.0" },
     { path: "/incidents", freq: "hourly", priority: "0.8" },
+    { path: "/live", freq: "hourly", priority: "0.8" },
+    { path: "/stack", freq: "weekly", priority: "0.7" },
+    { path: "/leaderboard", freq: "daily", priority: "0.8" },
     { path: "/docs", freq: "weekly", priority: "0.7" },
     { path: "/pricing", freq: "monthly", priority: "0.7" },
   ];

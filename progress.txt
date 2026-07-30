@@ -154,3 +154,8 @@ US-152: DONE - Parallelize API detail page data fetching (7 sequential queries r
 - Auth uses Supabase Auth with @supabase/ssr for cookie-based sessions on Cloudflare Pages
 - Stripe billing: Pro ($19/mo), Team ($49/mo) - products created in Stripe dashboard
 - Admin access: is_admin flag on users table, no role-based system
+
+-- Phase 21: Reasons to Visit (Round 1) --
+US-155: DONE - Command palette (Cmd/Ctrl+K, or bare "/") with fuzzy search across all APIs + 9 site destinations; API index added to +layout.server.js so the palette works on every route; header trigger shows the shortcut
+US-153: DONE - My Stack (/stack) personalized watchlist — localStorage + ?apis= URL encoding for shareable/bookmarkable stacks, searchable picker, starter stacks, single aggregate verdict, realtime status, open-incident list, no account needed
+US-154: DONE - Live Radar (/live) always-on feed — 48h incident seed merged from opened/resolved/update events, realtime apis+incidents subscriptions, down/degraded/24h counters, category filter, aria-live + reduced-motion support

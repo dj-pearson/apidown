@@ -2130,8 +2130,8 @@
         "Build passes"
       ],
       "priority": 153,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /stack route with localStorage + URL-encoded selection (?apis=slug,slug), searchable picker, four starter stacks, aggregate verdict banner, share-link copy, live status via Supabase realtime, open-incident list. No account required. Linked from nav and footer."
     },
     {
       "id": "US-154",
@@ -2147,8 +2147,8 @@
         "Build passes"
       ],
       "priority": 154,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /live route seeded with 48h of incident activity (opened/resolved/update events merged into one stream) plus realtime apis+incidents subscriptions. Header counters, affected-API chips, category filter, aria-live feed, prefers-reduced-motion honored."
     },
     {
       "id": "US-155",
@@ -2164,8 +2164,8 @@
         "Build passes"
       ],
       "priority": 155,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "CommandPalette component wired into the layout header. Cmd/Ctrl+K and bare / open it; subsequence fuzzy scoring over API name/slug/category plus 9 static destinations; arrow/enter navigation, aria dialog+listbox+option, focus returns to trigger. API index served from +layout.server.js so it works on every route."
     },
     {
       "id": "US-156",

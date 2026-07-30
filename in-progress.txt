@@ -1,8 +1,11 @@
-US-066 - Historical latency comparison with date range picker
-US-068 - Custom anomaly detection thresholds per subscription
-US-069 - Team incident annotations
-US-071 - Public embeddable status page for Pro users
-US-072 - SLA target tracking with pass/fail reporting
-US-096 - Wire newsletter signup form to backend storage
-US-098 - Add PWA manifest and service worker for offline support
-US-141 - Enhanced error page with API search and popular links
+US-156 - Browser push notifications for watched APIs
+US-157 - Per-API incident history archive with SEO permalinks
+US-158 - Category latency race pages
+US-159 - SLA receipts (published SLA vs measured uptime)
+US-160 - Open data downloads
+US-161 - Public REST API v1 with OpenAPI spec
+US-162 - MCP endpoint for AI agents
+US-163 - Per-API and per-category RSS feeds
+US-164 - npx apidown CLI
+US-165 - Public "I'm seeing this too" report feed
+US-166 - Weekly API Weather Report digest
