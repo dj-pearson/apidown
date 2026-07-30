@@ -171,3 +171,19 @@ US-164: DONE - packages/cli published as `apidown`, runnable via npx; status/lis
 US-160: DONE - Open data at /data with incidents and monthly-uptime datasets in CSV and JSON, documented schema, attribution terms, row caps, and Dataset JSON-LD
 US-159: DONE - /sla-receipts comparing published vendor SLA vs measured uptime for the last complete month; migration 024 adds published_sla_pct/url/note to apis with a CHECK constraint requiring a source URL, seeded only for the five vendors with per-service published commitments
 DOCS: Added /v1 API, MCP, CLI, and Open Data & Feeds sections to /docs with copy-paste examples; footer and command palette updated
+
+-- Phase 23: Reasons to Visit (Round 3) --
+US-165: DONE - Public "I'm seeing this too" report feed on API pages — last-hour count, one-click submit with error-type picker, 24h trend bars, recent-report list, server-side per-IP-hash rate limit; migration 025 adds error_type + country-only region; replaced the old ingest report button
+US-166: DONE - Weekly "API Weather Report" — deterministic pure builder (lib/weekly-digest.js), /weekly + /weekly/[yyyy-Www] archive, /v1/weekly/[week] JSON, worker newsletter-digest.js sending HTML+text via SMTP with List-Unsubscribe and idempotent per-week stamping; migration 026 adds per-subscriber unsubscribe tokens and /newsletter/unsubscribe
+US-156: DONE - Browser push notifications for watched APIs (no account needed) — migration 027 push_subscriptions, /api/push/subscribe GET/POST/DELETE, lib/push.js + PushToggle on API pages and /stack, sw.js push/notificationclick handlers, worker push-sender.js with severity filtering and dead-endpoint pruning; cleanly disabled without VAPID keys
+DOCS: Browser Notifications + weekly digest sections added; .env.example documents VAPID and digest vars
+
+== Notes for follow-up ==
+- database/migrations/024 seeds published SLA targets for only 5 vendors (4x AWS, Twilio). The
+  remaining tracked APIs need their published figure entered WITH a source URL — the schema
+  CHECK constraint refuses a percentage without one. /sla-receipts lists them separately until then.
+- Browser notifications need VAPID keys (npx web-push generate-vapid-keys) and `npm i` in
+  services/worker to pick up the new web-push dependency. Until then the feature self-disables.
+- Pre-existing, untouched: services/worker/src/lib/weekly-digest-worker.js (the per-user digest)
+  builds its email body but never calls a mail transport — it only console.logs. Separate from the
+  new public newsletter, which does send.

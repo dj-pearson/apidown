@@ -2181,8 +2181,8 @@
         "Build passes"
       ],
       "priority": 156,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New push_subscriptions table (migration 027, anonymous by design \u2014 no user_id, GIN index on api_ids, RLS service-role only). /api/push/subscribe GET/POST/DELETE returns the VAPID key and manages this browser endpoint's watch list with endpoint/key/slug/severity validation and a 25-API cap. lib/push.js handles base64url VAPID conversion, support detection, and gesture-only permission requests. PushToggle component on the API detail page and /stack merges rather than replaces the watch list. sw.js gains push + notificationclick handlers that reuse an open tab. worker push-sender.js signs with web-push, filters by per-subscription min_severity, always delivers resolutions, and stamps failed_at on 404/410 so dead endpoints stop being retried; hooked into alert-worker BEFORE the no-email-subscribers early return. Cleanly disabled with a clear UI message when VAPID keys are absent."
     },
     {
       "id": "US-157",
@@ -2326,8 +2326,8 @@
         "Build passes"
       ],
       "priority": 165,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Migration 025 adds error_type (CHECK-constrained) and region (country code only) to manual_reports plus an (api_id, created_at DESC) index. New POST /api/[slug]/report with server-side per-IP-hash hourly cap (salted SHA-256, never a raw IP). ReportFeed component shows the last-hour count, a one-click submit with error-type picker, per-browser duplicate suppression, a 24h reports-per-hour trend, and a recent-report list \u2014 with an explicit caveat that these are unverified visitor reports distinct from measured signals. Replaced the old ingest-service report button, which had no count, type, or feed."
     },
     {
       "id": "US-166",
@@ -2342,8 +2342,8 @@
         "Build passes"
       ],
       "priority": 166,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "lib/weekly-digest.js: pure deterministic builder (ISO week keys verified against year-boundary cases, biggest outages, >=10% latency movers both directions, per-category downtime, clean sheet). lib/server/digest-query.js shared by the web pages and the API so email and web cannot drift. /weekly and /weekly/[yyyy-Www] archive with prev/next nav, Report JSON-LD, and immutable caching for finished weeks. /v1/weekly/[week] (accepts \"latest\") for the sender. worker newsletter-digest.js renders HTML + plain text (escaped, no external assets, verified on populated and quiet weeks), sends via SMTP with List-Unsubscribe headers, and stamps last_digest_week only after success so retries are idempotent. Migration 026 adds per-subscriber unsubscribe tokens; /newsletter/unsubscribe handles one-click opt-out. Worker fires Mondays 10:00 UTC."
     }
   ]
 }

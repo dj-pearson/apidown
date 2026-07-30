@@ -5,6 +5,7 @@
   import { page } from '$app/state';
   import StatusCard from '$lib/components/StatusCard.svelte';
   import SEO from '$lib/components/SEO.svelte';
+  import PushToggle from '$lib/components/PushToggle.svelte';
 
   let { data } = $props();
 
@@ -244,6 +245,14 @@
       </span>
     {/each}
     <button class="chip-clear" onclick={() => selected = []}>Clear all</button>
+  </div>
+
+  <div class="push-row">
+    <PushToggle
+      slugs={selected}
+      label={stackApis.length === 1 ? stackApis[0].name : 'anything in your stack'}
+      compact
+    />
   </div>
 
   <div class="grid">
@@ -537,6 +546,10 @@
     font-family: inherit;
     cursor: pointer;
     text-decoration: underline;
+  }
+
+  .push-row {
+    margin-bottom: 1.25rem;
   }
 
   .grid {

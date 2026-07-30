@@ -27,6 +27,7 @@
     { id: 'mcp', label: 'MCP Server (AI agents)' },
     { id: 'cli', label: 'Terminal CLI' },
     { id: 'open-data', label: 'Open Data & Feeds' },
+    { id: 'notifications', label: 'Browser Notifications' },
     { id: 'privacy', label: 'Privacy' },
     { id: 'manual-recording', label: 'Manual Recording' },
     { id: 'troubleshooting', label: 'Troubleshooting' },
@@ -445,6 +446,38 @@ npx apidown openai --json | jq .status</code></pre>
       <li><code>/category/&#123;category&#125;/rss</code> — a whole category, e.g. <code>/category/ai/rss</code></li>
     </ul>
     <p>Point a feed reader, or a Slack/Discord RSS integration, at whichever scope you care about.</p>
+
+    <h3>Weekly digest</h3>
+    <ul>
+      <li><a href="/weekly">/weekly</a> — the API Weather Report, latest complete week</li>
+      <li><code>/weekly/&#123;YYYY-Www&#125;</code> — any archived week, e.g. <code>/weekly/2026-W31</code></li>
+      <li><code>/v1/weekly/latest</code> — the same digest as JSON</li>
+    </ul>
+    <p>Subscribe by email with the form in the site footer; every edition includes a one-click unsubscribe link.</p>
+  </section>
+
+  <section id="notifications">
+    <h2>Browser Notifications</h2>
+    <p>
+      Get a desktop or mobile notification when an API you watch goes down — no account and no
+      email address required. Turn it on from any API page, or from
+      <a href="/stack">My Stack</a> to cover your whole watchlist at once.
+    </p>
+    <p>
+      Notifications are tied to the browser you enable them in, not to a person: we store the
+      browser's opaque push endpoint and the API slugs you selected, nothing else. Revoke them
+      any time from the same button, or from your browser's site settings.
+    </p>
+    <p>
+      Default threshold is <strong>major</strong> and above, so a minor blip won't interrupt you.
+      Resolution notifications are always delivered if you were told about the outage.
+    </p>
+    <p>
+      Self-hosting APIdown? Browser notifications need a VAPID key pair
+      (<code>npx web-push generate-vapid-keys</code>) in
+      <code>PUBLIC_VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code>. Without them the
+      feature is cleanly disabled and the UI says so rather than failing.
+    </p>
   </section>
 
   <section id="manual-recording">

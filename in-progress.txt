@@ -1,3 +1,0 @@
-US-156 - Browser push notifications for watched APIs
-US-165 - Public "I'm seeing this too" report feed
-US-166 - Weekly API Weather Report digest

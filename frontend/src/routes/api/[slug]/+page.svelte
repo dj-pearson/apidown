@@ -6,6 +6,8 @@
   import RegionBreakdown from "$lib/components/RegionBreakdown.svelte";
   import UptimeBar from "$lib/components/UptimeBar.svelte";
   import SEO from "$lib/components/SEO.svelte";
+  import ReportFeed from "$lib/components/ReportFeed.svelte";
+  import PushToggle from "$lib/components/PushToggle.svelte";
 
   let isNavigating = $derived(!!$navigating);
 
@@ -14,10 +16,6 @@
   let incidents = $state(data.incidents);
   let latencyData = $derived(data.latencyData);
   let logoFailed = $state(false);
-
-  // Report button state
-  let reportSubmitting = $state(false);
-  let reportMessage = $state("");
 
   // Subscribe form state
   let showSubscribe = $state(false);
@@ -182,26 +180,6 @@
     });
   }
 
-  async function reportIssue() {
-    reportSubmitting = true;
-    reportMessage = "";
-    try {
-      const res = await fetch(`${ingestUrl}/v1/reports`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_slug: api.slug }),
-      });
-      const body = await res.json();
-      if (res.ok) {
-        reportMessage = "Report submitted. Thank you!";
-      } else {
-        reportMessage = body.error || "Failed to submit report.";
-      }
-    } catch {
-      reportMessage = "Network error. Try again later.";
-    }
-    reportSubmitting = false;
-  }
 
   async function subscribe() {
     subSubmitting = true;
@@ -519,6 +497,10 @@
   <a href="/api/{api.slug}/report-card">View Reliability Report Card</a>
 </div>
 
+<div class="push-row">
+  <PushToggle slugs={[api.slug]} label={api.name} />
+</div>
+
 <!-- Archive and feed entry points -->
 <div class="deep-links">
   <a href="/api/{api.slug}/history">Outage history by month</a>
@@ -543,6 +525,14 @@
     </span>
   {/if}
 </div>
+
+<ReportFeed
+  apiSlug={api.slug}
+  apiName={api.name}
+  reportsLastHour={data.reportsLastHour || 0}
+  reportTrend={data.reportTrend || []}
+  recentReports={data.recentReports || []}
+/>
 
 <UptimeBar data={data.dailyUptime} loading={isNavigating} />
 
@@ -611,15 +601,10 @@
   <div class="action-card">
     <h3>Report an Issue</h3>
     <p>
-      Seeing problems with {api.name}? Submit a manual report to help the
-      community.
+      Seeing problems with {api.name}? Add your report and see how many others
+      are hitting the same thing right now.
     </p>
-    <button onclick={reportIssue} disabled={reportSubmitting}>
-      {reportSubmitting ? "Submitting..." : "Report Issue"}
-    </button>
-    {#if reportMessage}
-      <p class="action-message">{reportMessage}</p>
-    {/if}
+    <a href="#reports" class="action-link">Go to community reports</a>
   </div>
 
   <div class="action-card">
@@ -892,6 +877,10 @@
   }
 
   .report-card-link {
+    margin-bottom: 1rem;
+  }
+
+  .push-row {
     margin-bottom: 1rem;
   }
 
@@ -1234,6 +1223,22 @@
 
   .action-card button:hover {
     opacity: 0.85;
+  }
+  .action-link {
+    display: inline-block;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .action-link:hover {
+    opacity: 0.85;
+    color: #fff;
+    text-decoration: none;
   }
   .action-card button:disabled {
     opacity: 0.5;
