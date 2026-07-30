@@ -3,6 +3,7 @@
   import StatusCard from '$lib/components/StatusCard.svelte';
   import SkeletonCard from '$lib/components/SkeletonCard.svelte';
   import SEO from '$lib/components/SEO.svelte';
+  import { categoryLabel } from '$lib/categories.js';
 
   let { data } = $props();
   let apis = $state(data.apis);
@@ -49,18 +50,6 @@
     return groups;
   });
 
-  const categoryLabels = {
-    payments: 'Payments',
-    ai: 'AI / LLM',
-    communications: 'Communications',
-    'cloud-aws': 'Cloud — AWS',
-    'cloud-gcp': 'Cloud — GCP',
-    'cloud-azure': 'Cloud — Azure',
-    auth: 'Auth & Identity',
-    database: 'Database / Storage',
-    devtools: 'Dev Tools & Hosting',
-    commerce: 'Commerce & Shipping',
-  };
 
   let operationalCount = $derived(apis.filter(a => a.current_status === 'operational').length);
   let connectionStatus = $state('connecting'); // 'live' | 'connecting' | 'offline'
@@ -266,7 +255,12 @@
   {:else}
     {#each Object.entries(groupedApis) as [category, categoryApis]}
       <section class="category">
-        <h2>{categoryLabels[category] || category}</h2>
+        <h2>
+          <a href="/category/{category}" class="category-link">
+            {categoryLabel(category)}
+            <span class="category-cta">Compare latency →</span>
+          </a>
+        </h2>
         <div class="grid">
           {#each categoryApis as api (api.id)}
             <StatusCard {api} sparkline={sparklineData[api.id] || []} grade={gradeData[api.id]?.grade} gradeColor={gradeData[api.id]?.gradeColor} />
@@ -696,6 +690,32 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.75rem;
+  }
+
+  .category-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .category-link:hover {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .category-cta {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--color-primary);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .category-link:hover .category-cta,
+  .category-link:focus-visible .category-cta {
+    opacity: 1;
   }
 
   .grid, .loading-grid {

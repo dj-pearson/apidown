@@ -1,4 +1,5 @@
 <script>
+  import { categoryLabel } from '$lib/categories.js';
   import { goto } from '$app/navigation';
 
   let { apis = [] } = $props();
@@ -9,18 +10,6 @@
     down: 'var(--color-down)',
   };
 
-  const categoryLabels = {
-    payments: 'Payments',
-    ai: 'AI / LLM',
-    communications: 'Communications',
-    'cloud-aws': 'Cloud — AWS',
-    'cloud-gcp': 'Cloud — GCP',
-    'cloud-azure': 'Cloud — Azure',
-    auth: 'Auth & Identity',
-    database: 'Database / Storage',
-    devtools: 'Dev Tools & Hosting',
-    commerce: 'Commerce & Shipping',
-  };
 
   const pages = [
     { label: 'Status Dashboard', href: '/', keywords: 'home status grid all apis' },
@@ -75,13 +64,13 @@
       const best = Math.max(
         score(query, api.name),
         score(query, api.slug),
-        score(query, categoryLabels[api.category] || api.category || ''),
+        score(query, categoryLabel(api.category) || ''),
       );
       if (best < 0) continue;
       items.push({
         kind: 'api',
         label: api.name,
-        hint: categoryLabels[api.category] || api.category,
+        hint: categoryLabel(api.category),
         status: api.current_status || 'operational',
         href: `/api/${api.slug}`,
         score: best,

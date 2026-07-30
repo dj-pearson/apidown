@@ -1,17 +1,6 @@
 import { getSupabaseAdmin } from '$lib/supabase-server.js';
+import { categoryLabel, categoryList } from '$lib/categories.js';
 
-const CATEGORY_LABELS = {
-  payments: 'Payments',
-  ai: 'AI / LLM',
-  communications: 'Communications',
-  'cloud-aws': 'Cloud — AWS',
-  'cloud-gcp': 'Cloud — GCP',
-  'cloud-azure': 'Cloud — Azure',
-  auth: 'Auth & Identity',
-  database: 'Database / Storage',
-  devtools: 'Dev Tools & Hosting',
-  commerce: 'Commerce & Shipping',
-};
 
 /**
  * Seeds the live radar with the last 48h of incident activity. Everything after
@@ -109,8 +98,8 @@ export async function load({ url, setHeaders }) {
       events: events.slice(0, 200),
       apis: apiList,
       category,
-      categoryLabel: category ? CATEGORY_LABELS[category] || category : null,
-      categories: Object.entries(CATEGORY_LABELS).map(([slug, label]) => ({ slug, label })),
+      categoryLabel: category ? categoryLabel(category) : null,
+      categories: categoryList(),
       openedLast24h: scoped.filter(i => new Date(i.started_at).getTime() >= dayAgo).length,
     };
   } catch (err) {
@@ -120,7 +109,7 @@ export async function load({ url, setHeaders }) {
       apis: [],
       category,
       categoryLabel: null,
-      categories: Object.entries(CATEGORY_LABELS).map(([slug, label]) => ({ slug, label })),
+      categories: categoryList(),
       openedLast24h: 0,
     };
   }

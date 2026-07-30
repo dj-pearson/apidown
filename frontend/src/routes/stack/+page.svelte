@@ -1,4 +1,5 @@
 <script>
+  import { categoryLabel } from '$lib/categories.js';
   import { createClient } from '@supabase/supabase-js';
   import { replaceState } from '$app/navigation';
   import { page } from '$app/state';
@@ -16,18 +17,6 @@
     { label: 'Comms stack', slugs: ['twilio', 'sendgrid', 'slack', 'discord'] },
   ];
 
-  const categoryLabels = {
-    payments: 'Payments',
-    ai: 'AI / LLM',
-    communications: 'Communications',
-    'cloud-aws': 'Cloud — AWS',
-    'cloud-gcp': 'Cloud — GCP',
-    'cloud-azure': 'Cloud — Azure',
-    auth: 'Auth & Identity',
-    database: 'Database / Storage',
-    devtools: 'Dev Tools & Hosting',
-    commerce: 'Commerce & Shipping',
-  };
 
   let apis = $state(data.apis);
   let sparklineData = data.sparklineData || {};
@@ -117,7 +106,7 @@
       .filter(a =>
         a.name.toLowerCase().includes(q) ||
         a.slug.toLowerCase().includes(q) ||
-        (categoryLabels[a.category] || '').toLowerCase().includes(q)
+        categoryLabel(a.category).toLowerCase().includes(q)
       )
       .slice(0, 12);
   });
@@ -233,7 +222,7 @@
           <button onclick={() => add(api.slug)}>
             <span class="dot dot-{api.current_status || 'operational'}"></span>
             <span class="picker-name">{api.name}</span>
-            <span class="picker-cat">{categoryLabels[api.category] || api.category}</span>
+            <span class="picker-cat">{categoryLabel(api.category)}</span>
             <span class="picker-add" aria-hidden="true">+</span>
             <span class="sr-only">Add {api.name} to your stack</span>
           </button>

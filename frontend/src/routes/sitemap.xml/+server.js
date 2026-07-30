@@ -1,4 +1,5 @@
 import { getSupabaseAdmin, setPlatform } from "$lib/supabase-server.js";
+import { recentMonthKeys } from "$lib/api-history.js";
 
 export async function GET({ platform }) {
   setPlatform(platform);
@@ -10,7 +11,7 @@ export async function GET({ platform }) {
     const supabase = getSupabaseAdmin();
 
     const [apisRes, incRes, spRes] = await Promise.all([
-      supabase.from("apis").select("slug, current_status").order("name"),
+      supabase.from("apis").select("slug, category, current_status").order("name"),
       supabase.from("incidents").select("id, started_at, resolved_at, status").order("started_at", { ascending: false }).limit(200),
       supabase.from("users").select("public_status_slug").eq("public_status_enabled", true).not("public_status_slug", "is", null),
     ]);
@@ -44,10 +45,22 @@ export async function GET({ platform }) {
     urls.push(urlEntry(base + p.path, now, p.freq, p.priority));
   }
 
-  // Individual API detail pages  /api/[slug]
+  // Individual API detail pages  /api/[slug] plus their history archive
+  const archiveMonths = recentMonthKeys(12);
   for (const a of apis) {
     const priority = a.current_status !== "operational" ? "1.0" : "0.9";
     urls.push(urlEntry(`${base}/api/${a.slug}`, now, "hourly", priority));
+    urls.push(urlEntry(`${base}/api/${a.slug}/history`, now, "daily", "0.7"));
+    urls.push(urlEntry(`${base}/api/${a.slug}/report-card`, now, "daily", "0.6"));
+    for (const [i, m] of archiveMonths.entries()) {
+      // Only the current month keeps changing; older archives are stable.
+      urls.push(urlEntry(`${base}/api/${a.slug}/history/${m}`, now, i === 0 ? "daily" : "monthly", i === 0 ? "0.6" : "0.5"));
+    }
+  }
+
+  // Category latency race pages  /category/[category]
+  for (const c of [...new Set(apis.map(a => a.category).filter(Boolean))]) {
+    urls.push(urlEntry(`${base}/category/${c}`, now, "hourly", "0.8"));
   }
 
   // Public status pages  /status/[slug]

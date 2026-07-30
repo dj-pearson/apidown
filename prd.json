@@ -2198,8 +2198,8 @@
         "Build passes"
       ],
       "priority": 157,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /api/[slug]/history route (18-month table of uptime, incidents, downtime, longest outage) plus /api/[slug]/history/[yyyy-mm] dated permalinks with prev/next nav, Dataset + ItemList JSON-LD, and a truthful clean-month empty state. Invalid or future months 404. sitemap.xml now emits history + report-card + 12 month archives per API."
     },
     {
       "id": "US-158",
@@ -2214,8 +2214,8 @@
         "Build passes"
       ],
       "priority": 158,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /category/[category] route ranking every API in a category by live p95 (1h signal-weighted), with p50, error rate, 30d uptime, 90d incident count, and reliability grade. Sortable columns with aria-sort, ItemList JSON-LD, RSS autodiscovery, as-of timestamp, unknown category 404s. Linked from homepage category headers; category pages added to sitemap."
     },
     {
       "id": "US-159",
@@ -2262,8 +2262,8 @@
         "Build passes"
       ],
       "priority": 161,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /v1 read API: GET /v1/apis (category/status filters, paging, summary), GET /v1/apis/[slug] (24h + 30d windows, open incidents), GET /v1/apis/[slug]/history (monthly rollup, max 24 months), GET /v1/incidents (api/severity/status/open filters). Shared envelope + CORS + error codes in lib/server/v1.js; OpenAPI 3.1 spec at /v1/openapi.json. No key required, reads only."
     },
     {
       "id": "US-162",
@@ -2294,8 +2294,8 @@
         "Build passes"
       ],
       "priority": 163,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New /api/[slug]/rss and /category/[category]/rss feeds. Extracted shared RSS 2.0 builder to lib/server/rss.js (atom:link self, GUIDs, pubDate, escaping) and refactored the existing /incidents/rss onto it. Autodiscovery link tags on API detail and category pages."
     },
     {
       "id": "US-164",

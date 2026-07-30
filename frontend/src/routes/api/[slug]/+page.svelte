@@ -382,6 +382,7 @@
   let alternateLinks = $derived([
     { type: "text/plain", href: `https://apidown.net/api/${api.slug}.txt`, title: `${api.name} API Status (Plain Text)` },
     { type: "application/json", href: `https://apidown.net/api-status/${api.slug}`, title: `${api.name} API Status (JSON)` },
+    { type: "application/rss+xml", href: `https://apidown.net/api/${api.slug}/rss`, title: `${api.name} Incident Feed` },
   ]);
 </script>
 
@@ -516,6 +517,13 @@
 <!-- Report Card Link -->
 <div class="report-card-link">
   <a href="/api/{api.slug}/report-card">View Reliability Report Card</a>
+</div>
+
+<!-- Archive and feed entry points -->
+<div class="deep-links">
+  <a href="/api/{api.slug}/history">Outage history by month</a>
+  <a href="/category/{api.category}">Compare {api.category} latency</a>
+  <a href="/api/{api.slug}/rss">RSS feed</a>
 </div>
 
 <!-- Community Pulse -->
@@ -885,6 +893,25 @@
 
   .report-card-link {
     margin-bottom: 1rem;
+  }
+
+  .deep-links {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  .deep-links a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--color-border);
+  }
+
+  .deep-links a:hover {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
   }
 
   .report-card-link a {
