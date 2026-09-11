@@ -366,3 +366,34 @@ US-173: DONE - all 48 reactive-capture sites now closed. The dashboard was the l
   services/ and packages/ trees have no test coverage at all, and database/migrations has no
   validation. Also unexamined so far: the /docs content, the ingest SDK, and error handling in
   services/worker.
+
+-- Phase 25: Platform Improvement Loop (iteration 8/15) --
+US-177: DONE - Fixed two opposite correctness failures in the anomaly detector, the engine the
+  entire product rests on, which had no tests whatsoever.
+  (1) getSeverity() returned null — indistinguishable from "healthy" — whenever unique reporters
+      dropped below 5. An API in a real outage whose users had given up calling it would fall
+      under that floor and be AUTO-RESOLVED to operational while still broken. The homepage
+      would read "all systems operational" in the middle of an outage: precisely the vendor
+      status-page failure this product exists to expose.
+  (2) evaluateApi() returned early whenever total_signals < 5, so an API whose traffic dried up
+      was never re-evaluated and stayed pinned to "down" indefinitely — the likely fate of the
+      low-traffic long tail overnight.
+  New services/worker/src/lib/detection-policy.js holds the decision logic as pure functions
+  (classifyWindow, decideAction) built around a three-way verdict — unknown / healthy /
+  unhealthy — where "unknown" means we cannot judge and can never resolve an incident. Adds a
+  three-consecutive-window hysteresis before resolving (an unknown window breaks the streak),
+  and annotates an incident whose signals dry up as unconfirmable, once, leaving it open rather
+  than claiming a recovery nobody observed.
+  32 tests; mutation-checked against both original bugs and against removing the hysteresis —
+  each is caught. The worker retains only IO plus a small per-API debounce map.
+  Fixed in passing: a null p95 produced NaN latency comparisons, and the upgrade/resolve paths
+  re-queried for the open incident that evaluateApi had already fetched.
+  `npm test` wired up in services/worker (was absent). Frontend still 192 tests green.
+
+== Notes for follow-up ==
+- Still no tests in services/ingest or packages/ (sdk-js, cli); database/migrations unvalidated.
+- maskAuthValue() in probe-crypto.js (duplicated identically in worker and ingest) reveals an
+  entire secret of 8 characters or fewer: it shows first 4 + last 4. Small but worth fixing, and
+  the duplication itself is worth resolving.
+- services/worker/src/lib/reliability-score.js looks duplicated from the frontend's copy —
+  check whether they have already drifted.

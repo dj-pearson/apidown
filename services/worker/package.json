@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/worker.js",
-    "start": "node src/worker.js"
+    "start": "node src/worker.js",
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "dependencies": {
     "ioredis": "^5.4.0",

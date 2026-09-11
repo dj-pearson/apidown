@@ -2507,6 +2507,24 @@
       "priority": 176,
       "passes": true,
       "notes": "The dashboard set newKeyValue = body.key and then immediately called location.reload(). The reload discarded all client state, so the panel that reads 'Your new API key (save it now - it won't be shown again)' never rendered. The server only ever returns key_prefix afterwards, so the key was unrecoverable: every user who created a key lost it, and creating another failed the same way. Found while converting the dashboard's state handling for US-173 — deriving the collections is what made invalidateAll() viable in place of the reload. Three location.reload() call sites replaced with invalidateAll() (two on the dashboard, one on /sla). Guarded by a new pageReloads check in lib/markup-lint.js sweeping every src/**/*.svelte; reintroducing the reload fails the test. Note the two widget.html endpoints still use a 60s location.reload() — that is correct there, as they are standalone embedded iframes with no SvelteKit runtime."
+    },
+    {
+      "id": "US-177",
+      "title": "Never claim an API recovered when we simply stopped being able to see it",
+      "description": "As someone checking whether an API is down, I want the verdict to distinguish 'healthy' from 'we cannot tell right now', so that the status page does not say all-clear during an outage or leave an API stuck down forever.",
+      "acceptanceCriteria": [
+        "A window with too few signals or too few distinct reporters is classified 'unknown', never 'healthy'",
+        "An 'unknown' window never resolves an open incident",
+        "An incident resolves only after several consecutive genuinely healthy windows",
+        "An 'unknown' window breaks the healthy streak rather than counting toward it",
+        "An incident whose signals dry up is annotated as unconfirmable on its timeline, and stays open",
+        "That annotation is written once, not on every pass",
+        "A missing p95 does not read as a latency spike",
+        "The decision logic is pure and unit-tested; the worker keeps only the IO"
+      ],
+      "priority": 177,
+      "passes": true,
+      "notes": "Two opposite failures in services/worker/src/lib/anomaly-detector.js, the engine the whole product rests on, which had no tests at all. (1) getSeverity() returned null — indistinguishable from healthy — whenever unique reporters fell below 5. So an API in an outage whose users had given up calling it would drop under the floor and be auto-resolved to 'operational' while still broken: the status page would show all-clear mid-outage, the exact failure the product exists to catch. (2) evaluateApi() returned early when total_signals < 5, so an API whose traffic dried up could never be re-evaluated and stayed pinned to 'down' indefinitely — likely for the long tail of low-traffic APIs overnight. New services/worker/src/lib/detection-policy.js holds the decision logic as pure functions (classifyWindow, decideAction) with a three-way verdict — unknown / healthy / unhealthy — plus a three-window resolve hysteresis and a stale-incident annotation. 32 tests, mutation-checked against both original bugs and against removing the hysteresis. The worker now keeps only IO and a small per-API debounce map. Also fixed in passing: a null p95 produced NaN comparisons, and upgrade/resolve re-queried for the open incident that evaluateApi had already fetched. `npm test` added to services/worker."
     }
   ]
 }

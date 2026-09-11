@@ -1,6 +1,25 @@
+import {
+  classifyWindow,
+  decideAction,
+  severityToStatus,
+} from './detection-policy.js';
+
 const ALERTS_QUEUE = 'alerts:pending';
 
 let _redis = null;
+
+/**
+ * Per-API detector memory: how many consecutive healthy windows we have seen,
+ * and since when the data stopped being judgeable. Held in the worker rather
+ * than the database — it is a debounce, and starting fresh after a restart
+ * only costs a few extra minutes before an incident resolves.
+ */
+const _state = new Map();
+
+/** Exposed for tests and for the worker to clear on shutdown. */
+export function resetDetectorState() {
+  _state.clear();
+}
 
 /**
  * Set the Redis client for alert queueing.
@@ -37,37 +56,77 @@ async function evaluateApi(supabase, api) {
   const { data: windowData, error: wErr } = await supabase
     .rpc('get_api_window', { p_api_id: api.id, p_minutes: 5 });
 
-  if (wErr || !windowData || windowData.length === 0) return;
-  const window = windowData[0];
+  // A missing window is "we cannot judge", which is deliberately not the same
+  // as "healthy" — the policy decides what to do about it.
+  const window = (!wErr && windowData && windowData.length > 0) ? windowData[0] : null;
 
-  if (window.total_signals < 5) return; // Not enough data
+  const syntheticOnly = window ? await isSyntheticOnly(supabase, api.id) : false;
 
-  // Determine signal source: check if all reporters are synthetic
-  const syntheticOnly = await isSyntheticOnly(supabase, api.id);
-
-  // Get 30-day baseline
-  const { data: baselineData, error: bErr } = await supabase
-    .rpc('get_api_baseline', { p_api_id: api.id, p_days: 30 });
-
-  if (bErr || !baselineData || baselineData.length === 0) return;
-  const baseline = baselineData[0];
-
-  const errorRate = window.error_count / window.total_signals;
-  const baselineP95 = baseline.p95_ms || 200;
-  const latencyRatio = window.p95_ms / baselineP95;
-  const uniqueReporters = window.unique_reporters || 0;
-
-  const severity = getSeverity(errorRate, latencyRatio, uniqueReporters, syntheticOnly);
-  const source = syntheticOnly ? 'synthetic' : (uniqueReporters > 0 ? 'hybrid' : 'sdk');
-
-  if (severity && api.current_status === 'operational') {
-    await createIncident(supabase, api, severity, window, errorRate, source);
-  } else if (severity && api.current_status !== 'operational') {
-    // Already in incident — check if severity needs upgrade
-    await maybeUpgradeIncident(supabase, api, severity);
-  } else if (!severity && api.current_status !== 'operational') {
-    await resolveIncident(supabase, api);
+  let baseline = null;
+  if (window) {
+    const { data: baselineData, error: bErr } = await supabase
+      .rpc('get_api_baseline', { p_api_id: api.id, p_days: 30 });
+    if (!bErr && baselineData && baselineData.length > 0) baseline = baselineData[0];
   }
+
+  const classification = classifyWindow({ window, baseline, syntheticOnly });
+
+  const openIncident = api.current_status !== 'operational'
+    ? await findOpenIncident(supabase, api.id)
+    : null;
+
+  const decision = decideAction({
+    classification,
+    currentStatus: api.current_status,
+    currentSeverity: openIncident?.severity ?? null,
+    state: _state.get(api.id),
+  });
+  _state.set(api.id, decision.nextState);
+
+  switch (decision.action) {
+    case 'open':
+      await createIncident(supabase, api, decision.severity, window, classification.errorRate, classification.source);
+      break;
+    case 'upgrade':
+      await upgradeIncident(supabase, api, openIncident, decision.severity);
+      break;
+    case 'resolve':
+      await resolveIncident(supabase, api, decision.reason);
+      break;
+    case 'mark-stale':
+      await markIncidentStale(supabase, api, openIncident, decision.reason);
+      break;
+    default:
+      break;
+  }
+}
+
+/** The most recent unresolved incident for an API, if any. */
+async function findOpenIncident(supabase, apiId) {
+  const { data } = await supabase
+    .from('incidents')
+    .select('id, severity')
+    .eq('api_id', apiId)
+    .neq('status', 'resolved')
+    .order('started_at', { ascending: false })
+    .limit(1);
+  return data && data.length > 0 ? data[0] : null;
+}
+
+/**
+ * Say on the incident timeline that signals have dried up. Deliberately does
+ * not resolve: an API nobody is calling any more is not an API we have
+ * observed recovering, and silently clearing the incident would claim a
+ * recovery that never happened.
+ */
+async function markIncidentStale(supabase, api, incident, reason) {
+  if (!incident) return;
+  await supabase.from('incident_updates').insert({
+    incident_id: incident.id,
+    status: 'monitoring',
+    message: `Signal volume has dropped too low to confirm recovery (${reason}). This incident stays open until enough traffic returns to judge.`,
+  });
+  console.log(`[anomaly] STALE: ${api.slug} — ${reason}`);
 }
 
 /**
@@ -86,32 +145,6 @@ async function isSyntheticOnly(supabase, apiId) {
   if (error) return false;
   // If no non-synthetic reporters found, it's synthetic-only
   return !data || data.length === 0;
-}
-
-function getSeverity(errorRate, latencyRatio, reporters, syntheticOnly = false) {
-  // When only synthetic probes are reporting, lower the reporter threshold
-  const minReporters = syntheticOnly ? 2 : 5;
-  if (reporters < minReporters) return null;
-
-  if (syntheticOnly) {
-    // Synthetic probes: only use error rate (latency is unreliable — measures
-    // network path from worker, not real user experience)
-    if (errorRate > 0.50) return 'critical';
-    if (errorRate > 0.20) return 'major';
-    if (errorRate > 0.10) return 'minor';
-    return null;
-  }
-
-  if (errorRate > 0.50) return 'critical';
-  if (errorRate > 0.20 || latencyRatio > 5) return 'major';
-  if (errorRate > 0.05 || latencyRatio > 2) return 'minor';
-  return null;
-}
-
-function severityToStatus(severity) {
-  if (severity === 'critical') return 'down';
-  if (severity === 'major' || severity === 'minor') return 'degraded';
-  return 'operational';
 }
 
 async function createIncident(supabase, api, severity, window, errorRate, source = 'sdk') {
@@ -168,45 +201,30 @@ async function createIncident(supabase, api, severity, window, errorRate, source
   console.log(`[anomaly] INCIDENT CREATED: ${api.slug} → ${severity} (error rate: ${(errorRate * 100).toFixed(1)}%, source: ${source})`);
 }
 
-async function maybeUpgradeIncident(supabase, api, newSeverity) {
-  // Find the active incident
-  const { data: incidents } = await supabase
+/** The policy has already decided this is an increase, so just apply it. */
+async function upgradeIncident(supabase, api, incident, newSeverity) {
+  if (!incident) return;
+
+  await supabase
     .from('incidents')
-    .select('id, severity')
-    .eq('api_id', api.id)
-    .neq('status', 'resolved')
-    .order('started_at', { ascending: false })
-    .limit(1);
+    .update({ severity: newSeverity })
+    .eq('id', incident.id);
 
-  if (!incidents || incidents.length === 0) return;
+  await supabase
+    .from('apis')
+    .update({ current_status: severityToStatus(newSeverity) })
+    .eq('id', api.id);
 
-  const current = incidents[0];
-  const severityRank = { minor: 1, major: 2, critical: 3 };
+  await supabase.from('incident_updates').insert({
+    incident_id: incident.id,
+    status: 'identified',
+    message: `Severity upgraded from ${incident.severity} to ${newSeverity}.`,
+  });
 
-  if (severityRank[newSeverity] > severityRank[current.severity]) {
-    await supabase
-      .from('incidents')
-      .update({ severity: newSeverity })
-      .eq('id', current.id);
-
-    const newStatus = severityToStatus(newSeverity);
-    await supabase
-      .from('apis')
-      .update({ current_status: newStatus })
-      .eq('id', api.id);
-
-    // Insert timeline entry for upgrade
-    await supabase.from('incident_updates').insert({
-      incident_id: current.id,
-      status: 'identified',
-      message: `Severity upgraded from ${current.severity} to ${newSeverity}.`,
-    });
-
-    console.log(`[anomaly] UPGRADED: ${api.slug} → ${newSeverity}`);
-  }
+  console.log(`[anomaly] UPGRADED: ${api.slug} → ${newSeverity}`);
 }
 
-async function resolveIncident(supabase, api) {
+async function resolveIncident(supabase, api, reason = 'signals returned to normal') {
   // Resolve active incidents for this API
   const { data: incidents } = await supabase
     .from('incidents')
@@ -229,7 +247,7 @@ async function resolveIncident(supabase, api) {
     await supabase.from('incident_updates').insert({
       incident_id: incident.id,
       status: 'resolved',
-      message: 'All signals have returned to normal. Incident resolved.',
+      message: `Signals have returned to normal (${reason}). Incident resolved.`,
     });
 
     // Queue resolution alert
@@ -253,5 +271,5 @@ async function resolveIncident(supabase, api) {
     .update({ current_status: 'operational' })
     .eq('id', api.id);
 
-  console.log(`[anomaly] RESOLVED: ${api.slug} → operational`);
+  console.log(`[anomaly] RESOLVED: ${api.slug} → operational (${reason})`);
 }
