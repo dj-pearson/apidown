@@ -397,3 +397,38 @@ US-177: DONE - Fixed two opposite correctness failures in the anomaly detector, 
   the duplication itself is worth resolving.
 - services/worker/src/lib/reliability-score.js looks duplicated from the frontend's copy —
   check whether they have already drifted.
+
+-- Phase 25: Platform Improvement Loop (iteration 9/15) --
+US-178: DONE - Reporter IP pseudonymisation was not one-way. Both report endpoints (the
+  frontend's /api/[slug]/report and the ingest service's /v1/reports) computed
+  sha256(ip + (IP_HASH_SALT || 'apidown-salt')). That fallback is a literal published in this
+  repository, and IP_HASH_SALT appeared nowhere in .env.example, so no deployment had any way
+  to know it existed — it was almost certainly running on the public constant. With a known
+  salt, SHA-256 over the 2^32 IPv4 space is enumerable in minutes, which makes
+  manual_reports.reporter_ip a plaintext log of who reported which outage and when — under a
+  privacy policy that calls the data anonymous and a code comment claiming "not stored as
+  plain IP".
+  Replaced with HMAC-SHA-256 keyed by the salt (a keyed construction, not a digest of a
+  concatenation), truncated to 128 bits, in one shared module copied to both deploy units and
+  covered by a drift test. A missing or too-short salt now produces a random per-process key
+  and exactly one warning: rate limiting degrades across restarts, privacy does not. Changing
+  the salt only resets the one-hour report window.
+  The env audit this prompted found 17 more undocumented variables — including
+  STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, the PUBLIC_SUPABASE_* pair and PROBE_ENCRYPTION_KEY
+  (which probe-crypto.js throws without). All now documented in .env.example and guarded by a
+  test that fails on any new undocumented variable; that test immediately caught one my own
+  grep had missed. Secrets ship empty, with generation commands.
+  Also: confirmed by differential test over 4312 input combinations that the two duplicated
+  reliability-score engines agree exactly (no drift — the diff was only comments and naming),
+  and fixed a fail-open `count >= 3` in the ingest rate limit where a query error yields null.
+  Frontend 219 tests, worker 32 tests, all green.
+
+== Notes for follow-up ==
+- services/ingest still has no test runner of its own; its route logic (api-keys auth,
+  signals validation, custom-apis) is untested. Worth extracting the pure parts as done for
+  the worker in US-177.
+- packages/sdk-js and packages/cli remain untested.
+- database/migrations unvalidated (no ordering/idempotency check).
+- maskAuthValue() in probe-crypto.js still reveals a secret of 8 characters or fewer, and
+  probe-crypto.js is duplicated byte-identically in worker and ingest — it could join the
+  shared-modules drift test.

@@ -2525,6 +2525,23 @@
       "priority": 177,
       "passes": true,
       "notes": "Two opposite failures in services/worker/src/lib/anomaly-detector.js, the engine the whole product rests on, which had no tests at all. (1) getSeverity() returned null — indistinguishable from healthy — whenever unique reporters fell below 5. So an API in an outage whose users had given up calling it would drop under the floor and be auto-resolved to 'operational' while still broken: the status page would show all-clear mid-outage, the exact failure the product exists to catch. (2) evaluateApi() returned early when total_signals < 5, so an API whose traffic dried up could never be re-evaluated and stayed pinned to 'down' indefinitely — likely for the long tail of low-traffic APIs overnight. New services/worker/src/lib/detection-policy.js holds the decision logic as pure functions (classifyWindow, decideAction) with a three-way verdict — unknown / healthy / unhealthy — plus a three-window resolve hysteresis and a stale-incident annotation. 32 tests, mutation-checked against both original bugs and against removing the hysteresis. The worker now keeps only IO and a small per-API debounce map. Also fixed in passing: a null p95 produced NaN comparisons, and upgrade/resolve re-queried for the open incident that evaluateApi had already fetched. `npm test` added to services/worker."
+    },
+    {
+      "id": "US-178",
+      "title": "Make reporter IP pseudonymisation actually one-way",
+      "description": "As someone who clicks 'I'm seeing this too' during an outage, I want the record of my report to be genuinely unlinkable to me, so that the anonymity the privacy policy promises is real.",
+      "acceptanceCriteria": [
+        "No hardcoded salt exists anywhere in the source",
+        "A missing or too-short IP_HASH_SALT produces a random per-process salt and one loud warning, never a known constant",
+        "The identifier is an HMAC keyed by the salt, not a digest of salt-plus-address",
+        "IP_HASH_SALT is documented in .env.example, shipped empty, with generation instructions",
+        "Every environment variable the code reads is documented in .env.example",
+        "A test fails if a new undocumented variable is introduced",
+        "The frontend and ingest copies of the hashing module cannot drift apart unnoticed"
+      ],
+      "priority": 178,
+      "passes": true,
+      "notes": "Both report endpoints hashed the reporter IP as sha256(ip + (IP_HASH_SALT || 'apidown-salt')). The fallback is a literal published in this repository, and IP_HASH_SALT was absent from .env.example entirely, so no deployment had any way to know it existed — it was almost certainly running on the public constant. With a known salt, SHA-256 over the 2^32 IPv4 space is enumerable in minutes, so manual_reports.reporter_ip was in practice a plaintext log of who reported which outage and when, under a privacy policy that calls the data anonymous and code comments claiming 'not stored as plain IP'. Replaced with HMAC-SHA-256 keyed by the salt, truncated to 128 bits, in one shared module duplicated to both deploy units with a drift test. A missing salt now yields a random per-process key plus a single warning: rate limiting degrades, privacy does not. The env audit this prompted found 17 further undocumented variables including STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and PROBE_ENCRYPTION_KEY (required by probe-crypto.js, which throws without it); all are now documented and guarded by a test. Also confirmed by differential test over 4312 input combinations that the duplicated reliability-score engines agree exactly — no drift there — and fixed a fail-open null count in the ingest rate-limit check."
     }
   ]
 }

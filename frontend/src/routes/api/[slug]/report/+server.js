@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { getSupabaseAdmin, setPlatform, getEnv } from '$lib/supabase-server.js';
+import { hashIp, resolveSalt, clientIpFrom } from '$lib/server/ip-hash.js';
 
 /**
  * POST /api/[slug]/report — "I'm seeing this too".
@@ -11,15 +12,6 @@ import { getSupabaseAdmin, setPlatform, getEnv } from '$lib/supabase-server.js';
 
 const ERROR_TYPES = ['timeout', 'server_error', 'auth_error', 'rate_limited', 'slow', 'other'];
 const MAX_PER_HOUR = 3;
-
-/** Salted hash so we can rate limit without storing an IP. */
-async function hashIp(ip, salt) {
-  const data = new TextEncoder().encode(`${ip}${salt}`);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
 
 export async function POST({ params, request, platform, getClientAddress }) {
   setPlatform(platform);
@@ -47,11 +39,9 @@ export async function POST({ params, request, platform, getClientAddress }) {
 
     if (!api) return json({ error: 'Unknown API' }, { status: 404 });
 
-    const rawIp =
-      request.headers.get('cf-connecting-ip') ||
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      getClientAddress();
-    const reporterIp = await hashIp(rawIp, getEnv('IP_HASH_SALT') || 'apidown-salt');
+    const rawIp = clientIpFrom(name => request.headers.get(name), getClientAddress());
+    const { salt } = resolveSalt(getEnv('IP_HASH_SALT'));
+    const reporterIp = await hashIp(rawIp, salt);
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count: recentFromReporter } = await supabase

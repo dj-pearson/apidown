@@ -1,3 +1,5 @@
+import { hashIp, resolveSalt, clientIpFrom } from '../lib/ip-hash.js';
+
 const bodySchema = {
   type: 'object',
   required: ['api_slug'],
@@ -26,11 +28,11 @@ export async function reportsRoute(fastify) {
       return reply.code(404).send({ error: 'Unknown API' });
     }
 
-    // Hash reporter IP for rate limiting (not stored as plain IP)
-    const ip = request.headers['cf-connecting-ip']
-      || request.headers['x-forwarded-for']?.split(',')[0]?.trim()
-      || request.ip;
-    const reporterIp = await hashIp(ip);
+    // Pseudonymise the reporter IP: this value is written to a table that
+    // would otherwise record who reported which outage.
+    const ip = clientIpFrom(name => request.headers[name], request.ip);
+    const { salt } = resolveSalt(process.env.IP_HASH_SALT, { warn: m => fastify.log.warn(m) });
+    const reporterIp = await hashIp(ip, salt);
 
     // Check rate limit: max 3 reports per IP per API per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -41,7 +43,7 @@ export async function reportsRoute(fastify) {
       .eq('reporter_ip', reporterIp)
       .gte('created_at', oneHourAgo);
 
-    if (count >= 3) {
+    if ((count || 0) >= 3) {
       return reply.code(429).send({ error: 'Report limit reached (3 per hour per API)' });
     }
 
@@ -56,13 +58,4 @@ export async function reportsRoute(fastify) {
 
     return reply.code(201).send({ submitted: true });
   });
-}
-
-async function hashIp(ip) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + (process.env.IP_HASH_SALT || 'apidown-salt'));
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
 }
