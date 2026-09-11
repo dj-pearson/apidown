@@ -940,33 +940,35 @@
           <!-- Basic Settings -->
           <div class="sp-edit-grid">
             <div class="status-field">
-              <label>Enabled</label>
+              <!-- A <label for> cannot name a button; a switch takes aria-labelledby. -->
+              <span class="field-label" id="sp-{page.id}-enabled-label">Enabled</span>
               <button
                 class="toggle-btn"
                 class:toggle-on={page.is_enabled}
                 onclick={() => { page.is_enabled = !page.is_enabled; statusPages = [...statusPages]; }}
                 role="switch"
                 aria-checked={page.is_enabled}
+                aria-labelledby="sp-{page.id}-enabled-label"
               >
                 <span class="toggle-knob"></span>
               </button>
             </div>
 
             <div class="status-field">
-              <label>Title</label>
-              <input type="text" bind:value={page.title} placeholder="My Status Page" maxlength="100" />
+              <label for="sp-{page.id}-title">Title</label>
+              <input id="sp-{page.id}-title" type="text" bind:value={page.title} placeholder="My Status Page" maxlength="100" />
             </div>
 
             <div class="status-field">
-              <label>Description</label>
-              <input type="text" bind:value={page.description} placeholder="Current status of our dependencies" maxlength="200" />
+              <label for="sp-{page.id}-description">Description</label>
+              <input id="sp-{page.id}-description" type="text" bind:value={page.description} placeholder="Current status of our dependencies" maxlength="200" />
             </div>
 
             <div class="status-field">
-              <label>URL Slug</label>
+              <label for="sp-{page.id}-slug">URL Slug</label>
               <div class="slug-input-row">
-                <span class="slug-prefix">apidown.net/status/</span>
-                <input type="text" bind:value={page.slug} placeholder="my-company" maxlength="60" />
+                <span class="slug-prefix" id="sp-{page.id}-slug-prefix">apidown.net/status/</span>
+                <input id="sp-{page.id}-slug" type="text" bind:value={page.slug} placeholder="my-company" maxlength="60" aria-describedby="sp-{page.id}-slug-prefix" />
               </div>
             </div>
           </div>
@@ -975,26 +977,27 @@
           <h4 class="sp-sub-heading">Branding</h4>
           <div class="sp-edit-grid">
             <div class="status-field">
-              <label>Logo URL</label>
-              <input type="url" bind:value={page.logo_url} placeholder="https://example.com/logo.png" />
+              <label for="sp-{page.id}-logo">Logo URL</label>
+              <input id="sp-{page.id}-logo" type="url" bind:value={page.logo_url} placeholder="https://example.com/logo.png" />
             </div>
 
             <div class="status-field">
-              <label>Accent Color</label>
+              <label for="sp-{page.id}-accent">Accent Color</label>
               <div class="color-input-row">
-                <input type="color" bind:value={page.accent_color} class="color-picker" />
-                <input type="text" bind:value={page.accent_color} placeholder="#06b4d4" maxlength="7" class="color-text" />
+                <input id="sp-{page.id}-accent" type="color" bind:value={page.accent_color} class="color-picker" />
+                <input type="text" bind:value={page.accent_color} placeholder="#06b4d4" maxlength="7" class="color-text" aria-label="Accent colour hex value" />
               </div>
             </div>
 
             <div class="status-field">
-              <label>Show "Powered by APIdown"</label>
+              <span class="field-label" id="sp-{page.id}-powered-label">Show "Powered by APIdown"</span>
               <button
                 class="toggle-btn"
                 class:toggle-on={page.show_powered_by}
                 onclick={() => { page.show_powered_by = !page.show_powered_by; statusPages = [...statusPages]; }}
                 role="switch"
                 aria-checked={page.show_powered_by}
+                aria-labelledby="sp-{page.id}-powered-label"
               >
                 <span class="toggle-knob"></span>
               </button>
@@ -1052,7 +1055,7 @@
             {@const embed = `<iframe src="${pUrl}" width="100%" height="600" frameborder="0" style="border:none;border-radius:8px;"></iframe>`}
             <div class="status-embed-info">
               <div class="status-url-row">
-                <label>Public URL</label>
+                <span class="field-label">Public URL</span>
                 <div class="status-url-display">
                   <a href={pUrl} target="_blank" rel="noopener">{pUrl}</a>
                   <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(pUrl); copiedUrl = true; setTimeout(() => copiedUrl = false, 2000); }}>
@@ -1061,7 +1064,7 @@
                 </div>
               </div>
               <div class="status-url-row">
-                <label>Embed Snippet</label>
+                <span class="field-label">Embed Snippet</span>
                 <div class="embed-code-wrap">
                   <code class="embed-code">{embed}</code>
                   <button class="btn-copy-sm" onclick={() => { navigator.clipboard.writeText(embed); copiedEmbed = true; setTimeout(() => copiedEmbed = false, 2000); }}>
@@ -1093,19 +1096,19 @@
     {#if showCreatePage}
       <div class="sp-create-form">
         <div class="status-field">
-          <label>Title</label>
-          <input type="text" bind:value={newPageTitle} placeholder="My Status Page" maxlength="100" />
+          <label for="new-page-title">Title</label>
+          <input id="new-page-title" type="text" bind:value={newPageTitle} placeholder="My Status Page" maxlength="100" />
         </div>
         <div class="status-field">
-          <label>URL Slug</label>
+          <label for="new-page-slug">URL Slug</label>
           <div class="slug-input-row">
-            <span class="slug-prefix">apidown.net/status/</span>
-            <input type="text" bind:value={newPageSlug} placeholder="my-company" maxlength="60" />
+            <span class="slug-prefix" id="new-page-slug-prefix">apidown.net/status/</span>
+            <input id="new-page-slug" type="text" bind:value={newPageSlug} placeholder="my-company" maxlength="60" aria-describedby="new-page-slug-prefix" />
           </div>
         </div>
         <div class="status-field">
-          <label>Description (optional)</label>
-          <input type="text" bind:value={newPageDescription} placeholder="Live status of our API dependencies" maxlength="200" />
+          <label for="new-page-description">Description (optional)</label>
+          <input id="new-page-description" type="text" bind:value={newPageDescription} placeholder="Live status of our API dependencies" maxlength="200" />
         </div>
         <div class="sp-create-actions">
           <button class="btn-primary" onclick={createStatusPage} disabled={spSaving}>
@@ -2479,7 +2482,10 @@
     gap: 0.25rem;
   }
 
-  .status-field label {
+  /* .field-label is the non-<label> variant, used where the thing being named
+     is a switch or a read-only value rather than a form control. */
+  .status-field label,
+  .status-field .field-label {
     font-size: 0.8rem;
     font-weight: 500;
     color: var(--color-text-muted);
@@ -2546,7 +2552,7 @@
     gap: 0.25rem;
   }
 
-  .status-url-row label {
+  .status-url-row .field-label {
     font-size: 0.8rem;
     font-weight: 500;
     color: var(--color-text-muted);

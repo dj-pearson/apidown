@@ -2456,7 +2456,24 @@
       ],
       "priority": 173,
       "passes": false,
-      "notes": "PARTIAL — iteration 3 of the loop closed the two highest-traffic surfaces; 38 of the original 48 remain. Done: src/routes/+page.svelte (5), src/routes/api/[slug]/+page.svelte (5), lib/components/ReportFeed.svelte (4, it renders on the API page). Unique build warnings 71 -> 57. New lib/live-patch.js carries the pattern: the rendered list/row stays $derived from `data`, while realtime rows and optimistic toggles live beside it in a set tagged with the exact payload they were made against, so they are dropped automatically when load() returns fresh data and a stale patch can never mask newer server data. 24 tests. Two further bugs fixed in passing: the API detail page's realtime $effect read the mutable `api`, so every status update tore down and rebuilt the Supabase channel; and ReportFeed's localStorage rate-limit key was computed once, so it checked the previously viewed API's key. REMAINING, roughly in traffic order: dashboard/+page.svelte (25 — its own iteration), incidents/+page.svelte (4), incidents/[id]/+page.svelte (4), live/+page.svelte (3), stack (2), sla (2), admin/apis (5), admin (2), admin/users (1), admin/incidents (1), and 6 single-warning routes. The non-admin ones should reuse lib/live-patch.js."
+      "notes": "PARTIAL — iteration 3 of the loop closed the two highest-traffic surfaces; 38 of the original 48 remain. Done: src/routes/+page.svelte (5), src/routes/api/[slug]/+page.svelte (5), lib/components/ReportFeed.svelte (4, it renders on the API page). Unique build warnings 71 -> 57. New lib/live-patch.js carries the pattern: the rendered list/row stays $derived from `data`, while realtime rows and optimistic toggles live beside it in a set tagged with the exact payload they were made against, so they are dropped automatically when load() returns fresh data and a stale patch can never mask newer server data. 24 tests. Two further bugs fixed in passing: the API detail page's realtime $effect read the mutable `api`, so every status update tore down and rebuilt the Supabase channel; and ReportFeed's localStorage rate-limit key was computed once, so it checked the previously viewed API's key. REMAINING, roughly in traffic order: dashboard/+page.svelte (11 capture warnings; its 14 a11y ones were closed in iteration 4 under US-174), incidents/+page.svelte (4), incidents/[id]/+page.svelte (4), live/+page.svelte (3), stack (2), sla (2), admin/apis (5), admin (2), admin/users (1), admin/incidents (1), and 6 single-warning routes. The non-admin ones should reuse lib/live-patch.js."
+    },
+    {
+      "id": "US-174",
+      "title": "Make the dashboard's status-page builder usable with a screen reader",
+      "description": "As a Pro customer building a public status page, I want every field and switch in the builder to announce what it is, so that I can configure it without sighted guesswork.",
+      "acceptanceCriteria": [
+        "Every <label> in the app either has a `for` pointing at its control or wraps that control",
+        "The Enabled and Show-Powered-By switches expose an accessible name via aria-labelledby",
+        "Labels that name a read-only value rather than a control are not <label> elements",
+        "The slug prefix is announced with the slug input via aria-describedby",
+        "The two colour inputs bound to the same value are distinguishable",
+        "Ids are scoped per status page so a list of pages produces no duplicates",
+        "A test fails if any component reintroduces an unassociated label or an unnamed switch"
+      ],
+      "priority": 174,
+      "passes": true,
+      "notes": "Every field in the status-page builder used a bare <label> with no `for` and no nested control, so assistive technology read all of them as unlabelled — the entire Pro status-page builder was unnavigable by screen reader. Both toggle switches had no accessible name at all: role=switch on a button containing only an empty span. Fixed all 12 labels and both switches; ids are scoped by page.id so the repeated editor rows stay unique. New lib/markup-lint.js (unassociatedLabels, unnamedWidgets, comment-stripping) with a test that sweeps every src/**/*.svelte — checked against the pre-fix tree, where it reproduces all 12 offenders by exact line number. Unique build warnings 57 -> 43; the a11y classes are now down to 5, all in admin/apis and UpgradeModal (modal keyboard handling, filed as follow-up)."
     }
   ]
 }
