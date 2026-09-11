@@ -2426,6 +2426,37 @@
       "priority": 171,
       "passes": true,
       "notes": "The /compare/[slug1]/vs/[slug2] pages were fully built but orphaned: no internal links, absent from the sitemap, and both slug orders indexable as duplicates. New lib/compare-pairs.js (orderPair, comparePath, isCanonicalOrder, peersForApi, allComparePairs, featuredComparisons) is the single source of truth, with 22 tests mutation-checked against three seeded regressions. Peer ranking prefers same-category peers whose current status differs, so the live-interesting comparison leads."
+    },
+    {
+      "id": "US-172",
+      "title": "Fix invalid nested anchor in the homepage status card",
+      "description": "As a visitor to the homepage, I want the whole status card to be clickable and the grade badge to keep its own destination, so that the card behaves the same before and after hydration.",
+      "acceptanceCriteria": [
+        "StatusCard renders no <a> inside another <a>",
+        "The whole card remains one clickable surface leading to the API detail page",
+        "The grade badge remains a separate link to the report card",
+        "Keyboard focus rings the whole card, not just the API name",
+        "The card link's accessible name includes the current status",
+        "A test renders the component server-side and fails if the nesting returns"
+      ],
+      "priority": 172,
+      "passes": true,
+      "notes": "The grade badge was an <a> inside the card's <a>. Browsers un-nest that during parsing, so the DOM the browser built never matched what Svelte hydrated: the card-status row (dot, label, badge) fell outside the link and the bottom half of every homepage card stopped being clickable, plus a hydration_mismatch risk. Replaced with the stretched-link pattern: the card is a <div>, the API-name anchor covers it via ::after, and the badge sits above the overlay with z-index. New tests/helpers/ssr.js compiles and server-renders a component so markup can be asserted with no browser and no new dependency; re-introducing the nesting fails 2 tests."
+    },
+    {
+      "id": "US-173",
+      "title": "Fix stale page state — 48 reactive-capture bugs across the app",
+      "description": "As a user navigating between pages of the same route (or triggering a data refresh), I want the page to show the new data, so that I am never looking at another API's numbers under the current API's name.",
+      "acceptanceCriteria": [
+        "No 'This reference only captures the initial value' warnings remain in a clean production build",
+        "Values derived from `data` in a component script use $derived (or are read inside the closure that needs them) rather than being snapshotted at init",
+        "Client-side navigation between two pages of the same route (e.g. /api/stripe -> /api/openai via the command palette) fully re-renders",
+        "invalidateAll() and realtime refreshes update every displayed value",
+        "$state that is intentionally local and seeded once from `data` is left alone and commented as deliberate"
+      ],
+      "priority": 173,
+      "passes": false,
+      "notes": "FOUND IN ITERATION 2 — NEXT UP. A clean build reports 142 warnings (each emitted twice, client + server), of which 48 unique are `let x = data.foo` in a component script: in Svelte 5 that captures the value once at init, so the UI keeps the first page's data when SvelteKit re-runs load without remounting. Worst offenders by unique count: dashboard/+page.svelte (25), api/[slug]/+page.svelte (5), +page.svelte (5), incidents/+page.svelte (4), incidents/[id]/+page.svelte (4), ReportFeed.svelte (4), live/+page.svelte (3). The command palette shipped in US-155 makes same-route navigation common, so this is now user-visible. Too large for one iteration: split by file, highest-traffic routes first (homepage, api/[slug]), and verify each with a build-warning count. Remaining warning classes for later: 12 unique 'form label must be associated with a control', 3 non-interactive click handlers without keyboard handlers, 2 dialog role missing tabindex, 2 buttons/links with no accessible name."
     }
   ]
 }

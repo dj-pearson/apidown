@@ -210,3 +210,25 @@ US-171: DONE - Head-to-head comparison pages made discoverable. /compare/[a]/vs/
 - Pre-existing build warning, untouched: src/lib/components/StatusCard.svelte:39 nests an <a>
   inside an <a>, which the browser rewrites on hydration (hydration_mismatch risk). Candidate
   for the next loop iteration.
+
+-- Phase 25: Platform Improvement Loop (iteration 2/15) --
+US-172: DONE - Fixed the invalid nested anchor in StatusCard (the homepage grid card). The grade
+  badge was an <a> inside the card's <a>; browsers un-nest that while parsing, so the DOM never
+  matched what Svelte hydrated — the whole card-status row fell outside the link and the bottom
+  half of every homepage card was not clickable. Replaced with the stretched-link pattern: card
+  is a <div>, the API-name anchor covers it via ::after, badge sits above the overlay. Focus now
+  rings the whole card and the card link's accessible name carries the status.
+  New tests/helpers/ssr.js compiles and server-renders any component so markup can be asserted
+  with no browser and no new dependency — 12 new tests; re-introducing the nesting fails 2 of
+  them. 109 tests pass, build clean of that warning.
+
+== Notes for follow-up ==
+- US-173 FILED, NEXT UP: a clean build emits 142 warnings (each twice, client + server). 48
+  unique are "This reference only captures the initial value of `data`" — Svelte 5 snapshotting
+  in component scripts, so pages show stale data when load() re-runs without a remount. Worst:
+  dashboard (25), api/[slug] (5), homepage (5), incidents (4), incidents/[id] (4), ReportFeed (4),
+  live (3). The US-155 command palette makes same-route navigation common, so this is now
+  user-visible. Multi-iteration: split by file, highest-traffic routes first.
+- Also queued behind it: 12 unique "form label must be associated with a control", 3 click
+  handlers on non-interactive elements with no keyboard handler, 2 dialog roles missing tabindex,
+  2 buttons/links with no accessible name.

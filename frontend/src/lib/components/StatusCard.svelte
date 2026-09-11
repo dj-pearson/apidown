@@ -20,14 +20,23 @@
   let label = $derived(statusLabels[api.current_status] || 'Operational');
 </script>
 
-<a href="/api/{api.slug}" class="card">
+<!--
+  The whole card is clickable, but it is a <div>, not an <a>: the grade badge is
+  its own link and an <a> inside an <a> is invalid HTML. The browser's parser
+  silently un-nests it, which changes the DOM out from under hydration. Instead
+  the API-name link is stretched over the card with ::after, and the badge sits
+  above that overlay — one clickable surface, two real links, valid markup.
+-->
+<div class="card">
   <div class="card-header">
     {#if api.logo_url && !logoFailed}
-      <img src={api.logo_url} alt="{api.name} logo" class="logo" loading="lazy" width="24" height="24" onerror={() => logoFailed = true} />
+      <img src={api.logo_url} alt="" class="logo" loading="lazy" width="24" height="24" onerror={() => logoFailed = true} />
     {:else}
-      <div class="logo-placeholder">{api.name[0]}</div>
+      <div class="logo-placeholder" aria-hidden="true">{api.name[0]}</div>
     {/if}
-    <span class="name">{api.name}</span>
+    <a href="/api/{api.slug}" class="name card-link">
+      {api.name}<span class="sr-only"> — {label}</span>
+    </a>
     <div class="sparkline-wrap">
       <Sparkline data={sparkline} apiName={api.name} />
     </div>
@@ -36,15 +45,21 @@
     <span class="dot" style="background: {dotColor}"></span>
     <span class="label" style="color: {dotColor}">{label}</span>
     {#if grade}
-      <a href="/api/{api.slug}/report-card" class="grade-badge" style="background: {gradeColor}20; color: {gradeColor}; border-color: {gradeColor}40" title="Reliability grade — click for report card" onclick={(e) => e.stopPropagation()}>
+      <a
+        href="/api/{api.slug}/report-card"
+        class="grade-badge"
+        style="background: {gradeColor}20; color: {gradeColor}; border-color: {gradeColor}40"
+        aria-label="Reliability grade {grade} — view the {api.name} report card"
+      >
         {grade}
       </a>
     {/if}
   </div>
-</a>
+</div>
 
 <style>
   .card {
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -93,6 +108,25 @@
     color: var(--color-text);
     font-size: 0.95rem;
     flex: 1;
+    text-decoration: none;
+  }
+
+  /* Stretched link: the API-name anchor covers the whole card. */
+  .card-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  /* Focus lands on the stretched link, so ring the whole card. */
+  .card-link:focus-visible {
+    outline: none;
+  }
+
+  .card-link:focus-visible::after {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 
   .sparkline-wrap {
@@ -119,6 +153,9 @@
   }
 
   .grade-badge {
+    /* Above the stretched link so the badge keeps its own destination. */
+    position: relative;
+    z-index: 1;
     margin-left: auto;
     font-size: 0.65rem;
     font-weight: 700;
@@ -130,7 +167,8 @@
     transition: opacity 0.15s;
   }
 
-  .grade-badge:hover {
+  .grade-badge:hover,
+  .grade-badge:focus-visible {
     opacity: 0.8;
   }
 </style>
