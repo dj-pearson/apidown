@@ -282,3 +282,28 @@ US-174: DONE - The dashboard's status-page builder is now usable with a screen r
   role="dialog" overlays with no tabindex and click-to-close with no keyboard equivalent, and
   UpgradeModal has the same click-outside-to-close pattern. Worth one iteration as "modals are
   keyboard-dismissable", ideally with a shared Modal component.
+
+-- Phase 25: Platform Improvement Loop (iteration 5/15) --
+US-175: DONE - Modal dialogs are keyboard-operable. UpgradeModal bound Escape to its overlay
+  div but never moved focus into the dialog, so the keydown was dispatched at the button that
+  opened it — outside the overlay — and Escape did nothing whatsoever. Neither it nor the two
+  admin/apis dialogs trapped Tab (focus wandered onto controls hidden behind the backdrop),
+  restored focus on close, locked background scroll, or carried an accessible name; the admin
+  ones declared role="dialog" with no tabindex, so they could not receive focus either.
+  New lib/focus-trap.js (focusableIn, nextFocusIndex — pure, DOM-injectable, 19 tests) and
+  lib/components/Modal.svelte handling focus-in, Tab containment with wrap, window-level Escape,
+  focus restore, scroll lock and aria wiring. Adopted by UpgradeModal and both admin dialogs;
+  their duplicated backdrop/box CSS was deleted in favour of the shared component.
+  9 SSR tests over the markup contract — writing them caught a stray double space in the class
+  attribute. CommandPalette was audited and is already correct (focus, Escape, restore, Tab
+  trap), so it was left untouched. 174 tests pass.
+  Unique build warnings 43 -> 38. Every remaining warning is now the US-173 capture class;
+  the a11y, CSS and correctness classes are all at zero.
+
+== Notes for follow-up ==
+- US-173 REMAINING (38, the only warning class left): dashboard (11 — CRUD collections held in
+  $state; the fix is a resync plus replacing its two location.reload() calls with
+  invalidateAll(), which is also a UX win), incidents (4), incidents/[id] (4), live (3),
+  stack (2), sla (2), admin (2), admin/apis (1 — already has an $effect resync so it is
+  correct, just noisy), and 8 single-warning routes. Non-admin ones should reuse
+  lib/live-patch.js.

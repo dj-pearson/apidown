@@ -2474,6 +2474,23 @@
       "priority": 174,
       "passes": true,
       "notes": "Every field in the status-page builder used a bare <label> with no `for` and no nested control, so assistive technology read all of them as unlabelled — the entire Pro status-page builder was unnavigable by screen reader. Both toggle switches had no accessible name at all: role=switch on a button containing only an empty span. Fixed all 12 labels and both switches; ids are scoped by page.id so the repeated editor rows stay unique. New lib/markup-lint.js (unassociatedLabels, unnamedWidgets, comment-stripping) with a test that sweeps every src/**/*.svelte — checked against the pre-fix tree, where it reproduces all 12 offenders by exact line number. Unique build warnings 57 -> 43; the a11y classes are now down to 5, all in admin/apis and UpgradeModal (modal keyboard handling, filed as follow-up)."
+    },
+    {
+      "id": "US-175",
+      "title": "Make modal dialogs operable from the keyboard",
+      "description": "As a keyboard or screen-reader user, I want to be able to dismiss a dialog and stay inside it while it is open, so that opening one is not a trap I have to reload the page to escape.",
+      "acceptanceCriteria": [
+        "Escape closes every modal, from wherever focus happens to be",
+        "Focus moves into the dialog when it opens and returns to the opener when it closes",
+        "Tab and Shift+Tab cycle within the dialog and never reach the page behind it",
+        "Each dialog announces itself with role=dialog, aria-modal and an accessible name",
+        "The page behind a modal does not scroll",
+        "The backdrop is presentational, not a fake interactive element",
+        "One shared component provides all of this rather than each dialog reimplementing it"
+      ],
+      "priority": 175,
+      "passes": true,
+      "notes": "UpgradeModal bound its Escape handler to the overlay div but never moved focus into the dialog — so the keydown was dispatched at the button that opened it, outside the overlay, and Escape did nothing at all. Neither it nor the two admin/apis dialogs trapped Tab, restored focus, locked background scroll, or carried an accessible name; the admin ones had role=dialog with no tabindex, so they could not receive focus either. New lib/focus-trap.js (focusableIn, nextFocusIndex — 19 tests, pure and DOM-injectable) plus lib/components/Modal.svelte, adopted by UpgradeModal and both admin dialogs. 9 SSR tests over the markup contract; writing them caught a stray double space in the class attribute. CommandPalette was audited and already correct (focus, Escape, restore, Tab trap) so it was left alone. This closes every non-capture build warning in the app: 43 -> 38 unique, and all 38 remaining are US-173."
     }
   ]
 }

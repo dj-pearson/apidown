@@ -1,5 +1,6 @@
 <script>
   import { TIER_INFO, getNextTier } from '$lib/tier-limits.js';
+  import Modal from '$lib/components/Modal.svelte';
 
   let { show = $bindable(false), currentTier, limitType, currentUsage, maxUsage } = $props();
 
@@ -17,12 +18,9 @@
   }
 </script>
 
-{#if show && nextTier}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="overlay" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()}>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal" onclick={(e) => e.stopPropagation()}>
-      <h3>Upgrade to unlock more</h3>
+{#if nextTier}
+  <Modal bind:open={show} labelledBy="upgrade-modal-title" dialogClass="upgrade-modal">
+      <h3 id="upgrade-modal-title">Upgrade to unlock more</h3>
       <p class="limit-msg">
         You've used all <strong>{currentUsage}/{maxUsage}</strong> {limitLabel} on the <strong>{currentTier}</strong> plan.
       </p>
@@ -42,28 +40,15 @@
         <a href="/pricing" class="btn-upgrade">Upgrade to {nextTier.name}</a>
         <button class="btn-dismiss" onclick={close}>Not now</button>
       </div>
-    </div>
-  </div>
+  </Modal>
 {/if}
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal {
-    background: var(--color-surface, #1a1a2e);
-    border: 1px solid var(--color-border, #333);
-    border-radius: 12px;
+  /* Backdrop, positioning and focus styling now come from Modal.svelte;
+     this dialog just wants to be narrower than the default. */
+  :global(.modal-dialog.upgrade-modal) {
+    width: min(400px, calc(100vw - 2rem));
     padding: 2rem;
-    max-width: 400px;
-    width: 90%;
   }
 
   h3 {

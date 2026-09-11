@@ -1,6 +1,7 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   import { enhance } from '$app/forms';
+  import Modal from '$lib/components/Modal.svelte';
 
   let { data, form: actionResult } = $props();
   let apis = $state(data.apis);
@@ -58,10 +59,8 @@
 <span class="api-count">{apis.length} APIs</span>
 
 <!-- Create Form -->
-{#if showCreate}
-  <div class="modal-backdrop" onclick={closeCreate} role="presentation">
-    <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog">
-      <h2>Add New API</h2>
+<Modal bind:open={showCreate} labelledBy="admin-create-api-title">
+      <h2 id="admin-create-api-title">Add New API</h2>
       <form method="POST" action="?/create" use:enhance={() => {
         return async ({ update }) => {
           await update();
@@ -97,15 +96,12 @@
           <button type="submit" class="btn-primary">Create API</button>
         </div>
       </form>
-    </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Edit Modal -->
 {#if editApi}
-  <div class="modal-backdrop" onclick={closeEdit} role="presentation">
-    <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog">
-      <h2>Edit: {editApi.name}</h2>
+  <Modal open={true} labelledBy="admin-edit-api-title" onclose={closeEdit}>
+      <h2 id="admin-edit-api-title">Edit: {editApi.name}</h2>
       <form method="POST" action="?/update" use:enhance={() => {
         return async ({ update }) => {
           await update();
@@ -150,8 +146,7 @@
           <button type="submit" class="btn-primary">Save Changes</button>
         </div>
       </form>
-    </div>
-  </div>
+  </Modal>
 {/if}
 
 <!-- APIs Table -->
@@ -233,12 +228,11 @@
 
   .inline-form { display: inline; }
 
-  /* Modal */
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .modal { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
-  .modal label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 500; margin-bottom: 0.75rem; }
-  .modal input, .modal select { padding: 0.5rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text); font-size: 0.85rem; }
-  .modal .hint { font-size: 0.7rem; color: var(--color-text-muted); }
+  /* Modal — backdrop, box and focus handling come from Modal.svelte; these
+     style the form fields rendered inside it. */
+  :global(.modal-dialog) label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 500; margin-bottom: 0.75rem; }
+  :global(.modal-dialog) input, :global(.modal-dialog) select { padding: 0.5rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text); font-size: 0.85rem; }
+  :global(.modal-dialog) .hint { font-size: 0.7rem; color: var(--color-text-muted); }
   .form-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
 
   /* Table */
