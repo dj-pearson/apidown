@@ -4,6 +4,8 @@
    * right now, plus a one-click way to add your own. These are unverified user
    * reports, kept visually distinct from measured signals.
    */
+  import { emptyOverride, withOverride, resolveOverride } from '$lib/live-patch.js';
+
   let {
     apiSlug,
     apiName,
@@ -24,12 +26,22 @@
   const ERROR_LABELS = Object.fromEntries(ERROR_TYPES.map(t => [t.value, t.label]));
 
   // One report per browser per API per hour — this is a courtesy guard for the
-  // UI only; the real limit is enforced server-side per IP hash.
-  const storageKey = `apidown-reported-${apiSlug}`;
+  // UI only; the real limit is enforced server-side per IP hash. Derived, so
+  // moving between two API pages does not keep checking the first one's key.
+  let storageKey = $derived(`apidown-reported-${apiSlug}`);
 
-  let hourCount = $state(reportsLastHour);
-  let reports = $state(recentReports);
-  let trend = $state(reportTrend);
+  // A report the visitor just filed, shown straight away instead of waiting for
+  // a reload. It is tagged with the `recentReports` array it was filed against,
+  // so it disappears the moment load() delivers a different API's feed.
+  let justReported = $state(emptyOverride());
+  let local = $derived(resolveOverride(justReported, recentReports, null));
+
+  let hourCount = $derived(local ? local.hourCount : reportsLastHour);
+  let reports = $derived(local ? [local.entry, ...recentReports].slice(0, 25) : recentReports);
+  let trend = $derived(
+    local ? [...reportTrend.slice(0, 23), (reportTrend[23] ?? 0) + 1] : reportTrend
+  );
+
   let selectedType = $state('timeout');
   let submitting = $state(false);
   let message = $state('');
@@ -69,13 +81,15 @@
         message = body.error || 'Could not record your report.';
         messageError = true;
       } else {
-        hourCount = body.reports_last_hour ?? hourCount + 1;
-        // Show it immediately rather than waiting for a reload.
-        reports = [
-          { id: `local-${Date.now()}`, created_at: new Date().toISOString(), error_type: selectedType, region: null },
-          ...reports,
-        ].slice(0, 25);
-        trend = [...trend.slice(0, 23), trend[23] + 1];
+        justReported = withOverride(recentReports, {
+          hourCount: body.reports_last_hour ?? reportsLastHour + 1,
+          entry: {
+            id: `local-${Date.now()}`,
+            created_at: new Date().toISOString(),
+            error_type: selectedType,
+            region: null,
+          },
+        });
         alreadyReported = true;
         message = 'Thanks — your report is counted.';
         messageError = false;

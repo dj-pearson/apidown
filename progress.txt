@@ -232,3 +232,29 @@ US-172: DONE - Fixed the invalid nested anchor in StatusCard (the homepage grid 
 - Also queued behind it: 12 unique "form label must be associated with a control", 3 click
   handlers on non-interactive elements with no keyboard handler, 2 dialog roles missing tabindex,
   2 buttons/links with no accessible name.
+
+-- Phase 25: Platform Improvement Loop (iteration 3/15) --
+US-173 (PARTIAL): Stale page state fixed on the two highest-traffic surfaces. In Svelte 5,
+  `let x = data.foo` in a component script snapshots the value at init; SvelteKit reuses the
+  component across navigations and invalidations, so the page kept rendering whichever payload
+  it first mounted with. With the US-155 command palette, moving from /api/stripe to /api/openai
+  is a normal action — and it left Stripe's name, incidents, pin state and report feed on screen.
+  Fixed: src/routes/+page.svelte (5), src/routes/api/[slug]/+page.svelte (5), ReportFeed.svelte
+  (4). Unique build warnings 71 -> 57; capture-class 48 -> 38.
+  New lib/live-patch.js is the pattern for realtime pages: the rendered list/row stays $derived
+  from `data`, and realtime rows plus optimistic toggles live beside it in a set tagged with the
+  exact payload they were made against — so they vanish when load() returns fresh data, and a
+  stale realtime row can never mask newer server data. 24 tests.
+  Two more bugs fixed in passing:
+   - api/[slug] realtime $effect read the mutable `api`, so every status UPDATE re-ran the effect
+     and tore down/rebuilt the Supabase channel. Now keyed off data.api.
+   - ReportFeed computed its localStorage rate-limit key once, so after navigating it checked the
+     previously viewed API's key. Now derived.
+
+== Notes for follow-up ==
+- US-173 REMAINING (38): dashboard/+page.svelte (25 — big enough for its own iteration),
+  admin/apis (5), incidents (4), incidents/[id] (4), live (3), stack (2), sla (2), admin (2),
+  and 8 single-warning routes. Non-admin ones should reuse lib/live-patch.js.
+- Still queued: 12 unique "form label must be associated with a control", 3 click handlers on
+  non-interactive elements with no keyboard handler, 2 dialog roles missing tabindex, 2
+  buttons/links with no accessible name.

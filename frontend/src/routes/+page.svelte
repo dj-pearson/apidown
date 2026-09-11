@@ -4,13 +4,21 @@
   import SkeletonCard from '$lib/components/SkeletonCard.svelte';
   import SEO from '$lib/components/SEO.svelte';
   import { categoryLabel } from '$lib/categories.js';
+  import { emptyPatchSet, withPatch, mergePatches } from '$lib/live-patch.js';
 
   let { data } = $props();
-  let apis = $state(data.apis);
-  let activeIncidents = $state(data.activeIncidents);
-  let recentDetected = data.recentDetected || [];
-  let sparklineData = data.sparklineData || {};
-  let gradeData = data.gradeData || {};
+
+  // Everything the page renders derives from `data`, so a client-side
+  // navigation back to the homepage or an invalidateAll() re-renders rather
+  // than leaving the payload this component first mounted with on screen.
+  // Realtime status updates ride alongside as a patch set (see lib/live-patch).
+  let livePatches = $state(emptyPatchSet());
+  let apis = $derived(mergePatches(data.apis, livePatches));
+  let activeIncidents = $derived(data.activeIncidents || []);
+  let recentDetected = $derived(data.recentDetected || []);
+  let sparklineData = $derived(data.sparklineData || {});
+  let gradeData = $derived(data.gradeData || {});
+
   let searchQuery = $state('');
   let sortMode = $state(typeof localStorage !== 'undefined' ? localStorage.getItem('apidown-sort') || 'category' : 'category');
 
@@ -98,9 +106,7 @@
         schema: 'public',
         table: 'apis',
       }, (payload) => {
-        apis = apis.map(a =>
-          a.id === payload.new.id ? { ...a, ...payload.new } : a
-        );
+        livePatches = withPatch(livePatches, data.apis, payload.new);
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') connectionStatus = 'live';

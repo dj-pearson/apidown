@@ -9,12 +9,23 @@
   import ReportFeed from "$lib/components/ReportFeed.svelte";
   import PushToggle from "$lib/components/PushToggle.svelte";
   import { categoryLabel } from "$lib/categories.js";
+  import {
+    emptyPatchSet, withPatch, mergeRow,
+    emptyOverride, withOverride, resolveOverride,
+  } from "$lib/live-patch.js";
 
   let isNavigating = $derived(!!$navigating);
 
   let { data } = $props();
-  let api = $state(data.api);
-  let incidents = $state(data.incidents);
+
+  // Everything renders off `data`, so navigating between two APIs (the command
+  // palette makes that a normal move) re-renders instead of leaving the first
+  // API's name and incidents on screen. Realtime status updates and optimistic
+  // toggles ride alongside as patches tagged to this payload — see
+  // lib/live-patch.js.
+  let livePatches = $state(emptyPatchSet());
+  let api = $derived(mergeRow(data.api, livePatches));
+  let incidents = $derived(data.incidents);
   let latencyData = $derived(data.latencyData);
   let logoFailed = $state(false);
 
@@ -31,11 +42,15 @@
   let myStats = $state(null);
   let myStatsLoading = $state(false);
   let showMyStats = $state(false);
-  let pinned = $state(data.isPinned);
+  let pinOverride = $state(emptyOverride());
+  let pinned = $derived(resolveOverride(pinOverride, data, data.isPinned));
   let pinLoading = $state(false);
 
-  const ingestUrl = data.ingestUrl;
-  let latencyRange = $state(data.latencyRange || '24h');
+  let ingestUrl = $derived(data.ingestUrl);
+  // Highlights the chosen range immediately; setRange then navigates and the
+  // server value takes over.
+  let rangeOverride = $state(emptyOverride());
+  let latencyRange = $derived(resolveOverride(rangeOverride, data, data.latencyRange || '24h'));
 
   const rangeOptions = [
     { value: '24h', label: '24h' },
@@ -46,7 +61,7 @@
   async function setRange(range) {
     const isFree = !data.userTier || data.userTier === 'free';
     if (isFree && range !== '24h') return;
-    latencyRange = range;
+    rangeOverride = withOverride(data, range);
     const url = new URL(window.location.href);
     if (range === '24h') {
       url.searchParams.delete('range');
@@ -94,14 +109,14 @@
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` },
         });
-        pinned = false;
+        pinOverride = withOverride(data, false);
       } else {
         const res = await fetch(`${ingestUrl}/v1/pinned-apis`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ api_id: api.id }),
         });
-        if (res.ok) pinned = true;
+        if (res.ok) pinOverride = withOverride(data, true);
       }
     } catch { /* ignore */ }
     pinLoading = false;
@@ -150,17 +165,19 @@
 
     const supabase = createClient(url, key);
     const channel = supabase
-      .channel(`api-detail-${api.slug}`)
+      // Keyed off `data.api`, not the merged `api`: reading the mutable value
+      // here made every status update re-run this effect and rebuild the channel.
+      .channel(`api-detail-${data.api.slug}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "apis",
-          filter: `id=eq.${api.id}`,
+          filter: `id=eq.${data.api.id}`,
         },
         (payload) => {
-          api = { ...api, ...payload.new };
+          livePatches = withPatch(livePatches, data.api, payload.new);
         },
       )
       .subscribe();
