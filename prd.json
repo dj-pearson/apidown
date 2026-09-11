@@ -2455,8 +2455,8 @@
         "$state that is intentionally local and seeded once from `data` is left alone and commented as deliberate"
       ],
       "priority": 173,
-      "passes": false,
-      "notes": "PARTIAL — 11 of the original 48 remain, all in src/routes/dashboard/+page.svelte. Iteration 3 closed the homepage (5), api/[slug] (5) and ReportFeed (4); iteration 6 closed every other file: live (3), incidents (4), incidents/[id] (4), stack (2), sla (2), admin (2), admin/incidents (1), admin/users (1), admin/apis (1), plus six `const {...} = data` destructuring sites on api/[slug]/history, history/[month], report-card, compare/vs, status/[slug] and weekly. Unique build warnings 71 -> 11, and all 11 are now in that one file. lib/live-patch.js carries three tagged-to-payload patterns — patches over existing rows (mergePatches/mergeRow), scalar overrides for optimistic toggles (resolveOverride), and locally added rows for live feeds (mergeAdditions/additionCount) — each dropped automatically when load() returns, so stale local state can never mask newer server data. 35 tests. DASHBOARD REMAINS: 10 CRUD collections held in $state and mutated in place after create/delete/update. Unlike the others these are not realtime overlays, so the fix is either a resync effect or invalidateAll() after each mutation; the page already calls location.reload() twice, which invalidateAll() would replace for a real UX win."
+      "passes": true,
+      "notes": "DONE. All 48 reactive-capture sites closed across iterations 3, 6 and 7; the production build now emits ZERO warnings, down from 71 unique at the start of the loop. lib/live-patch.js carries three tagged-to-payload patterns — row patches (mergePatches/mergeRow), scalar overrides (resolveOverride) and locally added feed rows (mergeAdditions/additionCount) — each dropped automatically when load() returns, so stale local state can never mask newer server data. The dashboard was different: its collections are server-owned CRUD, not realtime overlays, so it now derives them and calls invalidateAll() after each mutation. One deliberate exception remains, documented with svelte-ignore: `statusPages` is an editable draft the status-page editor binds into with bind:value, so it stays $state with a resync effect."
     },
     {
       "id": "US-174",
@@ -2491,6 +2491,22 @@
       "priority": 175,
       "passes": true,
       "notes": "UpgradeModal bound its Escape handler to the overlay div but never moved focus into the dialog — so the keydown was dispatched at the button that opened it, outside the overlay, and Escape did nothing at all. Neither it nor the two admin/apis dialogs trapped Tab, restored focus, locked background scroll, or carried an accessible name; the admin ones had role=dialog with no tabindex, so they could not receive focus either. New lib/focus-trap.js (focusableIn, nextFocusIndex — 19 tests, pure and DOM-injectable) plus lib/components/Modal.svelte, adopted by UpgradeModal and both admin dialogs. 9 SSR tests over the markup contract; writing them caught a stray double space in the class attribute. CommandPalette was audited and already correct (focus, Escape, restore, Tab trap) so it was left alone. This closes every non-capture build warning in the app: 43 -> 38 unique, and all 38 remaining are US-173."
+    },
+    {
+      "id": "US-176",
+      "title": "Stop discarding the API key the moment it is created",
+      "description": "As a developer setting up the SDK, I want to see and copy the API key I just created, so that I can actually use it — it is shown once and never returned again.",
+      "acceptanceCriteria": [
+        "Creating an API key leaves the key on screen long enough to copy",
+        "The key list still refreshes to include the new key",
+        "Adding a custom API refreshes both the custom API list and the pinned list without a reload",
+        "Adding an SLA target refreshes the computed data without a reload",
+        "No component calls location.reload(); invalidateAll() is used instead",
+        "A test fails if location.reload() reappears in any component"
+      ],
+      "priority": 176,
+      "passes": true,
+      "notes": "The dashboard set newKeyValue = body.key and then immediately called location.reload(). The reload discarded all client state, so the panel that reads 'Your new API key (save it now - it won't be shown again)' never rendered. The server only ever returns key_prefix afterwards, so the key was unrecoverable: every user who created a key lost it, and creating another failed the same way. Found while converting the dashboard's state handling for US-173 — deriving the collections is what made invalidateAll() viable in place of the reload. Three location.reload() call sites replaced with invalidateAll() (two on the dashboard, one on /sla). Guarded by a new pageReloads check in lib/markup-lint.js sweeping every src/**/*.svelte; reintroducing the reload fails the test. Note the two widget.html endpoints still use a 60s location.reload() — that is correct there, as they are standalone embedded iframes with no SvelteKit runtime."
     }
   ]
 }

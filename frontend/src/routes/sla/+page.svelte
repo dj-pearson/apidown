@@ -1,9 +1,11 @@
 <script>
+  import { invalidateAll } from '$app/navigation';
   import SEO from '$lib/components/SEO.svelte';
   import { createClient } from '@supabase/supabase-js';
 
-  let { data } = $props();
   import { emptyOverride, withOverride, resolveOverride } from '$lib/live-patch.js';
+
+  let { data } = $props();
   // Derived from `data`; a target the user just deleted is hidden locally
   // until load() confirms it, tagged to this payload.
   let deletedTargetIds = $state(emptyOverride());
@@ -50,8 +52,8 @@
 
       if (error) throw error;
 
-      // Reload page to get fresh computed data
-      window.location.reload();
+      // Refresh the computed data without discarding client state.
+      await invalidateAll();
     } catch (err) {
       addError = err.message || 'Failed to add target';
     }

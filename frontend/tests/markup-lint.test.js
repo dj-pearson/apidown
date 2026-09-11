@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { globSync } from 'node:fs';
-import { unassociatedLabels, unnamedWidgets } from '../src/lib/markup-lint.js';
+import { unassociatedLabels, unnamedWidgets, pageReloads } from '../src/lib/markup-lint.js';
 
 describe('unassociatedLabels', () => {
   test('flags a label with no for and no nested control', () => {
@@ -85,5 +85,51 @@ describe('comments are not markup', () => {
 
   test('a commented-out switch is not flagged', () => {
     assert.deepEqual(unnamedWidgets('<!-- <button role="switch"><span></span></button> -->'), []);
+  });
+});
+
+describe('pageReloads', () => {
+  test('flags location.reload and window.location.reload', () => {
+    assert.equal(pageReloads('location.reload()').length, 1);
+    assert.equal(pageReloads('window.location.reload()').length, 1);
+  });
+
+  test('tolerates whitespace', () => {
+    assert.equal(pageReloads('window . location . reload ()').length, 1);
+  });
+
+  test('ignores unrelated code and comments', () => {
+    assert.equal(pageReloads('invalidateAll()').length, 0);
+    assert.equal(pageReloads('// location.reload() is banned').length, 0);
+  });
+
+  test('reports the line', () => {
+    assert.equal(pageReloads('\na\nlocation.reload()')[0].line, 3);
+  });
+});
+
+describe('no component reloads the page', () => {
+  // A reload discards client state. The dashboard used to call it straight
+  // after minting an API key, throwing the key away before the user could
+  // copy it — and the server never returns that key again.
+  test('src/**/*.svelte uses invalidateAll() instead of location.reload()', () => {
+    const offenders = [];
+    for (const file of globSync('src/**/*.svelte')) {
+      for (const hit of pageReloads(readFileSync(file, 'utf8'))) {
+        offenders.push(`${file}:${hit.line}  ${hit.text}`);
+      }
+    }
+    assert.deepEqual(offenders, [], `\n${offenders.join('\n')}\n`);
+  });
+});
+
+describe('code-comment stripping preserves URLs', () => {
+  test('a https:// URL is not treated as a comment', () => {
+    const src = 'const u = "https://example.com/x";\nlocation.reload()';
+    assert.equal(pageReloads(src).length, 1, 'the real call after a URL must still be found');
+  });
+
+  test('a block comment is stripped', () => {
+    assert.equal(pageReloads('/* location.reload() */').length, 0);
   });
 });

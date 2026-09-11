@@ -1,19 +1,31 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   import { createClient } from '@supabase/supabase-js';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { getTierLimits, getNextTier } from '$lib/tier-limits.js';
   import UpgradeModal from '$lib/components/UpgradeModal.svelte';
+  import { emptyOverride, withOverride, resolveOverride } from '$lib/live-patch.js';
 
   let { data } = $props();
-  let profile = $state(data.profile);
-  let apiKeys = $state(data.apiKeys);
-  let pinnedApis = $state(data.pinnedApis);
-  let customApis = $state(data.customApis);
+
+  // Server-owned collections. Every mutation below writes to Supabase and then
+  // calls invalidateAll(), so these re-derive from the fresh load rather than
+  // being spliced by hand — which is what let them drift out of date before.
+  let profile = $derived(data.profile);
+  let apiKeys = $derived(data.apiKeys);
+  let pinnedApis = $derived(data.pinnedApis);
+  let customApis = $derived(data.customApis);
+  let subscriptions = $derived(data.subscriptions);
+
   let editingCostId = $state(null);
   let costInput = $state('');
-  let digestFrequency = $state(data.profile.digest_frequency || 'none');
-  let subscriptions = $state(data.subscriptions);
+
+  // Picked by the user and saved in the background, so it leads the server
+  // value until the next load confirms it.
+  let digestOverride = $state(emptyOverride());
+  let digestFrequency = $derived(
+    resolveOverride(digestOverride, data, data.profile.digest_frequency || 'none')
+  );
 
   let newKeyLabel = $state('');
   let creatingKey = $state(false);
@@ -35,11 +47,20 @@
   let addingApi = $state(false);
   let confirmDeleteApiId = $state(null);
 
-  // Status Pages state
+  // The editor binds straight into these objects with bind:value, so
+  // `statusPages` is an editable draft rather than a view of the server list —
+  // deriving it would make every keystroke fight the load data. It is re-seeded
+  // whenever load() returns so it can no longer strand the user on a stale copy.
+  // svelte-ignore state_referenced_locally
   let statusPages = $state(data.statusPages || []);
-  let statusPageApiMap = $state(data.statusPageApiMap || {});
-  let allApis = $state(data.allApis || []);
-  let subscriberCounts = $state(data.statusPageSubscriberCounts || {});
+  $effect(() => {
+    statusPages = data.statusPages || [];
+  });
+
+  let statusPageApiMap = $derived(data.statusPageApiMap || {});
+
+  let allApis = $derived(data.allApis || []);
+  let subscriberCounts = $derived(data.statusPageSubscriberCounts || {});
   let editingPageId = $state(null);
   let spSaving = $state(false);
   let spSaved = $state(false);
@@ -154,10 +175,7 @@
     const { error: err } = await supabase
       .from('status_page_apis')
       .insert({ status_page_id: pageId, api_id: apiId, display_order: order });
-    if (!err) {
-      statusPageApiMap[pageId] = [...current, { status_page_id: pageId, api_id: apiId, display_order: order }];
-      statusPageApiMap = { ...statusPageApiMap };
-    }
+    if (!err) await invalidateAll();
   }
 
   async function removeApiFromPage(pageId, apiId) {
@@ -168,14 +186,12 @@
       .delete()
       .eq('status_page_id', pageId)
       .eq('api_id', apiId);
-    if (!err) {
-      statusPageApiMap[pageId] = (statusPageApiMap[pageId] || []).filter(a => a.api_id !== apiId);
-      statusPageApiMap = { ...statusPageApiMap };
-    }
+    if (!err) await invalidateAll();
   }
 
   // 2FA / TOTP state
-  let mfaEnabled = $state(data.profile.mfa_enabled || false);
+  let mfaOverride = $state(emptyOverride());
+  let mfaEnabled = $derived(resolveOverride(mfaOverride, data, data.profile.mfa_enabled || false));
   let showMfaSetup = $state(false);
   let mfaQrUrl = $state('');
   let mfaSecret = $state('');
@@ -239,7 +255,7 @@
   }
 
   async function updateDigestFrequency(freq) {
-    digestFrequency = freq;
+    digestOverride = withOverride(data, freq);
     const supabase = getAuthClient();
     if (!supabase) return;
     await supabase.from('users').update({ digest_frequency: freq }).eq('id', data.profile.id || '');
@@ -254,10 +270,8 @@
       .update({ cost_per_minute_cents: cents })
       .eq('user_id', data.profile.id || '')
       .eq('api_id', apiId);
-    pinnedApis = pinnedApis.map(p =>
-      p.api_id === apiId ? { ...p, cost_per_minute_cents: cents } : p
-    );
     editingCostId = null;
+    await invalidateAll();
   }
 
   function getAuthClient() {
@@ -298,7 +312,9 @@
         const body = await res.json();
         newKeyValue = body.key;
         newKeyLabel = '';
-        location.reload();
+        // Must NOT reload: body.key is shown once and never returned again, so
+        // a reload would discard the key the user still has to copy.
+        await invalidateAll();
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.error || 'Failed to create API key');
@@ -331,7 +347,7 @@
     const supabase = getAuthClient();
     if (!supabase) return;
     await supabase.from('api_keys').update({ is_active: false }).eq('id', keyId);
-    apiKeys = apiKeys.map(k => k.id === keyId ? { ...k, is_active: false } : k);
+    await invalidateAll();
     confirmRevokeId = null;
   }
 
@@ -380,8 +396,6 @@
       });
 
       if (res.ok) {
-        const api = await res.json();
-        customApis = [api, ...customApis];
         customApiName = '';
         customApiUrl = '';
         customApiExpectedStatus = 200;
@@ -389,8 +403,8 @@
         customAuthHeaderValue = '';
         showAuthFields = false;
         showAddApi = false;
-        // Reload to refresh pinned APIs too
-        location.reload();
+        // Refreshes the custom API list and the pinned list together.
+        await invalidateAll();
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.error || 'Failed to add custom API');
@@ -414,8 +428,7 @@
       });
 
       if (res.ok) {
-        customApis = customApis.filter(a => a.id !== apiId);
-        pinnedApis = pinnedApis.filter(p => p.api_id !== apiId);
+        await invalidateAll();
         confirmDeleteApiId = null;
       } else {
         alert('Failed to delete custom API');
@@ -481,7 +494,7 @@
 
       // Mark MFA as enabled in our users table
       await supabase.from('users').update({ mfa_enabled: true }).eq('id', data.profile.id || '');
-      mfaEnabled = true;
+      mfaOverride = withOverride(data, true);
       showMfaSetup = false;
       mfaQrUrl = '';
       mfaSecret = '';
@@ -507,7 +520,7 @@
       }
 
       await supabase.from('users').update({ mfa_enabled: false }).eq('id', data.profile.id || '');
-      mfaEnabled = false;
+      mfaOverride = withOverride(data, false);
       confirmDisableMfa = false;
     } catch {
       mfaError = 'Failed to disable 2FA.';

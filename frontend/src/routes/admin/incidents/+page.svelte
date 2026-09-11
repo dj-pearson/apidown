@@ -2,8 +2,9 @@
   import SEO from '$lib/components/SEO.svelte';
   import { getSupabase } from '$lib/supabase.js';
 
-  let { data } = $props();
   import { emptyPatchSet, withPatch, mergePatches } from '$lib/live-patch.js';
+
+  let { data } = $props();
   // Derived from `data`; an incident the admin just resolved is patched over
   // it until the next load confirms.
   let resolvedPatches = $state(emptyPatchSet());

@@ -336,3 +336,33 @@ US-173 (PARTIAL, now 11 left): closed the stale-state class everywhere except th
   realtime overlays, so lib/live-patch.js is the wrong tool — the fix is invalidateAll() after
   each mutation (or a resync effect), and the page already calls location.reload() twice, which
   invalidateAll() would replace for a genuine UX win. Worth its own iteration.
+
+-- Phase 25: Platform Improvement Loop (iteration 7/15) --
+US-176: DONE - The dashboard was destroying every API key at the moment of creation. The handler
+  set newKeyValue = body.key and then immediately called location.reload(), which discards all
+  client state — so the panel reading "Your new API key (save it now — it won't be shown again)"
+  never rendered. The server only returns key_prefix afterwards, so the key was gone for good:
+  every user who created a key lost it, and creating another lost that one too. The SDK
+  onboarding path was effectively broken.
+  Replaced all three location.reload() call sites with invalidateAll() (two on the dashboard,
+  one on /sla). Guarded by a new pageReloads check in lib/markup-lint.js sweeping every
+  src/**/*.svelte — reintroducing a reload fails the test (mutation-verified). The two
+  widget.html endpoints keep their 60s reload, which is correct: they are standalone embedded
+  iframes with no SvelteKit runtime.
+
+US-173: DONE - all 48 reactive-capture sites now closed. The dashboard was the last file and
+  needed a different treatment from the rest: its collections are server-owned CRUD, not
+  realtime overlays, so they now derive from `data` with invalidateAll() after each mutation
+  rather than being spliced by hand. Deriving them is precisely what made replacing the reloads
+  possible. One deliberate exception, documented with svelte-ignore: `statusPages` is an
+  editable draft the editor binds into with bind:value, so it stays $state with a resync effect.
+  Also tidied three misplaced imports left below `let { data } = $props()` in earlier iterations.
+
+  *** BUILD WARNINGS NOW ZERO, down from 71 unique at the start of the loop. *** 192 tests pass.
+
+== Notes for follow-up ==
+- No warning classes remain. Future iterations should look for improvements by reading the
+  product rather than the build output: worker/ingest services are entirely untested, the
+  services/ and packages/ trees have no test coverage at all, and database/migrations has no
+  validation. Also unexamined so far: the /docs content, the ingest SDK, and error handling in
+  services/worker.

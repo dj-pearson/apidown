@@ -9,6 +9,17 @@ function stripComments(source) {
 }
 
 /**
+ * Also strip JavaScript comments, for checks that look at script bodies.
+ * The `//` rule skips a slash pair preceded by a colon so that URLs such as
+ * https://example.com survive intact.
+ */
+function stripCodeComments(source) {
+  return stripComments(source)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+/**
  * Every <label> in `source` that names nothing: no `for` attribute, and no form
  * control nested inside it. Such a label is decoration — assistive technology
  * reads the input as unlabelled.
@@ -52,6 +63,25 @@ export function unnamedWidgets(input, roles = ['switch', 'tab', 'checkbox', 'rad
     found.push({
       line: source.slice(0, match.index).split('\n').length,
       text: full.slice(0, 80).replace(/\s+/g, ' '),
+    });
+  }
+  return found;
+}
+
+/**
+ * Calls to `location.reload()` in client code. A reload throws away every bit
+ * of in-memory state, which is a bug whenever the page is holding something
+ * the server will not return again — a freshly minted API key, an unsaved
+ * draft, a scroll position. SvelteKit's `invalidateAll()` refetches the load
+ * data and keeps the rest.
+ */
+export function pageReloads(input) {
+  const source = stripCodeComments(input);
+  const found = [];
+  for (const match of source.matchAll(/(?:window\s*\.\s*)?location\s*\.\s*reload\s*\(/g)) {
+    found.push({
+      line: source.slice(0, match.index).split('\n').length,
+      text: match[0],
     });
   }
   return found;
