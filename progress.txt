@@ -465,3 +465,40 @@ US-179: DONE - Signal ingestion was silently discarding data and crashing on bad
   from a secret; a separate random per-key reporter id would be cleaner.
 - Fail-open pattern seen twice more: `count >= maxKeys` in api-keys.js treats a failed count query
   as under the limit.
+
+-- Phase 25: Platform Improvement Loop (iteration 11/15) --
+US-180: DONE - The Stripe webhook could lose a paid upgrade permanently, and could hand a
+  cancelled customer their tier back for free.
+  (1) All processing sat in a try/catch that returned 200 on error, commented "Still return 200
+      to prevent Stripe from retrying". That inverts the recovery mechanism. If Supabase was
+      briefly unreachable when checkout.session.completed arrived, the customer had paid, the
+      upgrade was lost, and Stripe was told the event was handled — so it never retried. A
+      paying customer stranded on free, permanently, with one log line. Transient failures now
+      return 500 and get redelivered; genuinely unprocessable events (unhandled type, customer
+      that maps to no account) still return 200 so they are not retried forever.
+  (2) No ordering protection. Stripe guarantees no ordering and redelivers on retry, so a
+      subscription.updated generated BEFORE a cancellation can arrive AFTER it and re-upgrade
+      the account. Migration 029 adds users.stripe_event_applied_at; each write stamps the
+      event's own created time, and an older event is skipped.
+  (3) Found by a test while writing this: tierFromPrices returned on the first matching item,
+      so a subscription carrying both the pro and team price resolved to whichever appeared
+      first rather than the higher tier. The same bug sat in getTierFromSubscription, used by
+      the checkout-success and dashboard reconciliation paths — those now delegate to the
+      tested module, so all three call sites are fixed at once. The webhook also no longer
+      accepts an unrecognised price as "pro"; it logs and declines rather than guessing.
+  New frontend/src/lib/server/stripe-webhook-policy.js holds the decisions as pure functions;
+  the route keeps signature verification, the database round trip and the status code. 34 tests,
+  mutation-checked against all three bugs. The webhook now also re-fetches the subscription on
+  checkout so the tier comes from the live price rather than possibly stale metadata.
+  Frontend 257 tests, ingest 18, worker 32 — all green. Build still zero warnings.
+
+== Notes for follow-up ==
+- Migration 029 must be applied before deploy; until then stripe_event_applied_at is missing
+  and the ordering guard silently does nothing (the update would error and be retried).
+- packages/sdk-js and packages/cli remain untested (sdk-python has tests).
+- database/migrations still unvalidated (no ordering/idempotency check) — now 29 files.
+- maskAuthValue() reveals a secret of 8 chars or fewer; probe-crypto.js duplicated in
+  worker+ingest could join the shared-modules drift test.
+- Fail-open `count >= maxKeys` in ingest api-keys.js.
+- Still unexamined: alert-worker.js, synthetic-probe.js, statuspage-scraper.js,
+  weekly-digest-worker.js.

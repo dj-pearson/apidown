@@ -1,7 +1,22 @@
 import { text } from '@sveltejs/kit';
 import { setPlatform, getSupabaseAdmin, getEnv } from '$lib/supabase-server.js';
-import { getStripe, getTierFromSubscription, stripePeriodEnd } from '$lib/stripe-server.js';
+import { getStripe } from '$lib/stripe-server.js';
+import {
+  planFromEvent,
+  updateForPlan,
+  isStaleEvent,
+  failureResponse,
+} from '$lib/server/stripe-webhook-policy.js';
 
+/**
+ * Stripe webhook receiver.
+ *
+ * The decisions live in lib/server/stripe-webhook-policy.js; this file does
+ * signature verification, the database round trip, and choosing a status code.
+ * The status code matters: answering 200 after a failed write tells Stripe the
+ * event is done, so it never retries and a paying customer can be left on the
+ * free tier permanently.
+ */
 export async function POST({ request, platform }) {
   setPlatform(platform);
 
@@ -23,115 +38,91 @@ export async function POST({ request, platform }) {
     return text('Invalid signature', { status: 400 });
   }
 
-  console.log(`[stripe-webhook] Received event: ${event.type} (${event.id})`);
-
-  const supabase = getSupabaseAdmin();
+  const prices = {
+    proPriceId: getEnv('STRIPE_PRO_PRICE_ID'),
+    teamPriceId: getEnv('STRIPE_TEAM_PRICE_ID'),
+  };
 
   try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        console.log(`[stripe-webhook] Checkout completed: mode=${session.mode}, subscription=${session.subscription}`);
-        if (session.mode === 'subscription' && session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(session.subscription, { expand: ['items'] });
-          const userId = subscription.metadata?.supabase_user_id || session.metadata?.supabase_user_id;
-          const tier = getTierFromSubscription(subscription) || session.metadata?.tier || 'pro';
+    const supabase = getSupabaseAdmin();
 
-          if (userId) {
-            console.log(`[stripe-webhook] Upgrading user ${userId} to ${tier}`);
-            await supabase.from('users').update({
-              tier,
-              stripe_subscription_id: subscription.id,
-              stripe_customer_id: session.customer,
-              billing_period_end: stripePeriodEnd(subscription),
-            }).eq('id', userId);
-          } else {
-            // Try to find user by stripe_customer_id
-            const { data: userRow } = await supabase
-              .from('users')
-              .select('id')
-              .eq('stripe_customer_id', session.customer)
-              .single();
-            if (userRow) {
-              console.log(`[stripe-webhook] Found user by customer ID, upgrading ${userRow.id} to ${tier}`);
-              await supabase.from('users').update({
-                tier,
-                stripe_subscription_id: subscription.id,
-                billing_period_end: stripePeriodEnd(subscription),
-              }).eq('id', userRow.id);
-            } else {
-              console.error('[stripe-webhook] Could not find user for checkout session:', session.id);
-            }
-          }
-        }
-        break;
+    // A checkout session references its subscription by id; fetch it so the
+    // tier comes from the live price rather than possibly stale metadata.
+    let subscription = null;
+    if (event.type === 'checkout.session.completed') {
+      const sessionSubscription = event.data?.object?.subscription;
+      if (sessionSubscription) {
+        subscription = await stripe.subscriptions.retrieve(sessionSubscription, { expand: ['items'] });
       }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const userId = subscription.metadata?.supabase_user_id;
-        const status = subscription.status;
-        console.log(`[stripe-webhook] Subscription updated: ${subscription.id}, status=${status}, cancel_at_period_end=${subscription.cancel_at_period_end}, user=${userId}`);
-
-        const findUser = userId
-          ? { id: userId }
-          : (await supabase.from('users').select('id').eq('stripe_subscription_id', subscription.id).single()).data
-            || (await supabase.from('users').select('id').eq('stripe_customer_id', subscription.customer).single()).data;
-
-        if (findUser?.id) {
-          if (status === 'canceled' || status === 'unpaid' || status === 'past_due' || status === 'incomplete_expired') {
-            console.log(`[stripe-webhook] Downgrading user ${findUser.id} to free (status=${status})`);
-            await supabase.from('users').update({
-              tier: 'free',
-              stripe_subscription_id: null,
-              billing_period_end: null,
-            }).eq('id', findUser.id);
-          } else {
-            const tier = getTierFromSubscription(subscription);
-            console.log(`[stripe-webhook] Syncing user ${findUser.id} to tier=${tier}, sub=${subscription.id}`);
-            await supabase.from('users').update({
-              tier,
-              stripe_subscription_id: subscription.id,
-              billing_period_end: stripePeriodEnd(subscription),
-            }).eq('id', findUser.id);
-          }
-        } else {
-          console.error(`[stripe-webhook] Could not find user for subscription ${subscription.id}, customer=${subscription.customer}`);
-        }
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const userId = subscription.metadata?.supabase_user_id;
-        console.log(`[stripe-webhook] Subscription deleted: ${subscription.id}, user=${userId}, customer=${subscription.customer}`);
-
-        const findUser = userId
-          ? { id: userId }
-          : (await supabase.from('users').select('id').eq('stripe_subscription_id', subscription.id).single()).data
-            || (await supabase.from('users').select('id').eq('stripe_customer_id', subscription.customer).single()).data;
-
-        if (findUser?.id) {
-          console.log(`[stripe-webhook] Downgrading user ${findUser.id} to free (subscription deleted)`);
-          await supabase.from('users').update({
-            tier: 'free',
-            stripe_subscription_id: null,
-            billing_period_end: null,
-          }).eq('id', findUser.id);
-        } else {
-          console.error(`[stripe-webhook] Could not find user for deleted subscription ${subscription.id}, customer=${subscription.customer}`);
-        }
-        break;
-      }
-
-      default:
-        console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
-        break;
     }
-  } catch (err) {
-    console.error(`[stripe-webhook] Error processing ${event.type}:`, err.message);
-    // Still return 200 to prevent Stripe from retrying
-  }
 
-  return text('ok', { status: 200 });
+    const plan = planFromEvent(event, subscription, prices);
+    if (plan.kind === 'ignore') {
+      console.log(`[stripe-webhook] ${event.type} (${event.id}): ${plan.reason}`);
+      return text('ok', { status: 200 });
+    }
+
+    const account = await findAccount(supabase, plan);
+    if (!account) {
+      // Nothing to retry against — the customer maps to no account here.
+      console.error(
+        `[stripe-webhook] ${event.type} (${event.id}): no account for subscription=${plan.subscriptionId} customer=${plan.customerId}`,
+      );
+      const { status } = failureResponse('unmappable');
+      return text('no matching account', { status });
+    }
+
+    if (isStaleEvent(event.created, account.stripe_event_applied_at)) {
+      console.log(
+        `[stripe-webhook] ${event.type} (${event.id}): skipped, older than the event already applied to ${account.id}`,
+      );
+      return text('ok (stale)', { status: 200 });
+    }
+
+    if (plan.kind === 'upgrade' && !plan.tier) {
+      // An unrecognised price must not silently grant or clear a paid plan.
+      console.error(
+        `[stripe-webhook] ${event.type} (${event.id}): no tier matches subscription ${plan.subscriptionId}; check STRIPE_PRO_PRICE_ID and STRIPE_TEAM_PRICE_ID`,
+      );
+      const { status } = failureResponse('unmappable');
+      return text('unrecognised price', { status });
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update(updateForPlan(plan, event.created))
+      .eq('id', account.id);
+
+    if (error) throw new Error(`users update failed: ${error.message}`);
+
+    console.log(
+      `[stripe-webhook] ${event.type} (${event.id}): ${plan.kind} ${account.id} -> ${plan.kind === 'downgrade' ? 'free' : plan.tier}`,
+    );
+    return text('ok', { status: 200 });
+  } catch (err) {
+    // Report the failure so Stripe redelivers. Swallowing this is how a paid
+    // upgrade gets lost for good when the database is briefly unavailable.
+    console.error(`[stripe-webhook] ${event.type} (${event.id}) failed, asking Stripe to retry:`, err.message);
+    const { status } = failureResponse('transient');
+    return text('processing failed', { status });
+  }
+}
+
+/** Find the account by user id, then subscription, then customer. */
+async function findAccount(supabase, plan) {
+  const select = 'id, stripe_event_applied_at';
+
+  if (plan.userId) {
+    const { data } = await supabase.from('users').select(select).eq('id', plan.userId).maybeSingle();
+    if (data) return data;
+  }
+  if (plan.subscriptionId) {
+    const { data } = await supabase.from('users').select(select).eq('stripe_subscription_id', plan.subscriptionId).maybeSingle();
+    if (data) return data;
+  }
+  if (plan.customerId) {
+    const { data } = await supabase.from('users').select(select).eq('stripe_customer_id', plan.customerId).maybeSingle();
+    if (data) return data;
+  }
+  return null;
 }

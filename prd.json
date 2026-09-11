@@ -2560,6 +2560,24 @@
       "priority": 179,
       "passes": true,
       "notes": "POST /v1/signals ran `new Date(signal.ts).toISOString()` on a `ts` validated only as `{ type: 'integer' }` — no bounds. Two failures followed. (1) new Date(1e20).toISOString() raises RangeError, so a single out-of-range value threw inside the loop and returned 500 for the entire batch. (2) A timestamp in epoch seconds — what time.time(), Go's Unix() and PHP's time() return — became January 1970, so the signal was accepted with a 202 and then sat outside every dashboard window forever: the integration looks healthy and the API never appears. Both official SDKs (sdk-js, sdk-python) send milliseconds correctly, so this bites third-party integrations and hostile input. New services/ingest/src/lib/signal-time.js normalises units, bounds the window (5 min future skew, 7 day age), and never throws; 18 tests including a hostile-input sweep. The route now counts what it drops and returns { queued, rejected, skipped } so a wholly-discarded batch cannot look like a success. Found alongside: /docs advertised POST /v1/keys (real route /v1/api-keys) and GET /v1/reports/sla (real route /api-status/{slug}/sla) — both 404, both the documented way to use paid features. Fixed and guarded by a test that matches documented paths against real SvelteKit and Fastify routes segment-wise. Also documented the signal wire format, which was described nowhere, and gave services/ingest an npm test script."
+    },
+    {
+      "id": "US-180",
+      "title": "Stop losing paid upgrades when the Stripe webhook fails",
+      "description": "As a customer who has just paid, I want my account to reach the tier I bought even if something goes wrong while the webhook is processed, so that a transient failure does not leave me on the free plan forever.",
+      "acceptanceCriteria": [
+        "A failed database write returns 5xx so Stripe redelivers the event",
+        "Events that can never succeed on retry (unhandled type, unmappable customer) still return 2xx",
+        "An event older than the one already applied to an account is skipped",
+        "A cancellation followed by a late-arriving earlier update does not restore the paid tier",
+        "An unrecognised price never silently grants a paid tier from the webhook",
+        "A subscription carrying both prices resolves to the higher tier",
+        "Decision logic is pure and unit-tested; the route keeps signature checking and IO",
+        "The reconciliation paths share the same tier matching as the webhook"
+      ],
+      "priority": 180,
+      "passes": true,
+      "notes": "The webhook wrapped all processing in try/catch and returned 200 on error, with the comment 'Still return 200 to prevent Stripe from retrying'. That inverts the recovery mechanism: if Supabase was briefly unreachable while checkout.session.completed arrived, the customer had paid, the upgrade was lost, and Stripe was told the event was handled so it never retried — a paying customer stranded on the free tier permanently, with only a log line. Now transient failures return 500 and are redelivered, while genuinely unprocessable events still return 200 so they are not retried forever. Second bug: no ordering protection. Stripe guarantees no ordering and redelivers on retry, so a subscription.updated generated before a cancellation can arrive after it and hand a cancelled customer their paid tier back for free. Migration 029 adds users.stripe_event_applied_at; every write stamps the event's own created time and older events are skipped. Third, found by a test while writing this: tierFromPrices returned on the first matching item, so a subscription carrying both the pro and team price resolved to whichever was listed first rather than the higher tier — the same bug existed in getTierFromSubscription, used by the checkout-success and dashboard reconciliation paths, which now delegate to the tested module. The webhook also no longer accepts an unrecognised price as 'pro'. New lib/server/stripe-webhook-policy.js with 34 tests, mutation-checked against all three bugs."
     }
   ]
 }

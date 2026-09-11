@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { getEnv } from '$lib/supabase-server.js';
+import { tierFromPrices, periodEndIso } from '$lib/server/stripe-webhook-policy.js';
 
 let _stripe;
 let _stripeKey;
@@ -22,28 +23,28 @@ export function getPriceId(tier) {
   return null;
 }
 
-/** Determine tier from a Stripe subscription's price ID */
+/**
+ * Determine tier from a Stripe subscription's price ID.
+ *
+ * Delegates the matching to the tested policy module so the reconciliation
+ * paths here and the webhook cannot disagree. Keeps the historical 'pro'
+ * fallback for these callers, which are user-initiated syncs where refusing to
+ * name a tier would leave a paying customer with none.
+ */
 export function getTierFromSubscription(subscription) {
-  // Match the price ID against env vars first (most reliable — metadata can be stale after plan changes)
-  const proPriceId = getEnv('STRIPE_PRO_PRICE_ID');
-  const teamPriceId = getEnv('STRIPE_TEAM_PRICE_ID');
+  const matched = tierFromPrices(subscription, {
+    proPriceId: getEnv('STRIPE_PRO_PRICE_ID'),
+    teamPriceId: getEnv('STRIPE_TEAM_PRICE_ID'),
+  });
+  if (matched) return matched;
 
-  const items = subscription?.items?.data || [];
-  for (const item of items) {
-    const priceId = item.price?.id || item.plan?.id;
-    if (priceId === teamPriceId) return 'team';
-    if (priceId === proPriceId) return 'pro';
-  }
-
-  // Fall back to metadata (may be stale if plan was changed via billing portal)
+  // Metadata may be stale if the plan was changed via the billing portal.
   if (subscription?.metadata?.tier) return subscription.metadata.tier;
 
-  return 'pro'; // final fallback
+  return 'pro';
 }
 
 /** Safely convert a Stripe Unix timestamp to ISO string, or null */
 export function stripePeriodEnd(subscription) {
-  const ts = subscription?.current_period_end;
-  if (!ts) return null;
-  return new Date(ts * 1000).toISOString();
+  return periodEndIso(subscription);
 }
