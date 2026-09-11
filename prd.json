@@ -2578,6 +2578,25 @@
       "priority": 180,
       "passes": true,
       "notes": "The webhook wrapped all processing in try/catch and returned 200 on error, with the comment 'Still return 200 to prevent Stripe from retrying'. That inverts the recovery mechanism: if Supabase was briefly unreachable while checkout.session.completed arrived, the customer had paid, the upgrade was lost, and Stripe was told the event was handled so it never retried — a paying customer stranded on the free tier permanently, with only a log line. Now transient failures return 500 and are redelivered, while genuinely unprocessable events still return 200 so they are not retried forever. Second bug: no ordering protection. Stripe guarantees no ordering and redelivers on retry, so a subscription.updated generated before a cancellation can arrive after it and hand a cancelled customer their paid tier back for free. Migration 029 adds users.stripe_event_applied_at; every write stamps the event's own created time and older events are skipped. Third, found by a test while writing this: tierFromPrices returned on the first matching item, so a subscription carrying both the pro and team price resolved to whichever was listed first rather than the higher tier — the same bug existed in getTierFromSubscription, used by the checkout-success and dashboard reconciliation paths, which now delegate to the tested module. The webhook also no longer accepts an unrecognised price as 'pro'. New lib/server/stripe-webhook-policy.js with 34 tests, mutation-checked against all three bugs."
+    },
+    {
+      "id": "US-181",
+      "title": "Stop silently losing outage alerts",
+      "description": "As someone who subscribed to alerts for an API, I want to be told when it goes down even if the worker restarts or my mail server is briefly unreachable, so that the one thing the product promises actually happens.",
+      "acceptanceCriteria": [
+        "A job is claimed onto a processing list, not deleted, until every subscriber is settled",
+        "A crash or redeploy mid-batch loses no alerts; the next drain reclaims them",
+        "A failed send requeues the job instead of being logged and forgotten",
+        "A retry does not re-notify subscribers who already received the alert",
+        "A job that keeps failing is dead-lettered after a fixed number of attempts, not retried forever",
+        "A requeued job waits for the next drain rather than burning its attempts in one pass",
+        "An unparseable job is discarded without blocking the queue behind it",
+        "Two overlapping drains cannot double-process",
+        "The queue protocol is testable without a mail transport"
+      ],
+      "priority": 181,
+      "passes": true,
+      "notes": "drainAlerts read a batch with LRANGE and deleted it with LTRIM in the same pipeline — before a single alert had been sent. Everything after that point was unrecoverable: a crash, a redeploy, or an SMTP timeout part-way through fifty jobs and those alerts were gone, with no retry and no dead letter. Per-subscriber send failures were caught and logged, then dropped. For a product whose whole promise is telling you an API is down, this was the core failure mode, and it was silent. Notably signal-drain.js already re-queued on failure, so the pattern was understood — just not applied to the higher-stakes path. Replaced with claim-then-acknowledge: LMOVE onto alerts:processing, removed only once every subscriber is sent or skipped, with anything stranded in processing reclaimed at the start of the next drain. Failed jobs are requeued with an attempt counter and dead-lettered to alerts:dead after MAX_ATTEMPTS. alert_log already made redelivery safe, so a retry skips subscribers already notified. Requeues are deferred to the end of a pass — a first cut retried within the same drain and burned every attempt in seconds, which the tests caught. Also caught by tests: an off-by-one that gave 6 attempts for MAX_ATTEMPTS=5. Queue mechanics moved into alert-queue.js so they are testable without nodemailer; 34 tests including a fake Redis exercising crash recovery, ordering, dead-lettering and dedup. Mutation-checked against the original destructive read, against removing reclaim, and against in-loop requeueing. Also added: a re-entrancy guard so two overlapping drains cannot double-process, an explicit failure result when the subscriber query itself errors (previously an early return that silently acknowledged the job), and severity-threshold filtering extracted and tested — an unrecognised severity now passes rather than silencing the alert."
     }
   ]
 }

@@ -1,8 +1,11 @@
 import nodemailer from 'nodemailer';
 import { sendPushForIncident } from './push-sender.js';
+import { runDrain, passesThreshold } from './alert-queue.js';
 
-const ALERTS_QUEUE = 'alerts:pending';
 const BATCH_SIZE = 50;
+
+/** Guards against two drains overlapping if one runs longer than the interval. */
+let _draining = false;
 
 let _transporter = null;
 
@@ -22,30 +25,31 @@ function getTransporter() {
 
 /**
  * Drains the alerts:pending queue and sends notifications.
+ *
+ * The queue mechanics live in alert-queue.js: a job is claimed onto a
+ * processing list and only removed once delivered, so a crash mid-batch costs
+ * a retry rather than the alerts.
  */
 export async function drainAlerts(redis, supabase) {
-  const pipeline = redis.pipeline();
-  pipeline.lrange(ALERTS_QUEUE, 0, BATCH_SIZE - 1);
-  pipeline.ltrim(ALERTS_QUEUE, BATCH_SIZE, -1);
-  const results = await pipeline.exec();
-
-  const rawItems = results[0][1];
-  if (!rawItems || rawItems.length === 0) return;
-
-  for (const raw of rawItems) {
-    let alertJob;
-    try {
-      alertJob = JSON.parse(raw);
-    } catch {
-      continue;
-    }
-
-    await processAlert(supabase, alertJob);
+  if (_draining) return;
+  _draining = true;
+  try {
+    await runDrain(redis, {
+      batchSize: BATCH_SIZE,
+      processJob: job => processAlert(supabase, job),
+    });
+  } finally {
+    _draining = false;
   }
 }
 
+/**
+ * Work through every subscriber for one incident.
+ * Returns an outcome per subscriber: 'sent', 'skipped' or 'failed'.
+ */
 async function processAlert(supabase, alertJob) {
-  const { incident_id, api_slug, api_name, severity, title, regions, event_type } = alertJob;
+  const { incident_id, api_slug, api_name, severity, title, event_type } = alertJob;
+  const results = [];
 
   // Browser push first: it has its own subscriber table, so it must not be
   // skipped by the "no email/webhook subscribers" early return below.
@@ -67,53 +71,76 @@ async function processAlert(supabase, alertJob) {
     .eq('api_id', alertJob.api_id)
     .eq('verified', true);
 
-  if (error || !subs || subs.length === 0) return;
+  if (error) {
+    // Could not read the subscriber list — the job is not finished with.
+    console.error('[alerts] Failed to load subscribers:', error.message);
+    return ['failed'];
+  }
+  if (!subs || subs.length === 0) return results;
 
-  const SEVERITY_RANK = { minor: 1, major: 2, critical: 3 };
+  const senders = {
+    email: sendEmailAlert,
+    slack: sendSlackAlert,
+    pagerduty: sendPagerDutyAlert,
+    discord: sendDiscordAlert,
+    teams: sendTeamsAlert,
+    webhook: sendWebhookAlert,
+  };
 
   for (const sub of subs) {
-    // Check min_severity threshold — skip if incident severity is below the subscriber's minimum.
-    // Resolution alerts (event_type === 'resolved') always pass through.
-    if (
-      sub.threshold_config?.min_severity &&
-      event_type !== 'resolved' &&
-      SEVERITY_RANK[severity] < SEVERITY_RANK[sub.threshold_config.min_severity]
-    ) {
+    if (!passesThreshold(sub, { severity, eventType: event_type })) {
+      results.push('skipped');
       continue;
     }
-    // Dedup check: already sent this alert?
-    const { data: existing } = await supabase
+
+    // alert_log is what makes a retry safe: a subscriber already delivered to
+    // is skipped rather than told twice.
+    const { data: existing, error: logErr } = await supabase
       .from('alert_log')
       .select('id')
       .eq('incident_id', incident_id)
       .eq('subscription_id', sub.id)
       .limit(1);
 
-    if (existing && existing.length > 0) continue;
+    if (logErr) {
+      console.error('[alerts] Dedup lookup failed:', logErr.message);
+      results.push('failed');
+      continue;
+    }
+    if (existing && existing.length > 0) {
+      results.push('skipped');
+      continue;
+    }
+
+    const send = senders[sub.channel];
+    if (!send) {
+      console.error(`[alerts] No sender for channel "${sub.channel}"; skipping`);
+      results.push('skipped');
+      continue;
+    }
 
     try {
-      if (sub.channel === 'email') {
-        await sendEmailAlert(sub, alertJob);
-      } else if (sub.channel === 'slack') {
-        await sendSlackAlert(sub, alertJob);
-      } else if (sub.channel === 'pagerduty') {
-        await sendPagerDutyAlert(sub, alertJob);
-      } else if (sub.channel === 'discord') {
-        await sendDiscordAlert(sub, alertJob);
-      } else if (sub.channel === 'teams') {
-        await sendTeamsAlert(sub, alertJob);
-      } else if (sub.channel === 'webhook') {
-        await sendWebhookAlert(sub, alertJob);
-      }
-      // Log that we sent it
-      await supabase.from('alert_log').insert({
-        incident_id,
-        subscription_id: sub.id,
-      });
+      await send(sub, alertJob);
     } catch (err) {
-      console.error(`[alerts] Failed to send ${sub.channel} alert:`, err.message);
+      // Reported, not swallowed: the job is requeued and tried again.
+      console.error(`[alerts] Failed to send ${sub.channel} alert for ${api_slug}:`, err.message);
+      results.push('failed');
+      continue;
     }
+
+    const { error: insertErr } = await supabase
+      .from('alert_log')
+      .insert({ incident_id, subscription_id: sub.id });
+
+    if (insertErr) {
+      // Delivered but unrecorded. Do not retry the job on this alone — that
+      // would send the alert again; the log entry is best effort.
+      console.error('[alerts] Sent but failed to record in alert_log:', insertErr.message);
+    }
+    results.push('sent');
   }
+
+  return results;
 }
 
 async function sendEmailAlert(sub, alertJob) {

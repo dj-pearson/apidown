@@ -502,3 +502,43 @@ US-180: DONE - The Stripe webhook could lose a paid upgrade permanently, and cou
 - Fail-open `count >= maxKeys` in ingest api-keys.js.
 - Still unexamined: alert-worker.js, synthetic-probe.js, statuspage-scraper.js,
   weekly-digest-worker.js.
+
+-- Phase 25: Platform Improvement Loop (iteration 12/15) --
+US-181: DONE - The alert worker was silently losing outage alerts. drainAlerts read a batch with
+  LRANGE and deleted it with LTRIM in the SAME pipeline — before a single alert had been sent.
+  From that point on nothing was recoverable: a crash, a redeploy, or an SMTP timeout part-way
+  through fifty jobs and those alerts were simply gone. No retry, no dead letter. Per-subscriber
+  send failures were caught, logged and dropped, so one transient SMTP error meant that
+  subscriber never learned about the outage. For a product whose entire promise is telling you
+  an API is down, this was the core failure mode — and it was completely silent.
+  Telling detail: signal-drain.js already re-queues on failure ("Re-queue failed signals so they
+  aren't lost"), so the risk was understood; it just was not applied to the higher-stakes path.
+  Replaced with claim-then-acknowledge: LMOVE onto alerts:processing, removed only once every
+  subscriber is settled, and anything left stranded there reclaimed at the start of the next
+  drain (safe because alert_log already dedupes delivery). Failures requeue with an attempt
+  counter and dead-letter to alerts:dead after MAX_ATTEMPTS rather than retrying forever.
+  Two bugs in my own first cut, both caught by the tests I wrote:
+   - requeueing inside the loop let the same drain immediately re-claim the job and burn every
+     attempt in one pass; requeues are now deferred to the end of the drain.
+   - an off-by-one gave 6 delivery attempts for MAX_ATTEMPTS = 5.
+  Queue mechanics moved into alert-queue.js so the protocol is testable without nodemailer —
+  34 tests with a fake Redis covering crash recovery, FIFO ordering, batch limits, dead-lettering
+  and dedup. Mutation-checked against the original destructive read, against removing reclaim,
+  and against in-loop requeueing.
+  Also fixed while in there: a failing subscriber query used to `return` early, silently
+  acknowledging the job — it now reports failure and retries; a re-entrancy guard prevents two
+  overlapping drains double-processing; and severity-threshold filtering was extracted and
+  tested, where an unrecognised severity now lets the alert through rather than silencing it.
+  Frontend 257, ingest 18, worker 66 — all green.
+
+== Notes for follow-up ==
+- docker-compose runs redis with `--maxmemory-policy allkeys-lru`, so under memory pressure
+  Redis may EVICT the alerts:pending / alerts:processing lists outright. The claim protocol
+  cannot protect against that. A `noeviction` policy, or a separate Redis db for queues, is the
+  real fix — worth its own look.
+- packages/sdk-js and packages/cli remain untested (sdk-python has tests).
+- database/migrations unvalidated (30 files now, no ordering/idempotency check).
+- maskAuthValue() reveals secrets of 8 chars or fewer; probe-crypto.js duplicated in
+  worker+ingest could join the shared-modules drift test.
+- Fail-open `count >= maxKeys` in ingest api-keys.js.
+- Still unexamined: synthetic-probe.js, statuspage-scraper.js, weekly-digest-worker.js.
