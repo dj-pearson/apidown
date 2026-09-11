@@ -1,6 +1,9 @@
 <script>
   import { page } from '$app/state';
   import SEO from '$lib/components/SEO.svelte';
+  import { categoryLabel } from '$lib/categories.js';
+
+  let { data } = $props();
 
   const comparisonRows = [
     {
@@ -152,6 +155,26 @@
     </div>
   </section>
 
+  {#if data.comparisonGroups?.length}
+    <section class="h2h-section" aria-labelledby="h2h-heading">
+      <h2 id="h2h-heading">Head-to-Head: API vs API</h2>
+      <p class="h2h-subtitle">
+        Independent, side-by-side reliability: uptime, latency, incident count and
+        resolution time for two APIs in the same category.
+      </p>
+      {#each data.comparisonGroups as group}
+        <div class="h2h-group">
+          <h3>{categoryLabel(group.category)}</h3>
+          <ul class="h2h-list">
+            {#each group.comparisons as c}
+              <li><a href={c.path}>{c.a.name} <span class="h2h-vs">vs</span> {c.b.name}</a></li>
+            {/each}
+          </ul>
+        </div>
+      {/each}
+    </section>
+  {/if}
+
   <section class="cta-section" aria-labelledby="cta-heading">
     <h2 id="cta-heading">Stop Relying on Vendor Self-Reports</h2>
     <p>Join thousands of developers who trust crowd-sourced monitoring for real-time, independent API status.</p>
@@ -160,6 +183,69 @@
 </div>
 
 <style>
+  /* Head-to-head directory */
+  .h2h-section {
+    margin-bottom: 3rem;
+  }
+
+  .h2h-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .h2h-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    max-width: 60ch;
+  }
+
+  .h2h-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .h2h-group h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .h2h-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .h2h-list a {
+    display: inline-block;
+    padding: 0.4rem 0.85rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+
+  .h2h-list a:hover,
+  .h2h-list a:focus-visible {
+    border-color: var(--color-primary);
+  }
+
+  .h2h-vs {
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+
   .compare-page {
     --color-bg: #0F172A;
     --color-surface: #1E293B;

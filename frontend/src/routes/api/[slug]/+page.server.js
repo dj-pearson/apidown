@@ -207,6 +207,21 @@ export async function load({ params, cookies, url }) {
   const metrics = metricsFromRaw({ uptimePct: uptimePercent, latencyData: latencyData, incidents: uptimeIncidents });
   const reliabilityScore = computeReliabilityScore(metrics);
 
+  // Head-to-head comparisons against same-category peers. Unlike `alternatives`
+  // below, these are offered for every API regardless of grade — the point is
+  // discovery of the /compare pages, not a warning.
+  let headToHead = [];
+  if (api.category) {
+    const { peersForApi } = await import('$lib/compare-pairs.js');
+    const { data: categoryApis } = await supabaseAdmin
+      .from('apis')
+      .select('slug, name, logo_url, category, current_status, owner_id')
+      .eq('category', api.category)
+      .is('owner_id', null)
+      .order('name');
+    headToHead = peersForApi(api.slug, categoryApis || [], 4);
+  }
+
   // If grade is C or below, suggest alternatives from same category
   let alternatives = [];
   if (reliabilityScore.score < 77 && api.category) {
@@ -283,6 +298,7 @@ export async function load({ params, cookies, url }) {
     })),
     reliabilityScore,
     alternatives,
+    headToHead,
     ingestUrl: getEnv('PUBLIC_INGEST_URL') || getEnv('INGEST_URL') || 'https://ingest.apidown.net',
   };
 }

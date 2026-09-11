@@ -8,6 +8,7 @@
   import SEO from "$lib/components/SEO.svelte";
   import ReportFeed from "$lib/components/ReportFeed.svelte";
   import PushToggle from "$lib/components/PushToggle.svelte";
+  import { categoryLabel } from "$lib/categories.js";
 
   let isNavigating = $derived(!!$navigating);
 
@@ -709,6 +710,25 @@
     {/each}
   {/if}
 </section>
+
+{#if data.headToHead && data.headToHead.length > 0}
+<section class="h2h-section">
+  <h2>Compare {api.name} head-to-head</h2>
+  <p class="h2h-desc">Uptime, latency and incident counts side by side against other {categoryLabel(api.category)} APIs.</p>
+  <ul class="h2h-list">
+    {#each data.headToHead as peer}
+      <li>
+        <a href={peer.comparePath} class="h2h-link">
+          {#if peer.logo_url}
+            <img src={peer.logo_url} alt="" width="18" height="18" class="h2h-logo" />
+          {/if}
+          <span>{api.name} <span class="h2h-vs">vs</span> {peer.name}</span>
+        </a>
+      </li>
+    {/each}
+  </ul>
+</section>
+{/if}
 
 {#if data.alternatives && data.alternatives.length > 0}
 <section class="alternatives-section">
@@ -1474,6 +1494,58 @@
   }
 
   /* Alternatives Section */
+  .h2h-section {
+    margin-bottom: 2rem;
+  }
+
+  .h2h-section h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .h2h-desc {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .h2h-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .h2h-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.9rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+
+  .h2h-link:hover,
+  .h2h-link:focus-visible {
+    border-color: var(--color-primary);
+  }
+
+  .h2h-logo { border-radius: 4px; }
+
+  .h2h-vs {
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+
   .alternatives-section {
     margin-bottom: 2rem;
   }

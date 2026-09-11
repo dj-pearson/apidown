@@ -1,6 +1,7 @@
 import { getSupabaseAdmin, setPlatform } from "$lib/supabase-server.js";
 import { recentMonthKeys } from "$lib/api-history.js";
 import { recentWeekKeys } from "$lib/weekly-digest.js";
+import { allComparePairs } from "$lib/compare-pairs.js";
 
 export async function GET({ platform }) {
   setPlatform(platform);
@@ -12,7 +13,7 @@ export async function GET({ platform }) {
     const supabase = getSupabaseAdmin();
 
     const [apisRes, incRes, spRes] = await Promise.all([
-      supabase.from("apis").select("slug, category, current_status").order("name"),
+      supabase.from("apis").select("slug, name, category, current_status, owner_id").order("name"),
       supabase.from("incidents").select("id, started_at, resolved_at, status").order("started_at", { ascending: false }).limit(200),
       supabase.from("users").select("public_status_slug").eq("public_status_enabled", true).not("public_status_slug", "is", null),
     ]);
@@ -70,6 +71,12 @@ export async function GET({ platform }) {
   // Category latency race pages  /category/[category]
   for (const c of [...new Set(apis.map(a => a.category).filter(Boolean))]) {
     urls.push(urlEntry(`${base}/category/${c}`, now, "hourly", "0.8"));
+  }
+
+  // Head-to-head comparisons  /compare/[a]/vs/[b] — canonical (ascending) order
+  // only, capped per category so the sitemap cannot grow combinatorially.
+  for (const [a, b] of allComparePairs(apis, { perCategory: 15 })) {
+    urls.push(urlEntry(`${base}/compare/${a}/vs/${b}`, now, "daily", "0.6"));
   }
 
   // Public status pages  /status/[slug]

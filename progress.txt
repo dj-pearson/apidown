@@ -193,3 +193,20 @@ US-167: DONE - Per-user digest actually sends now (was composing email and only 
 US-170: DONE - Test suite via `npm test` (Node built-in runner, no new deps): 75 tests over api-history, weekly-digest, reliability-score, and palette-search. Mutation-checked to confirm the tests actually fail when the logic breaks
 US-168: DONE - /weekly wired into footer, sitemap (+12 week archives), and command palette; per-API outage-history entries added to the palette. Fixed a bug in the first cut where "stripe history" matched nothing; ranking logic extracted to lib/palette-search.js so it is testable
 US-169: DONE - Homepage leads with the live global verdict and affected-API links above the grid; hero CTAs now point at My Stack and Live Radar instead of sign-up first
+
+-- Phase 25: Platform Improvement Loop (iteration 1/15) --
+US-171: DONE - Head-to-head comparison pages made discoverable. /compare/[a]/vs/[b] was fully
+  built but orphaned — zero internal links, absent from sitemap.xml, and both slug orderings
+  served indexable duplicate content. New lib/compare-pairs.js is the single source of truth for
+  pairing: canonical ascending-slug URLs, 301 redirect from the reverse order, same-slug ->
+  /api/[slug], same-category peer ranking that surfaces the peer whose status differs, and a
+  per-category cap so sitemap entries cannot grow combinatorially. Wired into sitemap.xml, the
+  API detail page ("Compare X head-to-head", now for every API rather than only low grades), the
+  /compare hub (new +page.server.js, category-grouped directory) and the comparison page itself
+  ("More head-to-heads"). 22 new tests, mutation-checked against three seeded regressions;
+  97 tests pass, build clean.
+
+== Notes for follow-up ==
+- Pre-existing build warning, untouched: src/lib/components/StatusCard.svelte:39 nests an <a>
+  inside an <a>, which the browser rewrites on hydration (hydration_mismatch risk). Candidate
+  for the next loop iteration.

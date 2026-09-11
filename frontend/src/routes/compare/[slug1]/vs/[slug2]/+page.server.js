@@ -1,8 +1,19 @@
 import { getSupabaseAdmin } from '$lib/supabase-server.js';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { computeReliabilityScore, metricsFromRaw } from '$lib/reliability-score.js';
+import { isCanonicalOrder, comparePath, peersForApi } from '$lib/compare-pairs.js';
 
 export async function load({ params, setHeaders }) {
+  // The comparison is symmetric, so both slug orders render the same page.
+  // Send the non-canonical order to the one URL the sitemap and every internal
+  // link point at, rather than serving duplicate content on two paths.
+  if (!isCanonicalOrder(params.slug1, params.slug2)) {
+    throw redirect(301, comparePath(params.slug1, params.slug2));
+  }
+  if (params.slug1 === params.slug2) {
+    throw redirect(301, `/api/${params.slug1}`);
+  }
+
   const supabase = getSupabaseAdmin();
   const now = Date.now();
   const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -70,7 +81,28 @@ export async function load({ params, setHeaders }) {
     };
   });
 
+  // Same-category head-to-heads so a visitor (and a crawler) can walk from one
+  // comparison to the next instead of hitting a dead end.
+  const { data: categoryApis } = await supabase
+    .from('apis')
+    .select('slug, name, category, current_status, owner_id')
+    .in('category', [...new Set(apis.map(a => a.category).filter(Boolean))])
+    .is('owner_id', null)
+    .order('name');
+
+  const seen = new Set([comparePath(params.slug1, params.slug2)]);
+  const related = [];
+  for (const api of apis) {
+    for (const peer of peersForApi(api.slug, categoryApis || [], 6)) {
+      if (seen.has(peer.comparePath)) continue;
+      seen.add(peer.comparePath);
+      related.push({ path: peer.comparePath, from: api.name, to: peer.name });
+      if (related.length >= 6) break;
+    }
+    if (related.length >= 6) break;
+  }
+
   setHeaders({ 'Cache-Control': 'public, max-age=300' });
 
-  return { comparisons: results };
+  return { comparisons: results, related };
 }

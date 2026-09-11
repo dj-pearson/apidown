@@ -1206,7 +1206,7 @@
         "Each incident shows: API name, severity badge, title, time ago, and resolution status",
         "Link each incident to its detail page",
         "Show 'View All Incidents' link to /incidents",
-        "Empty state: 'All systems operational \u2014 no recent critical incidents'",
+        "Empty state: 'All systems operational — no recent critical incidents'",
         "Section includes brief SEO copy explaining crowd-sourced detection",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
@@ -1627,7 +1627,7 @@
     },
     {
       "id": "US-102",
-      "title": "Status Page as a Service \u2014 Database schema and migration",
+      "title": "Status Page as a Service — Database schema and migration",
       "description": "As a platform operator, I want a dedicated status_pages table with branding, component toggles, and subscriber support so that the status page feature scales as a standalone product.",
       "acceptanceCriteria": [
         "Migration 022 creates status_pages table with slug, title, description, branding columns, component toggles",
@@ -1643,7 +1643,7 @@
     },
     {
       "id": "US-103",
-      "title": "Status Page as a Service \u2014 Enhanced public page with uptime, latency, incidents",
+      "title": "Status Page as a Service — Enhanced public page with uptime, latency, incidents",
       "description": "As a status page visitor, I want to see uptime bars, latency sparklines, recent incidents, and an overall uptime percentage so that I get a comprehensive view of service health.",
       "acceptanceCriteria": [
         "Public status page at /status/[slug] loads from status_pages table with legacy fallback",
@@ -1662,7 +1662,7 @@
     },
     {
       "id": "US-104",
-      "title": "Status Page as a Service \u2014 Dashboard management UI",
+      "title": "Status Page as a Service — Dashboard management UI",
       "description": "As a Pro/Team user, I want to create, configure, and manage my status pages from the dashboard including branding, component selection, and API assignment.",
       "acceptanceCriteria": [
         "Dashboard shows list of user's status pages with enable/disable status and subscriber count",
@@ -1682,7 +1682,7 @@
     },
     {
       "id": "US-105",
-      "title": "Status Page as a Service \u2014 Subscriber signup and notification endpoint",
+      "title": "Status Page as a Service — Subscriber signup and notification endpoint",
       "description": "As a status page visitor, I want to subscribe to email notifications so that I get alerted when a monitored service has issues.",
       "acceptanceCriteria": [
         "Subscribe form on public status page collects email",
@@ -1698,7 +1698,7 @@
     },
     {
       "id": "US-106",
-      "title": "Status Page as a Service \u2014 Pricing page updates",
+      "title": "Status Page as a Service — Pricing page updates",
       "description": "As a potential customer, I want to see status pages listed as a feature on the pricing page so I understand the value of upgrading.",
       "acceptanceCriteria": [
         "Pro plan card shows '1 public status page' feature",
@@ -1712,7 +1712,7 @@
     },
     {
       "id": "US-110",
-      "title": "Dependency Risk Scores \u2014 API report card generation",
+      "title": "Dependency Risk Scores — API report card generation",
       "description": "As a developer evaluating API vendors, I want to see a reliability score and report card for each API so I can make informed vendor selection decisions.",
       "acceptanceCriteria": [
         "New /api/[slug]/report-card route that generates a risk score",
@@ -1732,7 +1732,7 @@
     },
     {
       "id": "US-111",
-      "title": "Dependency Risk Scores \u2014 Homepage score badges",
+      "title": "Dependency Risk Scores — Homepage score badges",
       "description": "As a homepage visitor, I want to see reliability scores on each API card so I can quickly assess vendor health.",
       "acceptanceCriteria": [
         "Each StatusCard on homepage shows a small letter grade badge",
@@ -1746,7 +1746,7 @@
     },
     {
       "id": "US-112",
-      "title": "Dependency Risk Scores \u2014 Weekly digest email with scores",
+      "title": "Dependency Risk Scores — Weekly digest email with scores",
       "description": "As a subscribed user, I want to receive a weekly email summarizing the reliability scores of my pinned APIs so I stay informed passively.",
       "acceptanceCriteria": [
         "Weekly worker job generates score digests for users with digest_frequency set",
@@ -1761,11 +1761,11 @@
     },
     {
       "id": "US-115",
-      "title": "Postmortem / Incident Intelligence \u2014 Auto-generated postmortem reports",
+      "title": "Postmortem / Incident Intelligence — Auto-generated postmortem reports",
       "description": "As an engineering manager, I want auto-generated postmortem summaries after incidents resolve so I can share impact data with stakeholders without manual effort.",
       "acceptanceCriteria": [
         "New /incidents/[id]/postmortem route auto-generates summary after incident resolves",
-        "Report includes: timeline (detection \u2192 updates \u2192 resolution), total duration, affected regions, peak error rate",
+        "Report includes: timeline (detection → updates → resolution), total duration, affected regions, peak error rate",
         "Shows correlated incidents (other APIs that had issues in overlapping time window)",
         "Displays estimated impact (based on signal volume and error rates)",
         "Exportable as PDF with company branding (Pro+)",
@@ -1774,14 +1774,14 @@
       ],
       "priority": 115,
       "passes": true,
-      "notes": "Postmortem page at /incidents/[id]/postmortem with full timeline, impact metrics (duration, error rate, peak P95, affected regions, user reports), and correlated incidents (\u00b115min window). Linked from incident detail page."
+      "notes": "Postmortem page at /incidents/[id]/postmortem with full timeline, impact metrics (duration, error rate, peak P95, affected regions, user reports), and correlated incidents (±15min window). Linked from incident detail page."
     },
     {
       "id": "US-116",
-      "title": "Postmortem / Incident Intelligence \u2014 Incident correlation engine",
+      "title": "Postmortem / Incident Intelligence — Incident correlation engine",
       "description": "As an SRE, I want to see which APIs experienced issues at the same time as a given incident so I can identify cascading failures.",
       "acceptanceCriteria": [
-        "Correlation algorithm checks for overlapping incidents within \u00b115 minute window",
+        "Correlation algorithm checks for overlapping incidents within ±15 minute window",
         "Incident detail page shows 'Related Incidents' section",
         "Each related incident shows API name, severity, overlap duration",
         "Correlation data included in postmortem reports",
@@ -1789,11 +1789,11 @@
       ],
       "priority": 116,
       "passes": true,
-      "notes": "Correlation engine built into postmortem server load. Queries incidents within \u00b115min of the incident window, excludes same API. Shows correlated incidents with severity, API name, and link."
+      "notes": "Correlation engine built into postmortem server load. Queries incidents within ±15min of the incident window, excludes same API. Shows correlated incidents with severity, API name, and link."
     },
     {
       "id": "US-120",
-      "title": "Embeddable Widgets \u2014 Status badge and mini-widget endpoints",
+      "title": "Embeddable Widgets — Status badge and mini-widget endpoints",
       "description": "As a developer, I want embeddable status widgets beyond the existing SVG badge so I can show live dependency status in my own docs and dashboards.",
       "acceptanceCriteria": [
         "New /api/[slug]/widget.html endpoint renders a self-contained mini status card",
@@ -1812,7 +1812,7 @@
     },
     {
       "id": "US-121",
-      "title": "Embeddable Widgets \u2014 Multi-API dashboard widget",
+      "title": "Embeddable Widgets — Multi-API dashboard widget",
       "description": "As a developer, I want a multi-API status widget I can embed in my internal dashboard showing all my pinned APIs at once.",
       "acceptanceCriteria": [
         "New /status/[slug]/widget.html renders a compact multi-API status card",
@@ -1828,13 +1828,13 @@
     },
     {
       "id": "US-125",
-      "title": "Slack/Teams Bot \u2014 Interactive Slack app with status commands",
+      "title": "Slack/Teams Bot — Interactive Slack app with status commands",
       "description": "As a developer team, I want a Slack bot that responds to /apidown commands so we can check API status without leaving Slack.",
       "acceptanceCriteria": [
         "Slack app with slash command /apidown status [api-name]",
         "Returns current status, uptime %, latest P95 latency in a formatted Slack block",
-        "/apidown stack \u2014 shows status of all pinned APIs",
-        "/apidown subscribe [api] \u2014 adds Slack channel as alert destination",
+        "/apidown stack — shows status of all pinned APIs",
+        "/apidown subscribe [api] — adds Slack channel as alert destination",
         "OAuth2 installation flow for workspaces",
         "Rate limited to prevent abuse (10 commands/min per workspace)",
         "Priced at $9/mo per workspace as separate add-on"
@@ -1845,7 +1845,7 @@
     },
     {
       "id": "US-126",
-      "title": "Slack/Teams Bot \u2014 Daily morning briefing",
+      "title": "Slack/Teams Bot — Daily morning briefing",
       "description": "As a team lead, I want a daily status briefing posted to our Slack channel each morning so the team starts the day informed about API health.",
       "acceptanceCriteria": [
         "Configurable daily briefing time (default 9am in workspace timezone)",
@@ -1860,7 +1860,7 @@
     },
     {
       "id": "US-130",
-      "title": "API Vendor Reports \u2014 Aggregated reliability benchmarking data product",
+      "title": "API Vendor Reports — Aggregated reliability benchmarking data product",
       "description": "As a platform operator, I want to sell anonymized reliability benchmark reports to API vendors so they can compare their real-world performance against competitors.",
       "acceptanceCriteria": [
         "Admin dashboard section for generating vendor reports",
@@ -1878,7 +1878,7 @@
     },
     {
       "id": "US-131",
-      "title": "API Vendor Reports \u2014 Public API reliability leaderboard",
+      "title": "API Vendor Reports — Public API reliability leaderboard",
       "description": "As a developer browsing APIdown, I want to see a category-based reliability leaderboard so I can discover the most reliable APIs in each category.",
       "acceptanceCriteria": [
         "New /leaderboard route showing APIs ranked by reliability score per category",
@@ -1894,7 +1894,7 @@
     },
     {
       "id": "US-135",
-      "title": "Affiliate Marketplace \u2014 API alternative suggestions",
+      "title": "Affiliate Marketplace — API alternative suggestions",
       "description": "As a developer whose API dependency has poor reliability, I want to see suggested alternatives so I can evaluate switching to a more reliable vendor.",
       "acceptanceCriteria": [
         "API detail page shows 'Alternatives' section when API grade is C or below",
@@ -1911,7 +1911,7 @@
     },
     {
       "id": "US-136",
-      "title": "Affiliate Marketplace \u2014 Alternatives comparison page",
+      "title": "Affiliate Marketplace — Alternatives comparison page",
       "description": "As a developer evaluating options, I want a dedicated comparison page where I can compare 2-3 APIs side by side across all reliability metrics.",
       "acceptanceCriteria": [
         "New /compare/[slug1]/vs/[slug2] route for head-to-head comparison",
@@ -2012,7 +2012,7 @@
       ],
       "priority": 145,
       "passes": true,
-      "notes": "Fixed operator precedence: was (response.ok && url.includes(\"/favicon\")) || url.includes(\"/logo\") \u2014 now response.ok && (url.includes(\"/favicon\") || url.includes(\"/logo\"))"
+      "notes": "Fixed operator precedence: was (response.ok && url.includes(\"/favicon\")) || url.includes(\"/logo\") — now response.ok && (url.includes(\"/favicon\") || url.includes(\"/logo\"))"
     },
     {
       "id": "US-146",
@@ -2039,7 +2039,7 @@
         "All 6 Supabase queries in +page.server.js load function run via Promise.all",
         "APIs, incidents, recent incidents, sparkline data, 90d incidents, and 30d latency fetched concurrently",
         "Data processing (sparkline grouping, grade computation) runs after all queries resolve",
-        "Same data returned to frontend \u2014 no behavioral change",
+        "Same data returned to frontend — no behavioral change",
         "Build passes"
       ],
       "priority": 147,
@@ -2108,7 +2108,7 @@
       "acceptanceCriteria": [
         "api/[slug]/+page.server.js uses Promise.all for independent queries",
         "Incidents, latency, uptime, maintenances, subscriber/report counts run concurrently",
-        "Same data returned \u2014 no behavioral change",
+        "Same data returned — no behavioral change",
         "Build passes"
       ],
       "priority": 152,
@@ -2117,7 +2117,7 @@
     },
     {
       "id": "US-153",
-      "title": "My Stack \u2014 personalized API watchlist page",
+      "title": "My Stack — personalized API watchlist page",
       "description": "As a developer who depends on 5-10 specific APIs, I want a page that shows only my stack's live status, so that I bookmark APIdown instead of scanning a 40-API grid every time.",
       "acceptanceCriteria": [
         "New /stack route renders live status for a user-selected subset of APIs",
@@ -2135,7 +2135,7 @@
     },
     {
       "id": "US-154",
-      "title": "Live outage radar \u2014 always-on second-monitor feed",
+      "title": "Live outage radar — always-on second-monitor feed",
       "description": "As an on-call engineer, I want a continuously updating feed of API status changes and incidents, so that I can leave APIdown open on a second monitor during a deploy or an incident.",
       "acceptanceCriteria": [
         "New /live route showing a reverse-chronological feed of status transitions and incident events",
@@ -2182,7 +2182,7 @@
       ],
       "priority": 156,
       "passes": true,
-      "notes": "New push_subscriptions table (migration 027, anonymous by design \u2014 no user_id, GIN index on api_ids, RLS service-role only). /api/push/subscribe GET/POST/DELETE returns the VAPID key and manages this browser endpoint's watch list with endpoint/key/slug/severity validation and a 25-API cap. lib/push.js handles base64url VAPID conversion, support detection, and gesture-only permission requests. PushToggle component on the API detail page and /stack merges rather than replaces the watch list. sw.js gains push + notificationclick handlers that reuse an open tab. worker push-sender.js signs with web-push, filters by per-subscription min_severity, always delivers resolutions, and stamps failed_at on 404/410 so dead endpoints stop being retried; hooked into alert-worker BEFORE the no-email-subscribers early return. Cleanly disabled with a clear UI message when VAPID keys are absent."
+      "notes": "New push_subscriptions table (migration 027, anonymous by design — no user_id, GIN index on api_ids, RLS service-role only). /api/push/subscribe GET/POST/DELETE returns the VAPID key and manages this browser endpoint's watch list with endpoint/key/slug/severity validation and a 25-API cap. lib/push.js handles base64url VAPID conversion, support detection, and gesture-only permission requests. PushToggle component on the API detail page and /stack merges rather than replaces the watch list. sw.js gains push + notificationclick handlers that reuse an open tab. worker push-sender.js signs with web-push, filters by per-subscription min_severity, always delivers resolutions, and stamps failed_at on 404/410 so dead endpoints stop being retried; hooked into alert-worker BEFORE the no-email-subscribers early return. Cleanly disabled with a clear UI message when VAPID keys are absent."
     },
     {
       "id": "US-157",
@@ -2219,7 +2219,7 @@
     },
     {
       "id": "US-159",
-      "title": "SLA receipts \u2014 published SLA vs. measured uptime",
+      "title": "SLA receipts — published SLA vs. measured uptime",
       "description": "As a buyer or a curious developer, I want to see which vendors actually met their published SLA last month, so that I have a reason to share and revisit APIdown.",
       "acceptanceCriteria": [
         "New /sla-receipts route comparing each API's published SLA target against measured 30-day uptime",
@@ -2327,7 +2327,7 @@
       ],
       "priority": 165,
       "passes": true,
-      "notes": "Migration 025 adds error_type (CHECK-constrained) and region (country code only) to manual_reports plus an (api_id, created_at DESC) index. New POST /api/[slug]/report with server-side per-IP-hash hourly cap (salted SHA-256, never a raw IP). ReportFeed component shows the last-hour count, a one-click submit with error-type picker, per-browser duplicate suppression, a 24h reports-per-hour trend, and a recent-report list \u2014 with an explicit caveat that these are unverified visitor reports distinct from measured signals. Replaced the old ingest-service report button, which had no count, type, or feed."
+      "notes": "Migration 025 adds error_type (CHECK-constrained) and region (country code only) to manual_reports plus an (api_id, created_at DESC) index. New POST /api/[slug]/report with server-side per-IP-hash hourly cap (salted SHA-256, never a raw IP). ReportFeed component shows the last-hour count, a one-click submit with error-type picker, per-browser duplicate suppression, a 24h reports-per-hour trend, and a recent-report list — with an explicit caveat that these are unverified visitor reports distinct from measured signals. Replaced the old ingest-service report button, which had no count, type, or feed."
     },
     {
       "id": "US-166",
@@ -2359,7 +2359,7 @@
       ],
       "priority": 167,
       "passes": true,
-      "notes": "weekly-digest-worker.js now actually delivers: nodemailer transport, plain-text plus a new HTML body, and a send per selected user. Idempotency reworked \u2014 migration 028 adds users.last_digest_period/last_digest_sent_at, the worker skips anyone already served this period (daily-YYYY-MM-DD or weekly-YYYY-Www) and stamps only after a successful send, so a failure retries next run. Removed the old bogus alert_log insert that tied a digest to an arbitrary incident and deduplicated nothing. Per-user failures no longer abort the run. Selection and digest content unchanged. Verified end to end with a fake supabase and a captured transport: one send, one skip, one stamp."
+      "notes": "weekly-digest-worker.js now actually delivers: nodemailer transport, plain-text plus a new HTML body, and a send per selected user. Idempotency reworked — migration 028 adds users.last_digest_period/last_digest_sent_at, the worker skips anyone already served this period (daily-YYYY-MM-DD or weekly-YYYY-Www) and stamps only after a successful send, so a failure retries next run. Removed the old bogus alert_log insert that tied a digest to an arbitrary incident and deduplicated nothing. Per-user failures no longer abort the run. Selection and digest content unchanged. Verified end to end with a fake supabase and a captured transport: one send, one skip, one stamp."
     },
     {
       "id": "US-168",
@@ -2391,7 +2391,7 @@
       ],
       "priority": 169,
       "passes": true,
-      "notes": "Homepage now leads with the global verdict \u2014 \"All 30 APIs we track are operational\" or which are down/degraded \u2014 with affected APIs as direct links above the grid. Derived from the existing realtime-updated apis state, so it updates live with no new subscription. Hero CTAs changed from sign-up-first to My Stack and Live Radar, with account creation as secondary. Search, sort, and the category grid are untouched."
+      "notes": "Homepage now leads with the global verdict — \"All 30 APIs we track are operational\" or which are down/degraded — with affected APIs as direct links above the grid. Derived from the existing realtime-updated apis state, so it updates live with no new subscription. Hero CTAs changed from sign-up-first to My Stack and Live Radar, with account creation as secondary. Search, sort, and the category grid are untouched."
     },
     {
       "id": "US-170",
@@ -2407,7 +2407,25 @@
       ],
       "priority": 170,
       "passes": true,
-      "notes": "npm test via the Node built-in runner \u2014 no new dependency. 75 tests across api-history (overlap merging, unresolved incidents, boundary clipping, proration, future months), weekly-digest (ISO week keys at year boundaries, window round-trips, mover noise floor, determinism, quiet weeks, list caps), reliability-score (grade monotonicity, weighting, metric derivation), and palette-search. Mutation-checked: breaking overlap merging fails 2 tests, removing the digest sort tie-break fails the determinism test, reintroducing the palette guard bug fails its regression test. Documented in the README."
+      "notes": "npm test via the Node built-in runner — no new dependency. 75 tests across api-history (overlap merging, unresolved incidents, boundary clipping, proration, future months), weekly-digest (ISO week keys at year boundaries, window round-trips, mover noise floor, determinism, quiet weeks, list caps), reliability-score (grade monotonicity, weighting, metric derivation), and palette-search. Mutation-checked: breaking overlap merging fails 2 tests, removing the digest sort tie-break fails the determinism test, reintroducing the palette guard bug fails its regression test. Documented in the README."
+    },
+    {
+      "id": "US-171",
+      "title": "Make head-to-head comparison pages discoverable",
+      "description": "As a developer choosing between two vendors, I want to find the APIdown head-to-head comparison for them, so that I can see independent uptime and latency side by side instead of trusting two vendor status pages.",
+      "acceptanceCriteria": [
+        "Every pair resolves to one canonical URL (slugs in ascending order); the reverse order 301-redirects instead of serving duplicate content",
+        "Same-slug comparisons redirect to that API's detail page",
+        "Canonical same-category pairs appear in sitemap.xml, capped per category so the sitemap cannot grow combinatorially",
+        "API detail pages link to head-to-heads against same-category peers, for every API rather than only low-graded ones",
+        "The /compare hub lists head-to-heads grouped by category",
+        "Each comparison page links on to related comparisons rather than dead-ending",
+        "Private (owner_id) and uncategorised APIs are never listed publicly",
+        "Pairing logic lives in one tested module so sitemap, API pages and hub cannot disagree"
+      ],
+      "priority": 171,
+      "passes": true,
+      "notes": "The /compare/[slug1]/vs/[slug2] pages were fully built but orphaned: no internal links, absent from the sitemap, and both slug orders indexable as duplicates. New lib/compare-pairs.js (orderPair, comparePath, isCanonicalOrder, peersForApi, allComparePairs, featuredComparisons) is the single source of truth, with 22 tests mutation-checked against three seeded regressions. Peer ranking prefers same-category peers whose current status differs, so the live-interesting comparison leads."
     }
   ]
 }

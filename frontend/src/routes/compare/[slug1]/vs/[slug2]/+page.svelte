@@ -108,6 +108,18 @@
     </div>
   </div>
 
+  <!-- Related head-to-heads -->
+  {#if data.related?.length}
+    <nav class="related" aria-labelledby="related-heading">
+      <h2 id="related-heading">More head-to-heads</h2>
+      <ul>
+        {#each data.related as rel}
+          <li><a href={rel.path}>{rel.from} vs {rel.to}</a></li>
+        {/each}
+      </ul>
+    </nav>
+  {/if}
+
   <!-- Links -->
   <div class="comp-links">
     <a href="/api/{a.api.slug}/report-card">{a.api.name} Full Report</a>
@@ -121,6 +133,47 @@
 </div>
 
 <style>
+  /* Related head-to-heads */
+  .related {
+    margin-bottom: 2rem;
+  }
+
+  .related h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .related ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .related a {
+    display: inline-block;
+    padding: 0.4rem 0.85rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+
+  .related a:hover,
+  .related a:focus-visible {
+    border-color: var(--color-primary);
+  }
+
   .comparison {
     max-width: 750px;
     margin: 0 auto;
