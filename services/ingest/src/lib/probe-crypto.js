@@ -64,14 +64,23 @@ export function decryptProbeAuth(stored) {
 }
 
 /**
- * Create a masked hint for display.
- * "Bearer sk-ant-api03-abc...xyz" → "Bearer sk-ant-...xyz"
+ * Create a masked hint for display, stored in probe_auth_hint and returned by
+ * the API.
+ *
+ * Revealing a fixed number of characters from each end leaks a proportion of
+ * the secret that grows as the secret gets shorter: at eight characters,
+ * "first four plus last four" is the whole thing. So nothing is revealed below
+ * a length where four trailing characters are a small fraction, and the
+ * leading characters — which for most providers are the guessable part
+ * anyway — are never shown.
+ *
+ * "sk-ant-api03-abc123xyz789" → "********z789"
  */
 export function maskAuthValue(headerValue) {
   if (!headerValue) return null;
-  // Show first 12 chars and last 4 chars, mask the middle
-  if (headerValue.length <= 20) {
-    return headerValue.slice(0, 4) + '...' + headerValue.slice(-4);
-  }
-  return headerValue.slice(0, 12) + '...' + headerValue.slice(-4);
+  const value = String(headerValue);
+  const hidden = '*'.repeat(8);
+  // Below this, four trailing characters is too much of the whole.
+  if (value.length < 16) return hidden;
+  return hidden + value.slice(-4);
 }

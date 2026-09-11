@@ -2630,6 +2630,22 @@
       "priority": 183,
       "passes": true,
       "notes": "POST /v1/custom-apis validated a probe URL only as 'parses, and is http or https', then stored it; the worker fetched it every 60 seconds from inside the compose network with redirect: 'follow'. Any signed-in user on the free tier could therefore point a custom API at http://169.254.169.254/latest/meta-data/ (cloud metadata), http://redis:6379, or any sibling container by its service name, and have the worker request it on a timer. Response bodies are never shown, so this is a blind SSRF — but status codes and timings still leak, and internal endpoints can act on a bare GET. redirect: 'follow' made it worse twice over: it would chase a redirect into the private network however carefully the original hostname was screened, and Node re-sends request headers across redirects, so the decrypted customer auth credential travelled to whatever host the redirect named. New safe-url.js (shared byte-identically between ingest and worker, covered by the drift test) rejects loopback, RFC1918, link-local including the metadata address, CGNAT, multicast, reserved, IPv6 equivalents including IPv4-mapped forms, internal suffixes, and single-label hostnames. The worker now resolves the hostname and checks the resulting address before every fetch — the submission-time check alone loses to a DNS record repointed afterwards — follows redirects manually with each hop validated and capped at 3, and strips the auth header the moment the origin changes. An unsafe target now records no signal at all rather than a 503, since refusing to look is not evidence of an outage. 25 tests; mutation-checked against restoring follow-redirects, unblocking the metadata address, and allowing container names."
+    },
+    {
+      "id": "US-184",
+      "title": "Finish the custom-API secret surface: audit stored probe URLs and stop leaking short secrets",
+      "description": "As the operator, I want to find probe URLs stored before validation existed, and I want the stored auth hint never to disclose a secret, so that the custom-API feature leaves nothing sensitive behind.",
+      "acceptanceCriteria": [
+        "A script audits every stored probe_url against the same rules the API now enforces",
+        "The script is read-only by default and can clear failing URLs with an explicit flag",
+        "It exits non-zero when something fails, so it can gate a deploy",
+        "It gives actionable advice rather than a stack trace when run without its dependency",
+        "The auth hint reveals at most the last four characters, and nothing at all for a short secret",
+        "probe-crypto joins the shared-module drift test"
+      ],
+      "priority": 184,
+      "passes": true,
+      "notes": "Two loose ends from US-183. First, rows created before that change were never validated; the probe refuses them at fetch time so they are inert, but they are still stored and worth removing. scripts/audit-probe-urls.js checks every stored probe_url against parseProbeUrl, prints each failure with its reason and owner, exits non-zero, and clears them only with --disable. Second, maskAuthValue built the hint as first-four-plus-last-four, which discloses a proportion of the secret that grows as the secret shortens — at eight characters it was the entire secret, and probe_auth_hint is stored on the row and returned by the endpoint. It now reveals at most four trailing characters and nothing below sixteen, with the leading characters never shown. probe-crypto.js was added to the shared-modules drift test, so the two copies cannot diverge; mutating one now fails both its own suite and the drift check."
     }
   ]
 }

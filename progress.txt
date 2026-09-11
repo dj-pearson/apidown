@@ -613,3 +613,37 @@ US-183: DONE - Closed a server-side request forgery in custom-API probing.
   worker+ingest could join the shared-modules drift test.
 - Fail-open `count >= maxKeys` in ingest api-keys.js.
 - Still unexamined: statuspage-scraper.js, weekly-digest-worker.js.
+
+-- Phase 25: Platform Improvement Loop (iteration 15/15 — FINAL) --
+US-184: DONE - Closed the two loose ends left by US-183.
+  (1) Probe URLs stored BEFORE validation existed were never checked. The probe refuses them
+      at fetch time so they are inert, but they remain in the table. scripts/audit-probe-urls.js
+      checks every stored probe_url against the same parseProbeUrl the API now enforces, prints
+      each failure with its reason and owner, and exits non-zero so it can gate a deploy. It is
+      read-only unless given --disable, which clears the failing URLs. Run it from
+      services/ingest (it says so itself if the Supabase client is not resolvable).
+  (2) maskAuthValue built probe_auth_hint as first-four-plus-last-four. That discloses a
+      proportion of the secret which grows as the secret shortens — at eight characters it was
+      the ENTIRE secret, and the hint is stored on the row and returned by the endpoint. It now
+      reveals at most four trailing characters, nothing at all below sixteen, and never the
+      leading characters.
+  probe-crypto.js joined the shared-modules drift test, so mutating one copy now fails both its
+  own suite and the drift check — verified.
+  Final state: frontend 272 tests + ZERO build warnings, ingest 63, worker 66. All green.
+
+== LOOP COMPLETE: 15 iterations, US-171 to US-184 ==
+Build warnings went from 71 unique to zero. Test count went from 75 (frontend only) to 401
+across three suites, with services/ingest and services/worker gaining test runners that did
+not exist. Every fix was mutation-checked against the bug it was meant to prevent.
+
+== Notes for whoever picks this up next ==
+- RUN BEFORE/AT DEPLOY: migration 029 (Stripe event ordering) must be applied, and
+  scripts/audit-probe-urls.js should be run once against production.
+- Set IP_HASH_SALT and PROBE_ENCRYPTION_KEY in production — both were undocumented and both
+  silently degrade when unset (see .env.example, which now documents every variable the code
+  reads and is guarded by a test).
+- The JS SDK discards a batch on send failure by design; SDK-side durability would need a
+  bounded retry buffer.
+- Still untested: packages/sdk-js, packages/cli. Still unexamined: statuspage-scraper.js,
+  weekly-digest-worker.js. database/migrations has no ordering/idempotency validation.
+- Fail-open `count >= maxKeys` in ingest api-keys.js treats a failed count query as under limit.

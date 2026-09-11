@@ -33,6 +33,13 @@ const PAIRS = [
     a: 'services/ingest/src/lib/safe-url.js',
     b: 'services/worker/src/lib/safe-url.js',
   },
+  {
+    name: 'probe-crypto',
+    a: 'services/ingest/src/lib/probe-crypto.js',
+    b: 'services/worker/src/lib/probe-crypto.js',
+    // These two carry no cross-reference header; they are compared on body alone.
+    crossReferenced: false,
+  },
 ];
 
 describe('duplicated modules stay in step', () => {
@@ -43,12 +50,14 @@ describe('duplicated modules stay in step', () => {
       assert.equal(a, b, `${pair.a} and ${pair.b} have drifted apart`);
     });
 
-    test(`${pair.name}: each copy points at the other`, () => {
-      const a = readFileSync(resolve(repo, pair.a), 'utf8');
-      const b = readFileSync(resolve(repo, pair.b), 'utf8');
-      assert.ok(a.includes(pair.b), `${pair.a} should name its counterpart`);
-      assert.ok(b.includes(pair.a), `${pair.b} should name its counterpart`);
-    });
+    if (pair.crossReferenced !== false) {
+      test(`${pair.name}: each copy points at the other`, () => {
+        const a = readFileSync(resolve(repo, pair.a), 'utf8');
+        const b = readFileSync(resolve(repo, pair.b), 'utf8');
+        assert.ok(a.includes(pair.b), `${pair.a} should name its counterpart`);
+        assert.ok(b.includes(pair.a), `${pair.b} should name its counterpart`);
+      });
+    }
   }
 });
 
