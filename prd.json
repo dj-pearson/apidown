@@ -2542,6 +2542,24 @@
       "priority": 178,
       "passes": true,
       "notes": "Both report endpoints hashed the reporter IP as sha256(ip + (IP_HASH_SALT || 'apidown-salt')). The fallback is a literal published in this repository, and IP_HASH_SALT was absent from .env.example entirely, so no deployment had any way to know it existed — it was almost certainly running on the public constant. With a known salt, SHA-256 over the 2^32 IPv4 space is enumerable in minutes, so manual_reports.reporter_ip was in practice a plaintext log of who reported which outage and when, under a privacy policy that calls the data anonymous and code comments claiming 'not stored as plain IP'. Replaced with HMAC-SHA-256 keyed by the salt, truncated to 128 bits, in one shared module duplicated to both deploy units with a drift test. A missing salt now yields a random per-process key plus a single warning: rate limiting degrades, privacy does not. The env audit this prompted found 17 further undocumented variables including STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and PROBE_ENCRYPTION_KEY (required by probe-crypto.js, which throws without it); all are now documented and guarded by a test. Also confirmed by differential test over 4312 input combinations that the duplicated reliability-score engines agree exactly — no drift there — and fixed a fail-open null count in the ingest rate-limit check."
+    },
+    {
+      "id": "US-179",
+      "title": "Stop signal ingestion silently swallowing or crashing on bad timestamps",
+      "description": "As a developer integrating the SDK, I want a batch that is accepted to actually appear on my dashboard, and a batch with one bad value not to fail entirely, so that a successful response means what it says.",
+      "acceptanceCriteria": [
+        "A timestamp too large for a Date is rejected for that signal, not thrown as a 500 for the whole batch",
+        "Epoch-seconds timestamps are promoted to milliseconds instead of recording 1970",
+        "A promoted-seconds batch logs a warning naming the key prefix",
+        "Timestamps beyond a small clock-skew allowance, or older than the retention window, are rejected",
+        "The response reports queued, rejected and a breakdown when anything is discarded",
+        "The signal wire format including the ts unit is documented on /docs",
+        "Documented endpoints resolve to real routes, guarded by a test",
+        "services/ingest has a test runner"
+      ],
+      "priority": 179,
+      "passes": true,
+      "notes": "POST /v1/signals ran `new Date(signal.ts).toISOString()` on a `ts` validated only as `{ type: 'integer' }` — no bounds. Two failures followed. (1) new Date(1e20).toISOString() raises RangeError, so a single out-of-range value threw inside the loop and returned 500 for the entire batch. (2) A timestamp in epoch seconds — what time.time(), Go's Unix() and PHP's time() return — became January 1970, so the signal was accepted with a 202 and then sat outside every dashboard window forever: the integration looks healthy and the API never appears. Both official SDKs (sdk-js, sdk-python) send milliseconds correctly, so this bites third-party integrations and hostile input. New services/ingest/src/lib/signal-time.js normalises units, bounds the window (5 min future skew, 7 day age), and never throws; 18 tests including a hostile-input sweep. The route now counts what it drops and returns { queued, rejected, skipped } so a wholly-discarded batch cannot look like a success. Found alongside: /docs advertised POST /v1/keys (real route /v1/api-keys) and GET /v1/reports/sla (real route /api-status/{slug}/sla) — both 404, both the documented way to use paid features. Fixed and guarded by a test that matches documented paths against real SvelteKit and Fastify routes segment-wise. Also documented the signal wire format, which was described nowhere, and gave services/ingest an npm test script."
     }
   ]
 }

@@ -277,11 +277,20 @@
       <code>/v1/signals</code>
     </div>
     <p>Submit a batch of monitoring signals. Requires <code>X-APIdown-Key</code> header with your SDK key.</p>
+    <p>
+      Each signal is <code>&#123; domain, status, duration, ts &#125;</code>, where <code>duration</code>
+      is milliseconds and <code>ts</code> is a Unix timestamp <strong>in milliseconds</strong>
+      (<code>Date.now()</code>, or <code>int(time.time() * 1000)</code>) &mdash; a value in seconds is
+      promoted automatically, but send milliseconds. Timestamps more than 5 minutes in the future or
+      older than 7 days are rejected. The response reports what was stored:
+      <code>&#123; queued &#125;</code>, plus <code>rejected</code> and a <code>skipped</code> breakdown
+      when anything in the batch was discarded for an unknown domain or an unusable timestamp.
+    </p>
 
     <h3>Generate API Key</h3>
     <div class="api-endpoint">
       <span class="method post">POST</span>
-      <code>/v1/keys</code>
+      <code>/v1/api-keys</code>
     </div>
     <p>Generate a new SDK key. Requires authentication via bearer token.</p>
 
@@ -302,7 +311,7 @@
     <h3>SLA Report (Pro)</h3>
     <div class="api-endpoint">
       <span class="method get">GET</span>
-      <code>/v1/reports/sla?api_slug=&#123;slug&#125;</code>
+      <code>/api-status/&#123;slug&#125;/sla</code>
     </div>
     <p>Download an SLA compliance report in JSON format. Requires Pro tier.</p>
   </section>

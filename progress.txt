@@ -432,3 +432,36 @@ US-178: DONE - Reporter IP pseudonymisation was not one-way. Both report endpoin
 - maskAuthValue() in probe-crypto.js still reveals a secret of 8 characters or fewer, and
   probe-crypto.js is duplicated byte-identically in worker and ingest — it could join the
   shared-modules drift test.
+
+-- Phase 25: Platform Improvement Loop (iteration 10/15) --
+US-179: DONE - Signal ingestion was silently discarding data and crashing on bad timestamps.
+  POST /v1/signals ran new Date(signal.ts).toISOString() on a `ts` validated only as
+  { type: 'integer' } with no bounds:
+   (1) new Date(1e20).toISOString() raises RangeError, so ONE out-of-range value threw inside
+       the loop and returned 500 for the whole batch.
+   (2) A timestamp in epoch seconds — what time.time(), Go's Unix() and PHP's time() all
+       return — became January 1970. The signal was accepted with a 202 and then sat outside
+       every dashboard window forever: the integration looks healthy, the data never appears.
+  Both official SDKs send milliseconds correctly (checked sdk-js and sdk-python), so this bites
+  third-party integrations and hostile clients. New services/ingest/src/lib/signal-time.js
+  normalises units, bounds the window (5 min future skew, 7 day max age) and never throws —
+  18 tests including a sweep of hostile inputs. The route now counts what it drops and returns
+  { queued, rejected, skipped }, so a batch discarded in full can no longer look like success.
+  Found alongside, while auditing the API docs: /docs advertised POST /v1/keys (real route is
+  /v1/api-keys) and GET /v1/reports/sla (real route is /api-status/{slug}/sla). Both 404, and
+  both were the documented way to use paid features. Fixed, plus a test that matches every
+  documented path against real SvelteKit and Fastify routes segment-wise (so /v1/weekly/latest
+  correctly satisfies /v1/weekly/[week]). Also documented the signal wire format and the ts
+  unit, described nowhere before, and gave services/ingest an npm test script.
+  Frontend 223 tests, ingest 18, worker 32 — all green. Build still zero warnings.
+
+== Notes for follow-up ==
+- packages/sdk-js and packages/cli remain untested (sdk-python has tests).
+- database/migrations unvalidated (no ordering/idempotency check).
+- maskAuthValue() in probe-crypto.js still reveals a secret of 8 characters or fewer; probe-crypto
+  is duplicated byte-identically in worker and ingest and could join the shared-modules drift test.
+- signals.reporter_hash is the first 64 bits of SHA-256 of the customer's plaintext API key.
+  Not currently exposed by any public endpoint, so not urgent, but it derives a stored identifier
+  from a secret; a separate random per-key reporter id would be cleaner.
+- Fail-open pattern seen twice more: `count >= maxKeys` in api-keys.js treats a failed count query
+  as under the limit.

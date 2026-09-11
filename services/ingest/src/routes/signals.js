@@ -1,4 +1,5 @@
 import { resolveDomain } from '../lib/domain-map.js';
+import { normalizeTimestamp } from '../lib/signal-time.js';
 
 const SIGNALS_QUEUE = 'signals:raw';
 
@@ -68,22 +69,34 @@ export async function signalsRoute(fastify) {
     const reporterHash = keyHash.slice(0, 16);
 
     let queued = 0;
+    const skipped = { unknown_domain: 0, bad_timestamp: 0 };
+    let sawSecondsTimestamp = false;
     const pipeline = fastify.redis.pipeline();
+    const now = Date.now();
 
     for (const signal of signals) {
       const apiId = resolveDomain(fastify.domainMap, signal.domain);
-      if (!apiId) continue; // Unknown domain — skip
+      if (!apiId) {
+        skipped.unknown_domain++;
+        continue;
+      }
 
-      const enriched = {
+      // Never let one malformed timestamp throw and take the batch with it.
+      const when = normalizeTimestamp(signal.ts, now);
+      if (!when.ok) {
+        skipped.bad_timestamp++;
+        continue;
+      }
+      if (when.unit === 'seconds') sawSecondsTimestamp = true;
+
+      pipeline.rpush(SIGNALS_QUEUE, JSON.stringify({
         api_id: apiId,
         region,
         status_code: signal.status,
         duration_ms: signal.duration,
-        time: new Date(signal.ts).toISOString(),
+        time: when.iso,
         reporter_hash: reporterHash,
-      };
-
-      pipeline.rpush(SIGNALS_QUEUE, JSON.stringify(enriched));
+      }));
       queued++;
     }
 
@@ -91,7 +104,18 @@ export async function signalsRoute(fastify) {
       await pipeline.exec();
     }
 
-    return reply.code(202).send({ queued });
+    if (sawSecondsTimestamp) {
+      fastify.log.warn(
+        { key_prefix: reporterHash.slice(0, 8) },
+        'Signals arrived with epoch-seconds timestamps and were promoted to milliseconds; the SDK should send milliseconds.',
+      );
+    }
+
+    // Report what was dropped. Returning a bare 202 for a batch that was
+    // entirely discarded is how an integration looks healthy while sending
+    // nothing usable.
+    const rejected = skipped.unknown_domain + skipped.bad_timestamp;
+    return reply.code(202).send(rejected > 0 ? { queued, rejected, skipped } : { queued });
   });
 }
 
