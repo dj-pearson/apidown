@@ -1,4 +1,6 @@
+import { lookup } from 'node:dns/promises';
 import { decryptProbeAuth } from './probe-crypto.js';
+import { parseProbeUrl, isBlockedIp, sameOrigin } from './safe-url.js';
 
 const REGIONS = ['us-east', 'eu-west', 'ap-south'];
 const PROBE_TIMEOUT = 10_000;
@@ -6,6 +8,7 @@ const CONCURRENCY_LIMIT = 10;
 const SDK_SIGNAL_THRESHOLD = 10;
 const SDK_REPORTER_THRESHOLD = 3;
 const API_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const MAX_REDIRECTS = 3;
 
 // Domains that require account-specific subdomains and can't be probed at root
 const UNPROBEABLE_DOMAINS = [
@@ -180,35 +183,12 @@ async function probeApi(api, region) {
   try {
     // Use GET for custom APIs with probe_url (need real status), HEAD for system APIs
     const useGet = !!api.probe_url;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
 
-    let response;
-    try {
-      response = await fetch(url, {
-        method: useGet ? 'GET' : 'HEAD',
-        signal: controller.signal,
-        redirect: 'follow',
-        headers,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
+    let response = await probeFetch(url, useGet ? 'GET' : 'HEAD', headers);
 
     // Fall back to GET if HEAD not allowed
     if (!useGet && response.status === 405) {
-      const controller2 = new AbortController();
-      const timeout2 = setTimeout(() => controller2.abort(), PROBE_TIMEOUT);
-      try {
-        response = await fetch(url, {
-          method: 'GET',
-          signal: controller2.signal,
-          redirect: 'follow',
-          headers,
-        });
-      } finally {
-        clearTimeout(timeout2);
-      }
+      response = await probeFetch(url, 'GET', headers);
     }
 
     const code = response.status;
@@ -220,7 +200,13 @@ async function probeApi(api, region) {
       statusCode = code >= 500 ? 503 : 200;
     }
   } catch (err) {
-    // Timeout, DNS failure, connection refused = down
+    // Timeout, DNS failure, connection refused = down. A URL that fails the
+    // safety check is not evidence about the API, so it is reported as an
+    // error rather than an outage.
+    if (err?.code === 'PROBE_UNSAFE') {
+      console.error(`[probe] Refusing to fetch ${api.slug}: ${err.message}`);
+      return null;
+    }
     statusCode = 503;
   }
 
@@ -234,4 +220,82 @@ async function probeApi(api, region) {
     reporter_hash: reporterHash,
     sdk_version: 'synthetic-v1',
   };
+}
+
+/**
+ * Fetch a probe target with the redirect chain under our own control.
+ *
+ * `redirect: 'follow'` hands two things to whoever controls the endpoint: it
+ * will chase a redirect into the private network however carefully the
+ * original URL was screened, and it re-sends the request headers — including
+ * the customer's decrypted auth credential — to wherever it lands. So each hop
+ * is validated here, and the credential is dropped the moment the origin
+ * changes.
+ */
+async function probeFetch(startUrl, method, headers) {
+  let current = startUrl;
+  let currentHeaders = headers;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    await assertSafeTarget(current);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
+    let response;
+    try {
+      response = await fetch(current, {
+        method,
+        signal: controller.signal,
+        redirect: 'manual',
+        headers: currentHeaders,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const location = response.status >= 300 && response.status < 400
+      ? response.headers.get('location')
+      : null;
+    if (!location) return response;
+
+    const next = new URL(location, current).toString();
+    if (!sameOrigin(current, next)) {
+      // Never carry a credential to another origin.
+      currentHeaders = { 'User-Agent': currentHeaders['User-Agent'] || 'APIdown-Probe/1.0' };
+    }
+    current = next;
+  }
+
+  const err = new Error(`more than ${MAX_REDIRECTS} redirects`);
+  err.code = 'PROBE_UNSAFE';
+  throw err;
+}
+
+/**
+ * Re-check the target immediately before fetching it. The hostname was
+ * screened when the custom API was created, but DNS can be repointed at a
+ * private address afterwards, and a redirect target has never been screened at
+ * all — so the resolved address is what gets checked here.
+ */
+async function assertSafeTarget(target) {
+  const validated = parseProbeUrl(target);
+  if (!validated.ok) {
+    const err = new Error(`${target} — ${validated.reason}`);
+    err.code = 'PROBE_UNSAFE';
+    throw err;
+  }
+
+  let addresses;
+  try {
+    addresses = await lookup(validated.url.hostname, { all: true });
+  } catch {
+    return; // Unresolvable: the fetch will fail on its own and count as down.
+  }
+
+  const blocked = addresses.find(a => isBlockedIp(a.address));
+  if (blocked) {
+    const err = new Error(`${validated.url.hostname} resolves to the private address ${blocked.address}`);
+    err.code = 'PROBE_UNSAFE';
+    throw err;
+  }
 }

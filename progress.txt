@@ -575,3 +575,41 @@ US-182: DONE - Redis was configured to throw away the queues, and a failed queue
   worker+ingest could join the shared-modules drift test.
 - Fail-open `count >= maxKeys` in ingest api-keys.js.
 - Still unexamined: synthetic-probe.js, statuspage-scraper.js, weekly-digest-worker.js.
+
+-- Phase 25: Platform Improvement Loop (iteration 14/15) --
+US-183: DONE - Closed a server-side request forgery in custom-API probing.
+  POST /v1/custom-apis validated the user-supplied probe URL only as "parses, and is http or
+  https", then stored it. The worker fetched it every 60 seconds from inside the compose
+  network with redirect: 'follow'. So any signed-in user, on the free tier, could point a
+  custom API at http://169.254.169.254/latest/meta-data/ (cloud metadata credentials),
+  http://redis:6379, or any sibling container by service name, and have the worker request it
+  on a timer. Response bodies are never returned to the user, so this is a BLIND SSRF — but
+  status codes and timings still leak, and plenty of internal endpoints act on a bare GET.
+  redirect: 'follow' compounded it twice over:
+   - it would chase a redirect into the private network however carefully the original
+     hostname had been screened, and
+   - Node re-sends request headers across redirects, so the DECRYPTED CUSTOMER AUTH CREDENTIAL
+     was forwarded to whatever host the redirect named.
+  New safe-url.js — shared byte-identically between ingest and worker and covered by the
+  existing drift test — rejects loopback, RFC1918, link-local (including the metadata address),
+  CGNAT, multicast, reserved space, the IPv6 equivalents including IPv4-mapped forms, internal
+  suffixes (.local/.internal/.localhost/.home.arpa), and single-label hostnames, which is how
+  containers address each other.
+  The worker now: resolves the hostname and checks the resolved ADDRESS before every fetch (the
+  submission-time check alone loses to a DNS record repointed afterwards); follows redirects
+  manually, validating each hop and capping at 3; and strips the auth header the moment the
+  origin changes. A target that fails the safety check now records no signal at all rather than
+  a 503 — refusing to look is not evidence of an outage.
+  25 tests; mutation-checked against restoring follow-redirects, unblocking the metadata
+  address, and allowing single-label container names. Frontend 271, ingest 56, worker 66.
+
+== Notes for follow-up ==
+- probe_url rows created BEFORE this change were never validated. A one-off audit of existing
+  custom_apis rows against parseProbeUrl would be worth running; the probe now refuses them at
+  fetch time, so they are inert, but they are still stored.
+- packages/sdk-js and packages/cli remain untested (sdk-python has tests).
+- database/migrations unvalidated (30 files, no ordering/idempotency check).
+- maskAuthValue() reveals secrets of 8 chars or fewer; probe-crypto.js duplicated in
+  worker+ingest could join the shared-modules drift test.
+- Fail-open `count >= maxKeys` in ingest api-keys.js.
+- Still unexamined: statuspage-scraper.js, weekly-digest-worker.js.

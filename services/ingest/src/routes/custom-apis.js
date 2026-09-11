@@ -4,6 +4,7 @@
  * DELETE /v1/custom-apis/:id — remove a custom API
  */
 import { encryptProbeAuth, maskAuthValue } from '../lib/probe-crypto.js';
+import { parseProbeUrl } from '../lib/safe-url.js';
 
 const CUSTOM_API_LIMITS = { free: 1, pro: 5, team: Infinity };
 
@@ -34,16 +35,14 @@ export async function customApisRoute(fastify) {
       return reply.code(400).send({ error: 'name and url are required' });
     }
 
-    // Validate URL and extract domain
-    let parsed;
-    try {
-      parsed = new URL(url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        throw new Error('invalid protocol');
-      }
-    } catch {
-      return reply.code(400).send({ error: 'Invalid URL. Must be a valid http/https URL.' });
+    // Validate the URL. This is user-supplied and the worker will fetch it
+    // from inside the private network every minute, so a scheme check alone
+    // would make it a server-side request forgery.
+    const validated = parseProbeUrl(url);
+    if (!validated.ok) {
+      return reply.code(400).send({ error: `Invalid probe URL: ${validated.reason}.` });
     }
+    const parsed = validated.url;
 
     const domain = parsed.hostname;
     const status = expected_status && Number.isInteger(expected_status) ? expected_status : 200;

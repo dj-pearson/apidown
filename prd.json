@@ -2613,6 +2613,23 @@
       "passes": true,
       "priority": 182,
       "notes": "Two compounding silent-loss paths. (1) docker-compose ran Redis with --maxmemory-policy allkeys-lru, but Redis here is used purely as a queue — an audit of every call site found only lmove, lrem, rpush and list pipelines, with no GET/SET/EXPIRE anywhere. So there was nothing cacheable to evict, only accepted-but-undelivered customer data. Worse, memory pressure arrives precisely during a large outage, when many APIs fail at once and the alert queue is longest: the alerts would be dropped at the moment they matter most. This also defeats the claim-then-acknowledge protocol added in US-181, which cannot protect against the queue key itself being evicted. Now noeviction, with maxmemory raised to a configurable 512mb default. (2) ioredis pipeline.exec() resolves to per-command [error, result] pairs and does not reject, so the ingest route's bare `await pipeline.exec()` treated a full or read-only Redis as success and answered 202 for signals that were never queued. It now inspects the result and returns 503; the worker's re-queue path (which the author had added specifically so signals 'aren't lost') had the same unchecked exec and now logs the loss explicitly. New services/ingest/src/lib/redis-results.js with 13 tests, plus a guard test that fails if an evicting policy returns or a queue pipeline is awaited unchecked. Mutation-checked on both. Noted but not changed: the JS SDK splices its batch off the queue before sending and discards on failure — a deliberate client trade-off (never block the host app), which is exactly why the server must be honest about rejected writes."
+    },
+    {
+      "id": "US-183",
+      "title": "Close the SSRF in custom-API synthetic probing",
+      "description": "As the operator of this platform, I want a user-supplied probe URL to be unable to reach anything inside the private network or to carry a customer credential to a third party, so that adding a custom API is not a way to read the infrastructure.",
+      "acceptanceCriteria": [
+        "A probe URL naming loopback, a private range, link-local, CGNAT or a single-label container name is rejected on submission",
+        "Non-http schemes and URLs carrying credentials are rejected",
+        "The resolved IP address is re-checked immediately before every fetch, not only at submission",
+        "Redirects are followed manually, with each hop validated, and capped",
+        "A redirect that changes origin drops the customer's auth header",
+        "A URL that fails the safety check records no signal, rather than a false outage",
+        "The validation module is shared between ingest and worker and cannot drift"
+      ],
+      "priority": 183,
+      "passes": true,
+      "notes": "POST /v1/custom-apis validated a probe URL only as 'parses, and is http or https', then stored it; the worker fetched it every 60 seconds from inside the compose network with redirect: 'follow'. Any signed-in user on the free tier could therefore point a custom API at http://169.254.169.254/latest/meta-data/ (cloud metadata), http://redis:6379, or any sibling container by its service name, and have the worker request it on a timer. Response bodies are never shown, so this is a blind SSRF — but status codes and timings still leak, and internal endpoints can act on a bare GET. redirect: 'follow' made it worse twice over: it would chase a redirect into the private network however carefully the original hostname was screened, and Node re-sends request headers across redirects, so the decrypted customer auth credential travelled to whatever host the redirect named. New safe-url.js (shared byte-identically between ingest and worker, covered by the drift test) rejects loopback, RFC1918, link-local including the metadata address, CGNAT, multicast, reserved, IPv6 equivalents including IPv4-mapped forms, internal suffixes, and single-label hostnames. The worker now resolves the hostname and checks the resulting address before every fetch — the submission-time check alone loses to a DNS record repointed afterwards — follows redirects manually with each hop validated and capped at 3, and strips the auth header the moment the origin changes. An unsafe target now records no signal at all rather than a 503, since refusing to look is not evidence of an outage. 25 tests; mutation-checked against restoring follow-redirects, unblocking the metadata address, and allowing container names."
     }
   ]
 }

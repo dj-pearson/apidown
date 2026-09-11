@@ -81,3 +81,31 @@ describe('queue writes are checked', () => {
     assert.deepEqual(offenders, [], `\n${offenders.join('\n')}\n`);
   });
 });
+
+describe('probe requests cannot be steered into the private network', () => {
+  const read = p => readFileSync(resolve(repo, p), 'utf8');
+
+  test('the probe does not blindly follow redirects', () => {
+    const src = read('services/worker/src/lib/synthetic-probe.js');
+    const directives = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(
+      !/redirect:\s*'follow'/.test(directives),
+      "redirect: 'follow' re-sends the auth header to wherever it lands and can reach inside the network",
+    );
+    assert.match(directives, /redirect:\s*'manual'/);
+  });
+
+  test('the resolved address is re-checked before each fetch', () => {
+    const src = read('services/worker/src/lib/synthetic-probe.js');
+    assert.match(src, /assertSafeTarget/);
+    assert.match(src, /isBlockedIp/, 'a hostname check alone loses to a repointed DNS record');
+  });
+
+  test('the credential is dropped when a redirect changes origin', () => {
+    assert.match(read('services/worker/src/lib/synthetic-probe.js'), /sameOrigin/);
+  });
+
+  test('user-supplied probe URLs are validated when submitted', () => {
+    assert.match(read('services/ingest/src/routes/custom-apis.js'), /parseProbeUrl/);
+  });
+});

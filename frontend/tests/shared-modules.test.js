@@ -28,6 +28,11 @@ const PAIRS = [
     a: 'frontend/src/lib/server/ip-hash.js',
     b: 'services/ingest/src/lib/ip-hash.js',
   },
+  {
+    name: 'safe-url',
+    a: 'services/ingest/src/lib/safe-url.js',
+    b: 'services/worker/src/lib/safe-url.js',
+  },
 ];
 
 describe('duplicated modules stay in step', () => {
