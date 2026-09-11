@@ -542,3 +542,36 @@ US-181: DONE - The alert worker was silently losing outage alerts. drainAlerts r
   worker+ingest could join the shared-modules drift test.
 - Fail-open `count >= maxKeys` in ingest api-keys.js.
 - Still unexamined: synthetic-probe.js, statuspage-scraper.js, weekly-digest-worker.js.
+
+-- Phase 25: Platform Improvement Loop (iteration 13/15) --
+US-182: DONE - Redis was configured to throw away the queues, and a failed queue write was
+  reported as success.
+  (1) docker-compose ran Redis with --maxmemory-policy allkeys-lru. But Redis here is purely a
+      queue: an audit of every call site found only lmove, lrem, rpush and list pipelines — no
+      GET/SET/EXPIRE, no cache keys at all. There was nothing cacheable to evict, only accepted-
+      but-undelivered customer data. And memory pressure arrives exactly during a large outage,
+      when many APIs fail at once and the alert queue is at its longest, so the alerts would be
+      evicted at the moment they matter most. This also silently defeated the claim-then-ack
+      protocol from US-181, which cannot survive the queue key itself being evicted.
+      Now noeviction, with maxmemory a configurable 512mb default.
+  (2) ioredis pipeline.exec() resolves to per-command [error, result] pairs and does NOT reject.
+      The ingest route's bare `await pipeline.exec()` therefore treated a full or read-only
+      Redis as success and answered 202 for signals that were never queued. It now checks the
+      result and returns 503. The worker's re-queue path — added by the author specifically so
+      signals "aren't lost" — had the same unchecked exec, and now logs the loss explicitly.
+  New services/ingest/src/lib/redis-results.js (13 tests) plus a guard test that fails if an
+  evicting policy is reintroduced or a queue pipeline is awaited without inspecting the result.
+  Mutation-checked on both halves.
+  Frontend 265, ingest 31, worker 66 — all green.
+
+== Notes for follow-up ==
+- The JS SDK splices its batch off the local queue BEFORE sending and discards on failure
+  ("Silently discard — never block application flow"). That is a defensible client trade-off,
+  but it means a 503 from ingest still loses that batch. If SDK-side durability is ever wanted,
+  it needs a bounded retry buffer — deliberately not changed here.
+- packages/sdk-js and packages/cli remain untested (sdk-python has tests).
+- database/migrations unvalidated (30 files, no ordering/idempotency check).
+- maskAuthValue() reveals secrets of 8 chars or fewer; probe-crypto.js duplicated in
+  worker+ingest could join the shared-modules drift test.
+- Fail-open `count >= maxKeys` in ingest api-keys.js.
+- Still unexamined: synthetic-probe.js, statuspage-scraper.js, weekly-digest-worker.js.

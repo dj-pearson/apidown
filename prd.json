@@ -2597,6 +2597,22 @@
       "priority": 181,
       "passes": true,
       "notes": "drainAlerts read a batch with LRANGE and deleted it with LTRIM in the same pipeline — before a single alert had been sent. Everything after that point was unrecoverable: a crash, a redeploy, or an SMTP timeout part-way through fifty jobs and those alerts were gone, with no retry and no dead letter. Per-subscriber send failures were caught and logged, then dropped. For a product whose whole promise is telling you an API is down, this was the core failure mode, and it was silent. Notably signal-drain.js already re-queued on failure, so the pattern was understood — just not applied to the higher-stakes path. Replaced with claim-then-acknowledge: LMOVE onto alerts:processing, removed only once every subscriber is sent or skipped, with anything stranded in processing reclaimed at the start of the next drain. Failed jobs are requeued with an attempt counter and dead-lettered to alerts:dead after MAX_ATTEMPTS. alert_log already made redelivery safe, so a retry skips subscribers already notified. Requeues are deferred to the end of a pass — a first cut retried within the same drain and burned every attempt in seconds, which the tests caught. Also caught by tests: an off-by-one that gave 6 attempts for MAX_ATTEMPTS=5. Queue mechanics moved into alert-queue.js so they are testable without nodemailer; 34 tests including a fake Redis exercising crash recovery, ordering, dead-lettering and dedup. Mutation-checked against the original destructive read, against removing reclaim, and against in-loop requeueing. Also added: a re-entrancy guard so two overlapping drains cannot double-process, an explicit failure result when the subscriber query itself errors (previously an early return that silently acknowledged the job), and severity-threshold filtering extracted and tested — an unrecognised severity now passes rather than silencing the alert."
+    },
+    {
+      "id": "US-182",
+      "title": "Stop Redis discarding queued work, and stop pretending a failed write succeeded",
+      "description": "As an operator, I want queued signals and alerts to survive memory pressure, and any write that does fail to be visible, so that data is never lost without anyone knowing.",
+      "acceptanceCriteria": [
+        "Redis runs with a non-evicting maxmemory-policy, since it holds queues rather than cache",
+        "Persistence stays enabled so a restart does not empty the queues",
+        "The ingest signals route inspects its pipeline result and returns 503 when the queue write failed",
+        "The worker's re-queue path checks that the signals actually made it back",
+        "A test fails if an evicting policy is reintroduced or a pipeline is awaited unchecked",
+        "The maxmemory limit is configurable and documented"
+      ],
+      "passes": true,
+      "priority": 182,
+      "notes": "Two compounding silent-loss paths. (1) docker-compose ran Redis with --maxmemory-policy allkeys-lru, but Redis here is used purely as a queue — an audit of every call site found only lmove, lrem, rpush and list pipelines, with no GET/SET/EXPIRE anywhere. So there was nothing cacheable to evict, only accepted-but-undelivered customer data. Worse, memory pressure arrives precisely during a large outage, when many APIs fail at once and the alert queue is longest: the alerts would be dropped at the moment they matter most. This also defeats the claim-then-acknowledge protocol added in US-181, which cannot protect against the queue key itself being evicted. Now noeviction, with maxmemory raised to a configurable 512mb default. (2) ioredis pipeline.exec() resolves to per-command [error, result] pairs and does not reject, so the ingest route's bare `await pipeline.exec()` treated a full or read-only Redis as success and answered 202 for signals that were never queued. It now inspects the result and returns 503; the worker's re-queue path (which the author had added specifically so signals 'aren't lost') had the same unchecked exec and now logs the loss explicitly. New services/ingest/src/lib/redis-results.js with 13 tests, plus a guard test that fails if an evicting policy returns or a queue pipeline is awaited unchecked. Mutation-checked on both. Noted but not changed: the JS SDK splices its batch off the queue before sending and discards on failure — a deliberate client trade-off (never block the host app), which is exactly why the server must be honest about rejected writes."
     }
   ]
 }

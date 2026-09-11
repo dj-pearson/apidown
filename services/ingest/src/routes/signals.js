@@ -1,5 +1,6 @@
 import { resolveDomain } from '../lib/domain-map.js';
 import { normalizeTimestamp } from '../lib/signal-time.js';
+import { pipelineOk, describePipelineFailure } from '../lib/redis-results.js';
 
 const SIGNALS_QUEUE = 'signals:raw';
 
@@ -101,7 +102,18 @@ export async function signalsRoute(fastify) {
     }
 
     if (queued > 0) {
-      await pipeline.exec();
+      // exec() reports per-command errors in its result rather than throwing,
+      // so an unchecked await treats a full or read-only Redis as a success
+      // and answers 202 for signals that were never queued.
+      const execResults = await pipeline.exec();
+      if (!pipelineOk(execResults)) {
+        const detail = describePipelineFailure(execResults);
+        fastify.log.error({ detail, queued }, 'Failed to queue signals');
+        return reply.code(503).send({
+          error: 'Signal queue unavailable, nothing was recorded. Please retry.',
+          queued: 0,
+        });
+      }
     }
 
     if (sawSecondsTimestamp) {

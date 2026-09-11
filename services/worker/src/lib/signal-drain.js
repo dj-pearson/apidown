@@ -28,12 +28,18 @@ export async function drainSignals(redis, supabase) {
 
   if (error) {
     console.error('[drain] Supabase insert error:', error.message);
-    // Re-queue failed signals so they aren't lost
+    // Re-queue failed signals so they aren't lost. exec() reports per-command
+    // errors in its result rather than throwing, so check before assuming the
+    // signals made it back onto the queue.
     const rePipeline = redis.pipeline();
     for (const signal of signals) {
       rePipeline.rpush(QUEUE_KEY, JSON.stringify(signal));
     }
-    await rePipeline.exec();
+    const reResults = await rePipeline.exec();
+    const failed = (Array.isArray(reResults) ? reResults : []).filter(r => Array.isArray(r) && r[0]).length;
+    if (!Array.isArray(reResults) || failed > 0) {
+      console.error(`[drain] LOST ${failed || signals.length} signal(s): re-queue after a failed insert did not succeed`);
+    }
     return 0;
   }
 
