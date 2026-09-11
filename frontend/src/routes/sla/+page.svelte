@@ -3,8 +3,14 @@
   import { createClient } from '@supabase/supabase-js';
 
   let { data } = $props();
-  let targets = $state(data.targets || []);
-  let availableApis = $state(data.availableApis || []);
+  import { emptyOverride, withOverride, resolveOverride } from '$lib/live-patch.js';
+  // Derived from `data`; a target the user just deleted is hidden locally
+  // until load() confirms it, tagged to this payload.
+  let deletedTargetIds = $state(emptyOverride());
+  let targets = $derived(
+    (data.targets || []).filter(t => !(resolveOverride(deletedTargetIds, data, null) || []).includes(t.id))
+  );
+  let availableApis = $derived(data.availableApis || []);
 
   // Add target form state
   let selectedApiId = $state('');
@@ -58,7 +64,7 @@
       const supabase = getAuthClient();
       if (!supabase) return;
       await supabase.from('sla_targets').delete().eq('id', id);
-      targets = targets.filter(t => t.id !== id);
+      deletedTargetIds = withOverride(data, [...(resolveOverride(deletedTargetIds, data, null) || []), id]);
       confirmDeleteId = null;
     } catch { /* ignore */ }
     deleting = false;

@@ -3,7 +3,11 @@
   import { getSupabase } from '$lib/supabase.js';
 
   let { data } = $props();
-  let incidents = $state(data.incidents);
+  import { emptyPatchSet, withPatch, mergePatches } from '$lib/live-patch.js';
+  // Derived from `data`; an incident the admin just resolved is patched over
+  // it until the next load confirms.
+  let resolvedPatches = $state(emptyPatchSet());
+  let incidents = $derived(mergePatches(data.incidents, resolvedPatches));
 
   function formatDate(iso) {
     return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -13,7 +17,9 @@
     const supabase = getSupabase();
     await supabase.from('incidents').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', inc.id);
     await supabase.from('apis').update({ current_status: 'operational' }).eq('id', inc.api_id);
-    incidents = incidents.map(i => i.id === inc.id ? { ...i, status: 'resolved', resolved_at: new Date().toISOString() } : i);
+    resolvedPatches = withPatch(resolvedPatches, data.incidents, {
+      id: inc.id, status: 'resolved', resolved_at: new Date().toISOString(),
+    });
   }
 </script>
 

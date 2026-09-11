@@ -1,10 +1,16 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
-  const { api, score, metrics, trend, scoreDelta, incidents, peers } = data;
+  let api = $derived(data.api);
+  let score = $derived(data.score);
+  let metrics = $derived(data.metrics);
+  let trend = $derived(data.trend);
+  let scoreDelta = $derived(data.scoreDelta);
+  let incidents = $derived(data.incidents);
+  let peers = $derived(data.peers);
 
-  const trendIcon = trend === 'improving' ? '↑' : trend === 'degrading' ? '↓' : '→';
-  const trendColor = trend === 'improving' ? 'var(--color-operational)' : trend === 'degrading' ? 'var(--color-down)' : 'var(--color-text-muted)';
+  let trendIcon = $derived(trend === 'improving' ? '↑' : trend === 'degrading' ? '↓' : '→');
+  let trendColor = $derived(trend === 'improving' ? 'var(--color-operational)' : trend === 'degrading' ? 'var(--color-down)' : 'var(--color-text-muted)');
 
   function metricLabel(key) {
     return { uptime: 'Uptime (30d)', latency: 'P95 Latency', incidents: 'Incidents (90d)', resolution: 'Avg Resolution' }[key] || key;

@@ -5,6 +5,7 @@
   import { page } from '$app/state';
   import StatusCard from '$lib/components/StatusCard.svelte';
   import SEO from '$lib/components/SEO.svelte';
+  import { emptyPatchSet, withPatch, mergePatches } from '$lib/live-patch.js';
   import PushToggle from '$lib/components/PushToggle.svelte';
 
   let { data } = $props();
@@ -22,8 +23,9 @@
   ];
 
 
-  let apis = $state(data.apis);
-  let sparklineData = data.sparklineData || {};
+  let statusPatches = $state(emptyPatchSet());
+  let apis = $derived(mergePatches(data.apis, statusPatches));
+  let sparklineData = $derived(data.sparklineData || {});
 
   // URL wins over localStorage so a shared link always shows the sender's stack.
   const urlSlugs = (page.url.searchParams.get('apis') || '')
@@ -149,7 +151,7 @@
     const channel = supabase
       .channel('stack-status')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apis' }, (payload) => {
-        apis = apis.map(a => (a.id === payload.new.id ? { ...a, ...payload.new } : a));
+        statusPatches = withPatch(statusPatches, data.apis, payload.new);
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') connectionStatus = 'live';

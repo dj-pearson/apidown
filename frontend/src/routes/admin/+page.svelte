@@ -1,8 +1,8 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
-  let stats = data.stats;
-  let recentIncidents = data.recentIncidents;
+  let stats = $derived(data.stats);
+  let recentIncidents = $derived(data.recentIncidents);
 
   function formatDate(iso) {
     return new Date(iso).toLocaleString('en-US', {

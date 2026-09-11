@@ -1,9 +1,10 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
-  const [a, b] = data.comparisons;
+  let a = $derived(data.comparisons[0]);
+  let b = $derived(data.comparisons[1]);
 
-  const metrics = [
+  let metrics = $derived([
     { label: 'Reliability Score', key: 'score', aVal: a.score.score, bVal: b.score.score, unit: '/100', higher: true },
     { label: 'Grade', key: 'grade', aVal: a.score.grade, bVal: b.score.grade, unit: '', higher: null },
     { label: 'Uptime (30d)', key: 'uptime', aVal: Number(a.uptimePct), bVal: Number(b.uptimePct), unit: '%', higher: true, fmt: v => v.toFixed(3) },
@@ -12,7 +13,7 @@
     { label: 'Incidents (90d)', key: 'incidents', aVal: a.incidentCount, bVal: b.incidentCount, unit: '', higher: false },
     { label: 'Avg Resolution', key: 'resolution', aVal: a.metrics.avgResolutionMin, bVal: b.metrics.avgResolutionMin, unit: 'min', higher: false },
     { label: 'Regions', key: 'regions', aVal: a.regions.length, bVal: b.regions.length, unit: '', higher: true },
-  ];
+  ]);
 
   function winner(metric) {
     if (metric.higher === null) return 'tie';
@@ -26,9 +27,9 @@
     return val;
   }
 
-  const aWins = metrics.filter(m => winner(m) === 'a').length;
-  const bWins = metrics.filter(m => winner(m) === 'b').length;
-  const overallWinner = aWins > bWins ? 'a' : bWins > aWins ? 'b' : 'tie';
+  let aWins = $derived(metrics.filter(m => winner(m) === 'a').length);
+  let bWins = $derived(metrics.filter(m => winner(m) === 'b').length);
+  let overallWinner = $derived(aWins > bWins ? 'a' : bWins > aWins ? 'b' : 'tie');
 </script>
 
 <SEO

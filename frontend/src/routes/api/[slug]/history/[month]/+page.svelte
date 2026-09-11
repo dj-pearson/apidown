@@ -3,7 +3,9 @@
   import { formatDuration } from '$lib/api-history.js';
 
   let { data } = $props();
-  const { api, incidents, monthLabel } = data;
+  let api = $derived(data.api);
+  let incidents = $derived(data.incidents);
+  let monthLabel = $derived(data.monthLabel);
 
   function duration(inc) {
     const start = new Date(inc.started_at).getTime();

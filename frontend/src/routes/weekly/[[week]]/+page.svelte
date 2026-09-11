@@ -3,7 +3,7 @@
   import { formatMinutes } from '$lib/weekly-digest.js';
 
   let { data } = $props();
-  const d = data.digest;
+  let d = $derived(data.digest);
 </script>
 
 <SEO

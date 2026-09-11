@@ -4,10 +4,9 @@
   import Modal from '$lib/components/Modal.svelte';
 
   let { data, form: actionResult } = $props();
-  let apis = $state(data.apis);
-
-  // Reactively update when data changes (after form submissions)
-  $effect(() => { apis = data.apis; });
+  // Derived, so form submissions that invalidate the load are picked up
+  // without a resync effect.
+  let apis = $derived(data.apis);
 
   let showCreate = $state(false);
   let editApi = $state(null);

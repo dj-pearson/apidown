@@ -8,6 +8,10 @@ import {
   emptyOverride,
   withOverride,
   resolveOverride,
+  emptyAdditions,
+  withAddition,
+  mergeAdditions,
+  additionCount,
 } from '../src/lib/live-patch.js';
 
 const load = () => [
@@ -183,5 +187,91 @@ describe('overrides', () => {
   test('tolerates a null override', () => {
     const data = { latencyRange: '7d' };
     assert.equal(resolveOverride(null, data, data.latencyRange), '7d');
+  });
+});
+
+describe('additions', () => {
+  const feed = () => [{ key: 'a' }, { key: 'b' }];
+
+  test('an empty set leaves the feed untouched', () => {
+    const rows = feed();
+    assert.equal(mergeAdditions(rows, emptyAdditions(), { key: 'key' }), rows);
+  });
+
+  test('puts a new row at the front', () => {
+    const rows = feed();
+    const adds = withAddition(emptyAdditions(), rows, { key: 'c' }, 'key');
+    assert.deepEqual(mergeAdditions(rows, adds, { key: 'key' }).map(r => r.key), ['c', 'a', 'b']);
+  });
+
+  test('newest addition leads', () => {
+    const rows = feed();
+    let adds = withAddition(emptyAdditions(), rows, { key: 'c' }, 'key');
+    adds = withAddition(adds, rows, { key: 'd' }, 'key');
+    assert.deepEqual(mergeAdditions(rows, adds, { key: 'key' }).map(r => r.key), ['d', 'c', 'a', 'b']);
+  });
+
+  test('ignores a duplicate of a row already added', () => {
+    const rows = feed();
+    let adds = withAddition(emptyAdditions(), rows, { key: 'c' }, 'key');
+    adds = withAddition(adds, rows, { key: 'c' }, 'key');
+    assert.equal(adds.rows.length, 1);
+  });
+
+  test('drops an addition the server payload now contains', () => {
+    const rows = feed();
+    const adds = withAddition(emptyAdditions(), rows, { key: 'c' }, 'key');
+    const refreshed = [{ key: 'c' }, ...feed()];
+    // Same payload identity check applies first, but even tagged to it the
+    // duplicate must not appear twice.
+    const tagged = withAddition(emptyAdditions(), refreshed, { key: 'c' }, 'key');
+    assert.deepEqual(mergeAdditions(refreshed, tagged, { key: 'key' }).map(r => r.key), ['c', 'a', 'b']);
+    assert.deepEqual(mergeAdditions(refreshed, adds, { key: 'key' }).map(r => r.key), ['c', 'a', 'b']);
+  });
+
+  test('discards additions made against a superseded payload', () => {
+    const first = feed();
+    const adds = withAddition(emptyAdditions(), first, { key: 'c' }, 'key');
+    const second = feed();
+    assert.deepEqual(mergeAdditions(second, adds, { key: 'key' }).map(r => r.key), ['a', 'b']);
+  });
+
+  test('respects the cap, with and without additions', () => {
+    const rows = feed();
+    const adds = withAddition(emptyAdditions(), rows, { key: 'c' }, 'key');
+    assert.deepEqual(mergeAdditions(rows, adds, { key: 'key', limit: 2 }).map(r => r.key), ['c', 'a']);
+    assert.deepEqual(mergeAdditions(rows, emptyAdditions(), { key: 'key', limit: 1 }).map(r => r.key), ['a']);
+  });
+
+  test('never mutates the set or the source', () => {
+    const rows = feed();
+    const set = emptyAdditions();
+    withAddition(set, rows, { key: 'c' }, 'key');
+    assert.equal(set.rows.length, 0);
+    assert.equal(rows.length, 2);
+  });
+
+  test('ignores a row with no key', () => {
+    const rows = feed();
+    const set = emptyAdditions();
+    assert.equal(withAddition(set, rows, {}, 'key'), set);
+    assert.equal(withAddition(set, rows, null, 'key'), set);
+  });
+
+  test('additionCount counts only what is actually shown', () => {
+    const rows = feed();
+    let adds = withAddition(emptyAdditions(), rows, { key: 'c' }, 'key');
+    adds = withAddition(adds, rows, { key: 'd' }, 'key');
+    assert.equal(additionCount(rows, adds, 'key'), 2);
+
+    const second = feed();
+    assert.equal(additionCount(second, adds, 'key'), 0, 'superseded payload resets the count');
+    assert.equal(additionCount(rows, emptyAdditions(), 'key'), 0);
+  });
+
+  test('additionCount excludes rows the server has caught up on', () => {
+    const rows = feed();
+    const adds = withAddition(emptyAdditions(), rows, { key: 'a' }, 'key');
+    assert.equal(additionCount(rows, adds, 'key'), 0);
   });
 });

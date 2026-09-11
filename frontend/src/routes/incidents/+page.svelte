@@ -3,12 +3,23 @@
   import { page } from '$app/state';
   import { createClient } from '@supabase/supabase-js';
   import SEO from '$lib/components/SEO.svelte';
+  import {
+    emptyPatchSet, withPatch, mergePatches,
+    emptyAdditions, withAddition, mergeAdditions, additionCount,
+  } from '$lib/live-patch.js';
 
   let { data } = $props();
-  let incidents = $state(data.incidents);
-  let totalCount = $state(data.totalCount);
-  let currentPage = $state(data.page);
-  let pageSize = data.pageSize;
+  // Derived from `data` so paging and filter navigations re-render; live
+  // inserts and updates layer on top, tagged to this payload.
+  let incidentPatches = $state(emptyPatchSet());
+  let newIncidents = $state(emptyAdditions());
+
+  let incidents = $derived(
+    mergePatches(mergeAdditions(data.incidents, newIncidents), incidentPatches)
+  );
+  let totalCount = $derived(data.totalCount + additionCount(data.incidents, newIncidents));
+  let currentPage = $derived(data.page);
+  let pageSize = $derived(data.pageSize);
   let loadingMore = $state(false);
   let liveIndicator = $state('connecting');
 
@@ -17,13 +28,6 @@
   let filterStatus = $state(page.url.searchParams.get('status') || 'all');
   let filterDateRange = $state(page.url.searchParams.get('range') || 'all');
   let searchQuery = $state(page.url.searchParams.get('q') || '');
-
-  // Update state when data changes (navigation)
-  $effect(() => {
-    incidents = data.incidents;
-    totalCount = data.totalCount;
-    currentPage = data.page;
-  });
 
   // Real-time subscription for incident changes
   $effect(() => {
@@ -37,14 +41,11 @@
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' }, (payload) => {
         // Prepend new incident to list
         const newInc = { ...payload.new, apis: { name: 'Loading...', slug: '' }, report_count: 0 };
-        incidents = [newInc, ...incidents];
-        totalCount++;
+        newIncidents = withAddition(newIncidents, data.incidents, newInc);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'incidents' }, (payload) => {
         // Update existing incident in list
-        incidents = incidents.map(inc =>
-          inc.id === payload.new.id ? { ...inc, ...payload.new } : inc
-        );
+        incidentPatches = withPatch(incidentPatches, data.incidents, payload.new);
       })
       .subscribe((status) => {
         liveIndicator = status === 'SUBSCRIBED' ? 'live' : 'connecting';

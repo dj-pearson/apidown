@@ -307,3 +307,32 @@ US-175: DONE - Modal dialogs are keyboard-operable. UpgradeModal bound Escape to
   stack (2), sla (2), admin (2), admin/apis (1 — already has an $effect resync so it is
   correct, just noisy), and 8 single-warning routes. Non-admin ones should reuse
   lib/live-patch.js.
+
+-- Phase 25: Platform Improvement Loop (iteration 6/15) --
+US-173 (PARTIAL, now 11 left): closed the stale-state class everywhere except the dashboard.
+  Converted this iteration: live (3), incidents (4), incidents/[id] (4), stack (2), sla (2),
+  admin (2), admin/incidents (1), admin/users (1), admin/apis (1 — its resync $effect was
+  deleted as redundant once derived), plus six `const {...} = data` destructuring sites on
+  api/[slug]/history, history/[month], report-card, compare/vs, status/[slug] and weekly.
+  Those six mattered: destructuring snapshots every field, so /api/stripe/history ->
+  /api/openai/history through the command palette rendered the new URL with the old API's
+  months, and the same for report cards, postmortems and weekly archives.
+  lib/live-patch.js gained a third pattern — locally added rows for live feeds
+  (emptyAdditions/withAddition/mergeAdditions/additionCount), joining row patches and scalar
+  overrides. All three are tagged to the payload they were made against and dropped when
+  load() returns. 35 tests on the module.
+  Two behaviour details worth noting: /live's openedLast24h now derives from the feed rather
+  than a manual counter bump, and is filtered to 'opened' events so status changes and
+  resolutions no longer inflate it; and /incidents/[id] appends new notes rather than
+  prepending, so it derives explicitly instead of using mergeAdditions.
+  Checked that /live and /stack do NOT have the subscription-churn bug fixed on api/[slug] in
+  iteration 3 — their channel names are constants and every state read happens inside async
+  callbacks, which Svelte does not track. Left alone rather than churned.
+  Unique build warnings 38 -> 11. 185 tests pass.
+
+== Notes for follow-up ==
+- US-173 REMAINING (11, all in src/routes/dashboard/+page.svelte): 10 CRUD collections held in
+  $state and mutated in place after create/delete/update. Unlike every other page these are not
+  realtime overlays, so lib/live-patch.js is the wrong tool — the fix is invalidateAll() after
+  each mutation (or a resync effect), and the page already calls location.reload() twice, which
+  invalidateAll() would replace for a genuine UX win. Worth its own iteration.

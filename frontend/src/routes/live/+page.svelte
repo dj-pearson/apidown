@@ -1,18 +1,35 @@
 <script>
   import { createClient } from '@supabase/supabase-js';
   import SEO from '$lib/components/SEO.svelte';
+  import {
+    emptyPatchSet, withPatch, mergePatches,
+    emptyAdditions, withAddition, mergeAdditions,
+  } from '$lib/live-patch.js';
 
   let { data } = $props();
 
-  let apis = $state(data.apis);
-  let events = $state(data.events);
+  // The radar renders straight off `data`, with live activity layered on top as
+  // patches tagged to this payload — so switching category filter (or any other
+  // load) shows the new feed instead of the one this component mounted with.
+  let statusPatches = $state(emptyPatchSet());
+  let liveEvents = $state(emptyAdditions());
+
+  let apis = $derived(mergePatches(data.apis, statusPatches));
+  let events = $derived(mergeAdditions(data.events, liveEvents, { key: 'key', limit: 200 }));
+  // Only 'opened' events raise the counter — the feed also carries status
+  // changes and resolutions.
+  let openedLast24h = $derived.by(() => {
+    const seeded = new Set(data.events.map(e => e.key));
+    const newlyOpened = events.filter(e => e.type === 'opened' && !seeded.has(e.key)).length;
+    return data.openedLast24h + newlyOpened;
+  });
+
   let connectionStatus = $state('connecting');
   let now = $state(Date.now());
   let recentKeys = $state(new Set());
 
   let downApis = $derived(apis.filter(a => a.current_status === 'down'));
   let degradedApis = $derived(apis.filter(a => a.current_status === 'degraded'));
-  let openedLast24h = $state(data.openedLast24h);
 
   // Tick so relative timestamps stay honest without a full reload.
   $effect(() => {
@@ -41,7 +58,7 @@
 
   function pushEvent(evt) {
     if (events.some(e => e.key === evt.key)) return;
-    events = [evt, ...events].slice(0, 200);
+    liveEvents = withAddition(liveEvents, data.events, evt, 'key');
     markRecent(evt.key);
   }
 
@@ -72,12 +89,12 @@
             incidentId: null,
           });
         }
-        apis = apis.map(a => (a.id === payload.new.id ? { ...a, ...payload.new } : a));
+        statusPatches = withPatch(statusPatches, data.apis, payload.new);
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' }, (payload) => {
         const api = apiFor(payload.new.api_id);
         if (!api) return;
-        openedLast24h += 1;
+        // The counter derives from the 'opened' events below — no manual bump.
         pushEvent({
           key: `open-${payload.new.id}`,
           type: 'opened',

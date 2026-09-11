@@ -4,7 +4,8 @@
 
   let { data } = $props();
 
-  const { api, months } = data;
+  let api = $derived(data.api);
+  let months = $derived(data.months);
 
   let monthsWithData = $derived(months.filter(m => m.uptimePct !== null));
 

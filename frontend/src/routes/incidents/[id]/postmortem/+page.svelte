@@ -1,10 +1,17 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
-  const { incident, updates, reportCount, duration, impact, correlatedIncidents } = data;
+  // Destructuring `data` would snapshot every field at init; derive instead so
+  // navigating between postmortems re-renders.
+  let incident = $derived(data.incident);
+  let updates = $derived(data.updates);
+  let reportCount = $derived(data.reportCount);
+  let duration = $derived(data.duration);
+  let impact = $derived(data.impact);
+  let correlatedIncidents = $derived(data.correlatedIncidents);
 
-  const api = incident.apis;
-  const isResolved = incident.status === 'resolved';
+  let api = $derived(incident.apis);
+  let isResolved = $derived(incident.status === 'resolved');
 
   function formatTime(iso) {
     return new Date(iso).toLocaleString('en-US', {

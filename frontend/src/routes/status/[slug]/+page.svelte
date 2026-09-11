@@ -1,7 +1,12 @@
 <script>
   import SEO from '$lib/components/SEO.svelte';
   let { data } = $props();
-  const { page, apis, uptimeData, latencyData, recentIncidents, overallUptime } = data;
+  let page = $derived(data.page);
+  let apis = $derived(data.apis);
+  let uptimeData = $derived(data.uptimeData);
+  let latencyData = $derived(data.latencyData);
+  let recentIncidents = $derived(data.recentIncidents);
+  let overallUptime = $derived(data.overallUptime);
 
   let subscribing = $state(false);
   let subEmail = $state('');

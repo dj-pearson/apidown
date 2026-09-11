@@ -3,7 +3,7 @@
   import { getSupabase } from '$lib/supabase.js';
 
   let { data } = $props();
-  let users = $state(data.users);
+  let users = $derived(data.users);
 
   function formatDate(iso) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

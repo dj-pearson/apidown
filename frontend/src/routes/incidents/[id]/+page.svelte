@@ -2,11 +2,24 @@
   import { getSupabase } from '$lib/supabase.js';
   import SEO from '$lib/components/SEO.svelte';
 
+  import { emptyAdditions, withAddition } from '$lib/live-patch.js';
+
   let { data } = $props();
-  let incident = $state(data.incident);
-  let updates = $state(data.updates);
-  let notes = $state(data.notes || []);
-  let userProfile = $state(data.userProfile);
+  // Derived from `data` so moving between incidents re-renders. Notes the
+  // user has just written layer on top, tagged to this payload.
+  let addedNotes = $state(emptyAdditions());
+  let incident = $derived(data.incident);
+  let updates = $derived(data.updates);
+  // Notes read oldest-first, so newly written ones go on the end rather than
+  // the front that mergeAdditions would give.
+  let notes = $derived.by(() => {
+    const base = data.notes || [];
+    const added = addedNotes.source === base
+      ? addedNotes.rows.filter(n => !base.some(b => b.id === n.id))
+      : [];
+    return added.length ? [...base, ...added.slice().reverse()] : base;
+  });
+  let userProfile = $derived(data.userProfile);
   let newNoteContent = $state('');
   let submittingNote = $state(false);
 
@@ -33,10 +46,10 @@
         .select('id, content, created_at, user_id')
         .single();
       if (error) throw error;
-      notes = [...notes, {
+      addedNotes = withAddition(addedNotes, data.notes || [], {
         ...inserted,
         users: { display_name: userProfile.display_name, email: null },
-      }];
+      });
       newNoteContent = '';
     } catch (err) {
       console.error('Failed to add note:', err);
