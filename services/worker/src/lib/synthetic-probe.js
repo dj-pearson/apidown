@@ -106,7 +106,7 @@ async function getApisWithSdkCoverage(supabase) {
 
   if (error) {
     // RPC might not exist yet — fall back to manual query
-    if (error.message.includes('does not exist')) {
+    if (isMissingRpc(error)) {
       rpcMissing = true;
       return await getApisWithSdkCoverageFallback(supabase);
     }
@@ -118,6 +118,22 @@ async function getApisWithSdkCoverage(supabase) {
     skipSet.add(row.api_id);
   }
   return skipSet;
+}
+
+/**
+ * True when an rpc() error means the function is not in the database at all.
+ *
+ * PostgREST does not say "does not exist" for this: it answers PGRST202,
+ * "Could not find the function public.get_sdk_coverage_apis(...) in the schema
+ * cache". Matching only "does not exist" (Postgres's own 42883 wording) meant
+ * the fallback never ran in production: every cycle logged the error and
+ * probed all 42 APIs with nothing backed off (2026-10-24, 322 times in 6h).
+ */
+export function isMissingRpc(error) {
+  if (!error) return false;
+  if (error.code === 'PGRST202' || error.code === '42883') return true;
+  const message = String(error.message ?? '');
+  return message.includes('Could not find the function') || /function .* does not exist/.test(message);
 }
 
 async function getApisWithSdkCoverageFallback(supabase) {
