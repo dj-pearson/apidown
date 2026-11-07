@@ -2408,6 +2408,355 @@
       "priority": 170,
       "passes": true,
       "notes": "npm test via the Node built-in runner \u2014 no new dependency. 75 tests across api-history (overlap merging, unresolved incidents, boundary clipping, proration, future months), weekly-digest (ISO week keys at year boundaries, window round-trips, mover noise floor, determinism, quiet weeks, list caps), reliability-score (grade monotonicity, weighting, metric derivation), and palette-search. Mutation-checked: breaking overlap merging fails 2 tests, removing the digest sort tie-break fails the determinism test, reintroducing the palette guard bug fails its regression test. Documented in the README."
+    },
+    {
+      "id": "LEAP-001",
+      "title": "Measurement truth: correct error classes, honest provenance and a confirmation engine that publishes its sample size",
+      "description": "As someone deciding whether to page my team, I want every ApiDown status and incident to rest on correctly classified signals from independent customers, with the sample size and sources printed beside it, so that I can trust a red dot on apidown.net. Four defects in the current pipeline undercut every number the site shows. A network failure (status 0, which sdk-js and sdk-python send for timeouts and resets) counts as a success because signals.is_error is generated as status_code >= 400. A caller's own 401/402/404/422 counts as a vendor error. statuspage-scraper.js inserts fabricated 503 rows tagged synth-<region> whenever a vendor's status page says major or critical, and anomaly-detector.js counts those as reporters, so some 'detections' are the vendor's own status page. And reporter_hash is keyHash.slice(0,16), so one customer with five API keys looks like five independent reporters. Datadog confirms third-party outages with a Bayesian multi-customer model; Downdetector's crowd reports produce public false positives. Fixing provenance and publishing n is the foundation the verdict, lead-time ledger and forecasts all stand on.",
+      "acceptanceCriteria": [
+        "A new migration adds signals.error_class ('network'|'timeout'|'rate_limit'|'server'|'client'|null) and signals.source ('sdk'|'otlp'|'browser'|'probe'|'statuspage'); vendor error rate counts network, timeout, rate_limit and server; client-class (4xx other than 408 and 429) is stored but excluded from vendor error rate; the signals_1min aggregate (migration 029) gains per-class counts",
+        "services/ingest/src/routes/signals.js derives error_class from status (0 maps to network) plus an optional errorKind field that sdk-js and sdk-python send to distinguish 'timeout' from 'network'; both SDKs have tests for it",
+        "statuspage-scraper.js no longer inserts rows into signals; vendor status is written to a new vendor_status_observations table (api_id, time, indicator, description) and is never counted as a reporter or a request",
+        "Reporter identity is per account, not per key: ingest resolves api_keys.user_id and stores a salted hash of it as reporter_hash, so several keys on one account count once; get_api_window's unique_reporters counts only sources sdk, otlp and browser",
+        "anomaly-detector.js replaces the fixed thresholds in getSeverity with a confidence score (0-1) built from each reporter's deviation from its own 30-day baseline and the number of independent reporters that agree; a new migration adds confidence, reporter_count, request_count and sources[] to incidents; probe-only evidence is capped at 'minor' and labelled 'probe only'",
+        "/api/[slug] and /incidents/[id] show a data-source line (for example 'SDK: 14 reporters, 3,210 requests in the last hour' or 'Synthetic probe only') and the confidence; a public /methodology page states the confirmation rule, thresholds and known blind spots",
+        "scripts/backtest-confirmation.js replays 30 days of signals and reports precision and recall against vendor_status_observations, stating that vendor acknowledgement is the reference and not ground truth; the result is committed under docs/",
+        "Tests under the Node built-in runner (npm test): status 0 counts as an error; a 404 does not; one account sending through five keys does not open an incident; a correlated spike across independent reporters does; no row with source 'statuspage' is ever written to signals",
+        "Build passes"
+      ],
+      "priority": 171,
+      "passes": false,
+      "notes": "Rewritten from draft LEAP-005 and moved to priority 1 because every other story reads these numbers. Defects verified in the repo: database/migrations/003_create_signals_table.sql (is_error GENERATED AS status_code >= 400), packages/sdk-js/src/index.js addSignal(hostname, 0, ...) on network error, services/worker/src/lib/statuspage-scraper.js pushing status_code 503 rows with reporter_hash synth-<region>, services/ingest/src/routes/signals.js reporterHash = keyHash.slice(0, 16). Competitive rationale: Datadog External Provider Status pools APM telemetry across customers into a Bayesian model and confirms when several customers are hit. https://www.datadoghq.com/blog/external-provider-status ; https://piunikaweb.com/2026/02/18/cloudflare-ceo-matthew-prince-sue-downdetector-false-outages/ ; https://www.tomsguide.com/news/live/aws-outage-october-2025 . Size: L. Success metric: backtest false-positive rate below 5% at the incident threshold, published on /methodology; share of incidents carrying a non-probe source tracked weekly."
+    },
+    {
+      "id": "LEAP-002",
+      "title": "\"Is it me or them?\" verdict everywhere a developer asks: /v1, SDKs, CLI and an MCP error-triage tool",
+      "description": "As a developer whose calls to Stripe or OpenAI just started failing, or as a coding agent about to rewrite working code, I want one call that says whether my failures match everyone else's, so that I stop debugging my own code during a vendor outage, or stop waiting on a vendor when the fault is mine. US-062 already computes my error rate and latency against the global figure behind a Pro toggle on /api/[slug]; this turns that comparison into a classified answer (them, you, both, healthy, insufficient data) and ships it where the question is asked: the SDK, the terminal, and agents. Datadog's per-service mapping needs Datadog APM, and its free public Updog.ai shows only the fleet view. IsDown and StatusGator ship MCP servers that answer from status pages.",
+      "acceptanceCriteria": [
+        "New endpoint GET /v1/verdict?api=<slug> (frontend/src/routes/v1/verdict/+server.js), authenticated by API key, reuses the per-user stats RPC from migration 016 (US-062) to compare the caller (all of that account's keys) with the fleet excluding the caller over 5 and 15 minutes, and returns {verdict: 'them'|'you'|'both'|'healthy'|'insufficient_data', yourErrorRate, fleetErrorRate, yourP95, fleetP95, yourSignals, fleetReporters, errorClassMix, windowMinutes}",
+        "Returns 'insufficient_data', never a fabricated rate, when the caller has fewer than 20 signals or the fleet (excluding the caller) has fewer than the minimum reporter count, and names which side is short; a caller who is the only reporter never gets 'them'",
+        "Uses LEAP-001 error classes: a caller whose errors are client-class (402, 401, 422) gets 'you' even while the fleet is degraded for server-class errors",
+        "packages/sdk-js exposes verdict(slug) typed in index.d.ts, packages/sdk-python exposes verdict(slug), and packages/cli adds 'apidown verdict <slug>' with exit codes documented alongside the existing 0/2/3/1 scheme from US-164",
+        "routes/mcp/+server.js adds get_verdict(api, api_key?) and diagnose_error(text); diagnose_error extracts hostnames, HTTP status codes and SDK error names (Stripe card_error, OpenAI RateLimitError and similar) and maps them through the domain map, answering vendor, you or unknown with the evidence; the input text is never logged or stored",
+        "The 'My App' toggle on /api/[slug] (US-062) shows the verdict sentence above the existing personal and global figures",
+        "Tests under the Node built-in runner cover each verdict branch, the sole-reporter case, a Stripe card_error answering 'you', a 503 from api.openai.com during a fixture incident answering 'vendor', and unrecognised text answering that it was not recognised",
+        "Build passes"
+      ],
+      "priority": 172,
+      "passes": false,
+      "notes": "Merged draft LEAP-001 and draft LEAP-011 (the MCP triage tool was the same verdict delivered to agents, and MCP itself is built: US-162). Dropped the draft criterion for a 'You vs everyone' My Stack card: US-062 already shows personal vs global latency for pinned APIs on the dashboard. Competitive rationale: Datadog External Provider Status needs APM to map providers to your services; Updog.ai is its public fleet-only view; IsDown includes MCP from its $49 Pro plan (not Starter), and StatusGator lists an MCP server, both fed by status pages. https://www.datadoghq.com/blog/external-provider-status ; https://updog.ai ; https://isdown.app/pricing ; https://statusgator.com/plans . Size: L. Success metric: weekly distinct accounts calling /v1/verdict, SDK verdict(), the CLI or the MCP tools; target 50 within 90 days of launch."
+    },
+    {
+      "id": "LEAP-003",
+      "title": "OpenTelemetry ingestion: real-traffic signals without installing the ApiDown SDK",
+      "description": "As an engineering team that already exports OpenTelemetry traces, I want to point an OTLP exporter at ApiDown and have my outbound HTTP client spans counted as signals, so that I contribute and receive real-traffic status with no code change. This attacks ApiDown's biggest risk, the cold start: Datadog starts with its APM customer base, and OTel is the vendor-neutral way to reach the teams that don't run Datadog. Status-page aggregators can't accept traffic at all.",
+      "acceptanceCriteria": [
+        "services/ingest gains POST /v1/traces (OTLP/HTTP protobuf and JSON), authenticated by the same api_keys bearer check signals.js uses, moved into a shared helper in services/ingest/src/lib so both routes call one implementation",
+        "Only CLIENT-kind spans with http.request.method plus server.address or url.full are kept; host, status code, duration, start time and an error_class (a span with error status and no response status maps to 'network') are mapped onto the LEAP-001 signal shape with source='otlp' and pushed to SIGNALS_QUEUE; span names, URL paths, attributes, headers and bodies are discarded and never stored",
+        "Spans for hosts not in fastify.domainMap are counted for LEAP-007 rather than dropped, and the response reports {accepted, mapped, unmapped, ignored}",
+        "Per-key rate limit and maximum batch size are enforced and documented; an oversize batch gets 413, never silent truncation",
+        "/docs gains an OpenTelemetry page with Collector config snippets for Node, Python, Go and Java",
+        "An ingest test posts a fixture OTLP payload and asserts the exact signals queued, including a SERVER-kind span that must be ignored and a span with a URL query string whose path must not appear in the queued payload",
+        "Build passes"
+      ],
+      "priority": 173,
+      "passes": false,
+      "notes": "Kept from draft LEAP-002; tied to LEAP-001's source and error_class columns and to a shared auth helper instead of reaching into routes/signals.js. Competitive rationale: Datadog's real-traffic detection is drawn from its customers' application telemetry; OTel lets ApiDown be the neutral alternative without an SDK install. https://www.datadoghq.com/blog/external-provider-status ; https://docs.datadoghq.com/internal_developer_portal/external_provider_status/ . Size: L. Success metric: distinct OTLP reporters and the share of signals with source='otlp'; baseline measured at launch, target 25 OTLP reporters within 90 days."
+    },
+    {
+      "id": "LEAP-004",
+      "title": "Browser collector: real-user signals for third-party calls from every visitor's region",
+      "description": "As a SaaS owner, I want to add one script tag that reports how third-party calls from my end users' browsers behave (Stripe.js, Auth0, Google Maps, Intercom, client-side OpenAI and similar), so that ApiDown sees real user regions and far more vantage points. Server SDK signals come from wherever customers host, a handful of cloud regions, so ApiDown's regional breakdown is thin and region is taken from the SDK host's cf-ipcountry header. A browser collector turns each customer site's visitors into vantage points around the world. packages/sdk-js advertises 'Browser compatible' in its README but authenticates with a secret API key that must never ship to a browser. Datadog sees this only for its own RUM customers.",
+      "acceptanceCriteria": [
+        "A migration adds publishable ingest keys: api_keys.kind ('secret'|'publishable') and allowed_origins[]; a publishable key can only write signals, and ingest rejects a request whose Origin is not on the list with 403",
+        "services/ingest adds POST /v1/rum with CORS for allowed origins, per-key and per-IP rate limits, region from the visitor's cf-ipcountry, and source='browser'",
+        "New packages/sdk-browser (under 5 KB gzipped) uses PerformanceObserver resource timing plus fetch/XHR wrapping for calls to catalogue domains only; it sends host, status when the browser exposes it, duration and error_class, and never a URL path, query string, cookie or user identifier; it batches with sendBeacon and honours a consent flag",
+        "Reporter identity is the customer site (the key), not the visitor, so one busy site counts as one reporter; distinct visitor countries are counted separately for the regional view",
+        "A cross-origin resource with no Timing-Allow-Origin header (status unknown, duration 0) is dropped, never recorded as a success",
+        "RegionBreakdown.svelte shows browser-sourced country data, labelled as browser data distinct from SDK and probe data",
+        "Tests: no path or query in the payload, the no-TAO case is dropped, a disallowed origin gets 403, and a secret key used from a browser origin is refused",
+        "/docs gains a browser page with the install snippet and Content-Security-Policy notes",
+        "Build passes"
+      ],
+      "priority": 174,
+      "passes": false,
+      "notes": "New story, replacing draft LEAP-007. It attacks the same cold-start problem as OTLP from the other side: thousands of end-user vantage points per customer site. Limitation stated up front: Resource Timing exposes responseStatus only in recent browsers and needs Timing-Allow-Origin for timings, so coverage will vary by vendor. Competitive rationale: Datadog's detection rides telemetry from its own customers; status-page aggregators have no client-side data. https://docs.datadoghq.com/internal_developer_portal/external_provider_status/ ; https://isdown.app/pricing . Size: L. Success metric: distinct countries with browser signals per catalogue API and distinct sites with a publishable key; target 20 sites and 30+ countries on the top 10 APIs within 6 months."
+    },
+    {
+      "id": "LEAP-005",
+      "title": "Per-model AI API health: time-to-first-token, error class and volume for OpenAI, Anthropic and Gemini",
+      "description": "As a team calling LLM providers directly, I want ApiDown to report health per model and per error class (429 vs 5xx vs timeout) with time-to-first-token, so that I see 'this model is returning 6x its normal 429s and TTFT p95 is 4.1s' instead of 'OpenAI: degraded'. Aggregators report provider-level status from status pages; OpenRouter and LLM Gateway publish uptime only for traffic routed through their gateways. ApiDown's client-side SDK sees direct calls, the vantage point neither has.",
+      "acceptanceCriteria": [
+        "packages/sdk-js and packages/sdk-python extract the model name from request bodies or paths for api.openai.com, api.anthropic.com and generativelanguage.googleapis.com, plus TTFT for streamed responses; no prompt or completion content leaves the process, asserted by an SDK test that inspects the outbound payload",
+        "A new migration adds nullable model and ttft_ms columns to signals (error_class comes from LEAP-001) and a continuous aggregate per (api_id, model, minute); services/ingest/src/routes/signals.js validates model against an allowlist pattern and forwards both fields",
+        "New pages /api/[slug]/models and /api/[slug]/models/[model] show 24h error-class mix, TTFT p50/p95 and request volume, with the reporter count beside every figure and 'insufficient data' below the reporter threshold",
+        "anomaly-detector.js can open an incident scoped to a model (incidents gains a nullable model column) and alert_subscriptions can target a model",
+        "routes/mcp/+server.js gains get_model_health(provider, model)",
+        "The existing /category/[slug] page for the AI category lists models ranked by current TTFT p95 and 429 rate, omitting models below the reporter threshold",
+        "Build passes"
+      ],
+      "priority": 175,
+      "passes": false,
+      "notes": "Kept from draft LEAP-003; error_class moved to LEAP-001 so it applies to every API, not only AI. Competitive rationale: OpenRouter and LLM Gateway show real-traffic uptime only for traffic through their gateways; aggregators stop at provider-level status. https://openrouter.ai/docs/features/uptime-optimization ; https://llmgateway.io/models/o3/uptime ; https://isdown.app/pricing . Size: XL. Success metric: sessions and signups attributed to /api/*/models; target AI model pages at 30% or more of organic landings within 6 months."
+    },
+    {
+      "id": "LEAP-006",
+      "title": "Keyed, metered Status Data API and MCP with a paid data plan",
+      "description": "As a company embedding third-party status into its own tooling or agents, I want a keyed /v1 and /mcp with published quotas, history depth and signed webhooks, so that I can build on ApiDown with confidence and ApiDown earns from its most distinctive asset. Today /v1 (US-161), /mcp (US-162) and /data (US-160) are anonymous with no paid path, although PRD.md section 15.2 lists a Status Data API as a revenue stream. IsDown sells an Outage Data API priced per request and puts API and MCP access on Pro and above; StatusGator gives every plan an API with rate limits and history depth that grow by tier. ApiDown keeps a useful anonymous tier for distribution and charges for depth, volume and push.",
+      "acceptanceCriteria": [
+        "frontend/src/lib/server/v1.js resolves an optional API key (api_keys table) and applies per-tier limits declared in tier-limits.js: anonymous 60 requests per hour and 7 days of history; Pro, Team and a new 'data' tier with higher quotas and full history",
+        "A new migration adds api_usage (key_id, day, endpoint, count), written from v1.js and routes/mcp/+server.js; limits are enforced server-side with 429, Retry-After and an upgrade URL in the error body",
+        "The dashboard shows usage against quota per key for the current period",
+        "A new Stripe price STRIPE_DATA_PRICE_ID is wired through getPriceId in stripe-server.js and the subscription tier mapping; an unknown price maps to 'free', replacing the current final fallback that returns 'pro'",
+        "Outbound status-change webhooks, signed with a per-key HMAC secret, are available for subscribed APIs on the data and Team tiers, with retries and a delivery log",
+        "routes/v1/openapi.json documents auth, quotas and error shapes; MCP tool responses include a usage hint when the caller is within 10% of quota",
+        "Tests cover quota enforcement, the unknown-price mapping and webhook signature verification",
+        "Build passes"
+      ],
+      "priority": 176,
+      "passes": false,
+      "notes": "Kept from draft LEAP-004. Corrected the competitive claim: IsDown's MCP is on Pro ($49) and above, not only on higher tiers, and StatusGator's API is on every plan including Free at 15 req/min. Verified defect: frontend/src/lib/stripe-server.js returns 'pro' as the final fallback for an unrecognised price. Sources: https://isdown.app/pricing ; https://statusgator.com/plans . Size: L. Success metric: MRR from data and keyed API plans; target first $500 MRR within 120 days."
+    },
+    {
+      "id": "LEAP-007",
+      "title": "Demand-driven catalogue: grow from 48 APIs to 500+ chosen by the hosts customers actually call",
+      "description": "As an SDK, OTLP or browser-collector user, I want the APIs I actually call to appear on ApiDown, so that my whole dependency graph is covered and not only the 48 seeded APIs (30 in 001_seed_apis.sql, 18 in 002_seed_additional_apis.sql). StatusGator covers 12,540+ services and IsDown's data API 6,320+ vendors, all from status pages; ApiDown can't win on breadth by scraping, but it can grow from hostnames its users really call, and every new API inherits the page templates already built (is-down page, monthly history, compare, category race, RSS).",
+      "acceptanceCriteria": [
+        "services/ingest/src/routes/signals.js stops discarding unknown domains (today `if (!apiId) continue;`): it increments counts in a new discovered_domains table (host, distinct_reporters_7d, signals_7d, first_seen) with no payload stored; private ranges, IP literals, localhost and single-label hosts are excluded",
+        "custom_apis entries (migration 018) created by several distinct accounts for the same domain are flagged as graduation candidates",
+        "An admin queue at /admin/catalogue lists candidates ranked by distinct reporters, with one-click promotion that creates the apis row, maps the domain and enqueues indexing via indexing_queue (migration 021)",
+        "Promotion requires a minimum distinct-reporter threshold (per account, per LEAP-001) so a single customer's internal API never becomes public",
+        "Dashboard My Stack offers 'We see you calling these APIs' to add the caller's own discovered hosts",
+        "Sitemap and llms.txt pick up promoted APIs automatically; a test asserts a promoted API appears in sitemap.xml and an unpromoted discovered host does not",
+        "Build passes"
+      ],
+      "priority": 177,
+      "passes": false,
+      "notes": "Kept from draft LEAP-008; corrected the seeded count to 48 from the seed files. Competitive rationale: aggregators win on breadth (StatusGator 12,540+ services, IsDown 6,320+ vendors in its data API). https://statusgator.com/plans ; https://isdown.app/pricing . Size: M. Success metric: catalogue size and organic landings on promoted API pages; target 300 APIs within 6 months and promoted pages at 40% or more of new organic entrances."
+    },
+    {
+      "id": "LEAP-008",
+      "title": "Detection lead-time ledger: per-incident, per-vendor proof of how far ApiDown beats the status page",
+      "description": "As a developer choosing where to look first in an outage, and as a journalist covering one, I want a public ledger that shows for every incident when ApiDown confirmed it from traffic and when the vendor's status page acknowledged it, or never did, so that 'minutes before official status pages' becomes a measured number per vendor. The homepage makes that claim today (frontend/src/routes/+page.svelte, the 'Community signals often detect problems minutes before the vendor acknowledges them' copy) with no measurement behind it, and until LEAP-001 the scraper's injected 503 rows meant some detections were the status page itself. IsDown publishes marketing figures for time saved; nobody publishes per-incident lead time including the misses.",
+      "acceptanceCriteria": [
+        "Builds on LEAP-001's vendor_status_observations: the worker records the first non-operational indicator time per vendor incident, and statuspage-scraper.js also reads /api/v2/incidents.json for each incident's created_at",
+        "A matcher pairs ApiDown incidents with vendor incidents by API and overlap window and stores lead_seconds (negative when the vendor was first), plus explicit 'vendor never acknowledged' and 'ApiDown missed' outcomes",
+        "A public /lead-time page shows per-vendor median lead, hit and miss counts over 90 days, with every incident row linked; negative leads and misses are shown, not filtered",
+        "/api/[slug] shows that vendor's median lead and acknowledgement rate, or 'not enough incidents' below n=5",
+        "The homepage copy replaces 'minutes before' with the measured median, or removes the claim while fewer than 10 matched incidents exist",
+        "The ledger is added to /data (US-160) as CSV and JSON",
+        "Matcher tests cover overlapping incidents, vendor-first, vendor-never and ApiDown-only cases",
+        "Build passes"
+      ],
+      "priority": 178,
+      "passes": false,
+      "notes": "New story, replacing draft LEAP-014. It turns ApiDown's central marketing claim into evidence that earns links and press coverage after every outage, and depends on LEAP-001 removing status-page rows from signals. Competitive rationale: aggregators sell 'early' detection without publishing per-incident accuracy. https://isdown.app/blog/april-2026-isdown-users-saved-16-5-hours-with-early-outage-detection ; https://dev.to/cbartlett/waiting-for-status-pages-is-the-slowest-way-to-respond-to-cloud-outages-14b6 . Size: M. Success metric: referring domains to /lead-time and incident pages; target 25 new referring domains within 6 months and a published median lead on at least 10 vendors."
+    },
+    {
+      "id": "LEAP-009",
+      "title": "SDK resilience hooks: circuit breaker and failover driven by fleet state",
+      "description": "As a developer, I want apidown.isDegraded('stripe') and a ready-made circuit breaker that opens when the fleet sees the vendor failing, so that my app falls back or backs off before my own errors pile up. Status aggregators and Datadog stop at alerting a human. OpenRouter's edge comes from routing requests away from degraded providers; this brings that behaviour to any Node or Python app and moves ApiDown from a dashboard into the runtime, where it is much harder to remove.",
+      "acceptanceCriteria": [
+        "services/ingest serves GET /v1/fleet-state (compact JSON of degraded and down APIs with LEAP-001 confidence and a timestamp) with a short cache TTL and ETag; Pro and above get a streaming (SSE) variant",
+        "packages/sdk-js adds isDegraded(slug), onStatusChange(cb) and a breaker(slug, {fallback, openOn: 'down'|'degraded'}) wrapper, typed in index.d.ts; packages/sdk-python mirrors them",
+        "The SDK fails open: if fleet state is unreachable or older than a configured max age, isDegraded returns false and logs once; a test asserts no call is blocked when ApiDown itself is down",
+        "Breaker decisions combine fleet state with the caller's own recent error rate from LEAP-002, so a probe-only or low-confidence fleet signal can't take a healthy integration offline",
+        "Docs ship recipes for Stripe-to-queue deferral and OpenAI-to-Anthropic failover",
+        "SDK tests cover open, half-open and closed transitions against a mocked fleet-state server",
+        "Build passes"
+      ],
+      "priority": 179,
+      "passes": false,
+      "notes": "Kept from draft LEAP-006; dropped the unverified '80% uptime' figure for OpenRouter and tied the breaker to LEAP-001 confidence. Competitive rationale: OpenRouter routes around providers with degraded uptime; status aggregators only notify. https://openrouter.ai/docs/features/uptime-optimization ; https://openrouter.ai/docs/guides/community/for-providers . Size: L. Success metric: installs calling breaker() or isDegraded(), counted through an opt-in SDK feature counter; target 100 within 6 months."
+    },
+    {
+      "id": "LEAP-010",
+      "title": "Status Pages 2.0: first-party components, dependency-aware auto status and custom domains",
+      "description": "As a SaaS owner, I want my ApiDown status page to show my own services (heartbeat or probe) next to my vendors, suggest 'degraded because Stripe is down' automatically, and live on status.mycompany.com, so that I can replace Atlassian Statuspage or a StatusGator or IsDown page. The status page product built in US-102 to US-106 shows only third-party and custom APIs. Explaining customer-facing impact from measured upstream traffic is something none of those products do.",
+      "acceptanceCriteria": [
+        "A migration adds status_page_components for first-party services fed by a heartbeat endpoint (POST /v1/heartbeat/<token>) or the existing custom API probe path (migration 018)",
+        "Components can declare upstream dependencies on tracked APIs; when an upstream incident opens with LEAP-001 confidence above threshold, the component shows a suggested status and an auto-drafted notice the owner publishes in one click; nothing is published without that click",
+        "Custom domains via CNAME with automatic TLS on Cloudflare, activated only after a DNS TXT verification check",
+        "Tier limits move server-side: today the dashboard checks getTierLimits in the browser and RLS policy status_pages_own allows any insert by the owner; inserts on status_pages are enforced by an RLS policy or RPC that reads users.tier, and show_powered_by and custom_css are honoured only on eligible tiers",
+        "A usage-priced add-on for status pages beyond the Team cap via a Stripe metered price",
+        "status/[slug]/+page.server.js renders first-party and upstream components, with subscriber notifications reusing status_page_subscribers",
+        "Tests prove a free-tier user cannot create a status page through a direct Supabase insert",
+        "Build passes"
+      ],
+      "priority": 180,
+      "passes": false,
+      "notes": "Kept from draft LEAP-009. Corrected the price claim: StatusGator's private status pages start at $72/mo billed annually, but IsDown includes a status page from its $27 Starter plan, so the angle is impact explanation, not price. Verified: frontend/src/routes/dashboard/+page.svelte imports getTierLimits client-side; database/migrations/022_status_pages_service.sql policy status_pages_own is FOR ALL with no count check. https://statusgator.com/plans ; https://isdown.app/pricing . Size: XL. Success metric: paying status-page accounts and add-on revenue; target 25 within 6 months."
+    },
+    {
+      "id": "LEAP-011",
+      "title": "GitHub App and CI gate: dependency risk on every PR and deploys that wait out vendor incidents",
+      "description": "As a team shipping through GitHub, I want an ApiDown GitHub App that reads my manifests (package.json, requirements.txt, go.mod) to build my stack automatically, comments a dependency risk report on PRs that add a vendor SDK, and a CI step that warns or blocks a deploy while a dependency is down, so that I don't ship into an outage or blame my release for a vendor's. Aggregators and Datadog live in dashboards; none hooks the PR or the deploy.",
+      "acceptanceCriteria": [
+        "A mapping file in packages/ maps client libraries (stripe, openai, @anthropic-ai/sdk, twilio, @aws-sdk/*, and others) to catalogue slugs, with tests",
+        "The GitHub App install flow creates or links a users row and populates pinned_apis (migration 016) from detected dependencies",
+        "The PR comment shows each detected dependency's grade from reliability-score.js, 90-day uptime and current status, with links to /api/[slug]?ref=github",
+        "packages/cli gains 'apidown check --stack <file> --fail-on down|degraded', reusing the existing exit-code scheme from US-164, and a published GitHub Action wraps it; exit codes are documented",
+        "The check respects LEAP-001 confidence so a probe-only blip doesn't block a deploy",
+        "A README badge snippet is generated for the detected stack, linking to /stack?apis=... (US-153)",
+        "Build passes"
+      ],
+      "priority": 181,
+      "passes": false,
+      "notes": "Kept from draft LEAP-010 with criteria tied to the existing CLI exit codes and /stack route. Competitive rationale: StatusGator, IsDown and Datadog deliver status in dashboards, chat and alerts; none acts at PR or deploy time. https://statusgator.com/plans ; https://isdown.app/pricing ; https://www.datadoghq.com/blog/external-provider-status . Size: L. Success metric: GitHub App installs and signups with ref=github; target 200 installs and 15% install-to-signup within 6 months."
+    },
+    {
+      "id": "LEAP-012",
+      "title": "Team workspaces, seats, SSO, audit log and an Enterprise tier",
+      "description": "As an engineering manager, I want a shared workspace with seats, roles, SSO and an audit log, so that my team shares one stack, alert routing and status pages and procurement can approve ApiDown. The pricing page sells 'Team management' on the $49 Team plan (frontend/src/routes/pricing/+page.svelte) with no organizations table behind it, and PRD.md sections 15.1 and 18.2 planned SSO, audit log and Enterprise with no story. StatusGator sells Team at $137 and Corporate at $274 per month billed annually; IsDown includes admin SSO from its $49 Pro plan. This is the path from $49 to four-figure contracts.",
+      "acceptanceCriteria": [
+        "A migration adds organizations and organization_members (role owner|admin|member) and moves ownership of api_keys, alert_subscriptions, pinned_apis, custom_apis and status_pages to org_id, with a backfill giving each existing user a personal org",
+        "RLS policies scope every owned table by org membership; tests prove a member of org A cannot read or write org B's rows",
+        "Invite by email with seat counting enforced server-side against the Stripe subscription quantity",
+        "SAML/OIDC SSO for an Enterprise tier via GoTrue SSO providers, with domain verification",
+        "An audit_log table records key creation, alert changes, member changes and billing events, viewable and exportable as CSV in the dashboard",
+        "Pricing page copy matches what ships: no feature is listed that the code doesn't do",
+        "Build passes"
+      ],
+      "priority": 182,
+      "passes": false,
+      "notes": "Kept from draft LEAP-013. Planned in PRD.md prose (15.1 Team tier: '5 seats, SSO ... audit log'; 18.2 'SSO / SAML - Team tier') but never as a prd.json story, so this is the first buildable form. Corrected competitor framing: IsDown's admin SSO starts at Pro $49, so SSO alone is not a differentiator, it is table stakes. https://statusgator.com/plans ; https://isdown.app/pricing . Size: XL. Success metric: Team-or-above MRR and average revenue per account; target 10 Team-or-above accounts and ARPA above $60 within 6 months."
+    },
+    {
+      "id": "LEAP-013",
+      "title": "Real multi-region probe network replacing the simulated regions",
+      "description": "As a user reading the regional breakdown on /api/[slug], I want probes that really run from North America, Europe and Asia-Pacific, so that a regional outage shows as regional. synthetic-probe.js runs every probe from one host and labels the results with REGIONS = ['us-east', 'eu-west', 'ap-south'] ('3 simulated regions' in its own comment), each with a fake reporter_hash synth-<region>, and RegionBreakdown.svelte presents them as real regions. Real regions make ApiDown's probe baseline honest and turn multi-region probing of customers' custom APIs into a paid feature.",
+      "acceptanceCriteria": [
+        "A lightweight probe agent (Cloudflare Workers cron or small VMs) runs in at least 5 real regions, signs results with a per-agent key and posts them to services/ingest with source='probe' and the agent's real region",
+        "synthetic-probe.js and statuspage-scraper.js stop assigning the simulated REGIONS labels; probe reporter identity is the agent, and probes never count toward the SDK reporter threshold",
+        "RegionBreakdown.svelte labels regions by real location and shows which figures are probe, SDK or browser data",
+        "Custom APIs (migration 018) can be probed from multiple regions on Pro (2) and Team (all), with probe auth decrypted only inside the agent (reusing probe-crypto.js)",
+        "anomaly-detector.js can open region-scoped incidents when one region fails and others pass",
+        "A test fails if any code path still emits the literal 'us-east', 'eu-west' or 'ap-south' simulated labels",
+        "Build passes"
+      ],
+      "priority": 183,
+      "passes": false,
+      "notes": "Kept from draft LEAP-015; verified services/worker/src/lib/synthetic-probe.js lines 3, 23 and 178. Competitive rationale: APIContext sells global synthetic API testing to enterprises; Datadog External Provider Status covers about 40 providers. https://intellyx.com/2024/05/17/api-context-measure-api-performance-and-conformance/ ; https://www.datadoghq.com/blog/external-provider-status . Size: L. Success metric: region-scoped incidents detected and paid accounts using multi-region custom probes; target 20 within 6 months."
+    },
+    {
+      "id": "LEAP-014",
+      "title": "Cascade map: learned dependencies between providers, with a heads-up when an upstream starts failing",
+      "description": "As an SRE during a cloud outage, I want ApiDown to tell me which APIs historically fail together with a given provider, and to flag when an upstream starts failing that its usual downstreams tend to follow, so that I know AWS trouble means my Vercel, Supabase or Stripe calls may be next. US-116's correlation engine only lists incidents that overlapped within +/-15 minutes, after the fact, on the postmortem page. Datadog maps providers to your own APM services, not providers to each other, and status-page aggregators can't observe co-failure at all.",
+      "acceptanceCriteria": [
+        "A worker job computes lagged co-failure between APIs from signals_1min error rates and incidents over 180 days (lags 0-30 minutes) and stores api_dependency_edges (upstream_api_id, downstream_api_id, lag_minutes, support, lift, computed_at); edges below minimum support and lift are not stored",
+        "/api/[slug] gains 'Often fails with' and 'Fails after' sections showing each edge's support count; a public /cascade page renders the graph",
+        "An API with too little history shows 'not enough history', never an empty list that reads as independence",
+        "When an incident opens on an upstream API, downstream APIs with strong edges show a 'watch' note (never a status change), and users with those APIs pinned can opt into a heads-up alert",
+        "The US-116 correlated-incidents list on /incidents/[id]/postmortem marks which correlations match a learned edge",
+        "Tests: a fixture where B fails 5 minutes after A yields edge A->B with lag 5; independent random failures yield no edge",
+        "Build passes"
+      ],
+      "priority": 184,
+      "passes": false,
+      "notes": "New story, replacing the slot freed by merging draft LEAP-011 into LEAP-002. It goes past US-116 (after-the-fact overlap) to a learned, forward-looking dependency graph, and feeds LEAP-020 forecasts. Competitive rationale: Datadog maps third-party providers to your services, which needs APM; aggregators read each status page in isolation. https://www.datadoghq.com/blog/external-provider-status ; https://statusgator.com/plans . Size: L. Success metric: heads-up alert opt-ins and the share of downstream incidents preceded by a heads-up; target 40% of downstream incidents on edges with support 5+ flagged in advance within 9 months."
+    },
+    {
+      "id": "LEAP-015",
+      "title": "SLA credit claims: what a vendor owes you, with a ready-to-file evidence packet",
+      "description": "As a customer of AWS, Twilio or Stripe, I want ApiDown to compare each vendor's published SLA with the downtime my own traffic saw and generate a credit-claim packet with evidence, so that I recover money I'm owed. /sla-receipts (US-159) compares fleet uptime with published SLAs, but migration 024 seeded targets for only five services (four AWS, one Twilio), and US-072 tracks targets users set themselves without any credit math. No competitor turns monitoring into recovered cash, and one claim can pay for a year of ApiDown.",
+      "acceptanceCriteria": [
+        "published_sla_pct is researched and seeded for at least 40 catalogue APIs, each satisfying migration 024's CHECK that a stored percentage has a source URL; a new migration adds credit tiers and claim window columns, each with its own source",
+        "For a user with SDK, OTLP or browser traffic, a monthly job computes observed availability per vendor from that account's signals (LEAP-001 error classes, excluding client-class errors) and compares it with the SLA and the fleet",
+        "Dashboard 'Credits owed' shows eligible claims with the estimated credit and the claim deadline, reusing the downtime cost estimator inputs (US-064)",
+        "Claim packet export (PDF and Markdown) includes timestamps, request counts, error classes and fleet corroboration, with no customer payloads",
+        "Users get an alert before a claim window closes",
+        "/sla-receipts expands to every seeded vendor with the fleet-wide breach record",
+        "Tests cover the credit-tier calculation and the case where the account has too few signals to support a claim",
+        "Build passes"
+      ],
+      "priority": 185,
+      "passes": false,
+      "notes": "Kept from draft LEAP-016; tied to migration 024's existing source-URL CHECK and distinguished from US-072 (user-set targets). Competitive rationale: aggregators and Datadog report outages but never quantify SLA credits. https://isdown.app/pricing ; https://statusgator.com/plans . Size: M. Success metric: claim packets generated and dollar value surfaced; target $50k cumulative credits identified within 6 months."
+    },
+    {
+      "id": "LEAP-016",
+      "title": "Contributor program and loop attribution: traffic earns features, every surface carries a ref",
+      "description": "As a free user, I want to unlock more subscriptions, history and the verdict by running the SDK, OTLP exporter or browser collector in production, so that contributing data pays me back. And as the owner, I want every badge, widget, status page, CLI, MCP response and integration to carry a ref recorded at signup, so that we know which loop works. Each contributor improves every API page for everyone, a network effect that products reading status pages can't copy; today no signup is attributed.",
+      "acceptanceCriteria": [
+        "users gains contributor_level computed nightly from that account's distinct contributing days and signal volume over 7 days (per-account reporter identity from LEAP-001); tier-limits.js grants contributor bonuses (extra subscriptions, 30-day history, verdict access) on top of the base tier",
+        "The dashboard shows contribution status and what the next level unlocks",
+        "badge.svg embed snippets, widget.html (US-120), the status page 'Powered by' link, CLI output, MCP responses and GitHub comments append ?ref=badge|widget|statuspage|cli|mcp|github",
+        "First-touch ref is stored in a cookie and written to a new users.signup_ref column at account creation in routes/auth/login/+server.js or routes/auth/callback/+server.js",
+        "An admin view lists signups and paid conversions by ref, with 'direct' for no ref",
+        "A test asserts the ref survives the login and callback round trip",
+        "Build passes"
+      ],
+      "priority": 186,
+      "passes": false,
+      "notes": "Kept from draft LEAP-012; the 'share' ref was removed with draft LEAP-007, and contributor level now uses per-account identity so key-farming can't buy features. Competitive rationale: Downdetector and status-page aggregators get no data from their users' production traffic. https://isdown.app/compare/vs-downdetector ; https://statusgator.com/plans . Size: M. Success metric: contributing accounts and ref-attributed signups; target 2x distinct weekly contributing accounts in 90 days and every new signup carrying a ref or 'direct'."
+    },
+    {
+      "id": "LEAP-017",
+      "title": "Observability marketplace reach: Datadog, Grafana, incident.io and Better Stack integrations",
+      "description": "As a team living in Datadog, Grafana or an incident tool, I want ApiDown's real-traffic third-party status inside those tools, so that I don't open another tab. Third-party status is becoming a checkbox inside bigger platforms: IsDown is listed as a Datadog integration and feeds Better Stack. Shipping where buyers already pay brings managed billing and co-marketing; Datadog's own case study reports RapDev averaging $30-50k a month from Marketplace deals.",
+      "acceptanceCriteria": [
+        "A Datadog integration posts ApiDown incidents as Datadog events and exposes status metrics via a published integration package, authenticated with a keyed /v1 token from LEAP-006",
+        "A Grafana data source plugin queries /v1 for status, latency and incidents and ships a starter dashboard",
+        "Outbound webhooks match incident.io and Better Stack incoming formats, reusing the channel code in services/worker/src/lib/alert-worker.js (PagerDuty already exists from US-024 and is not rebuilt)",
+        "Integration usage is attributed with ref=datadog|grafana|incidentio|betterstack (LEAP-016)",
+        "Docs pages for each integration, plus a Datadog Marketplace listing checklist",
+        "Contract tests validate each payload against the target platform's documented schema",
+        "Build passes"
+      ],
+      "priority": 187,
+      "passes": false,
+      "notes": "Kept from draft LEAP-017; removed the PagerDuty Events v2 criterion because US-024 built the PagerDuty channel. RapDev figure verified against Datadog's case study. https://docs.datadoghq.com/integrations/isdown/ ; https://isdown.app/blog/bring-third-party-incidents-into-better-stack ; https://datadoghq.com/case-studies/rapdev . Size: L. Success metric: integration-attributed signups and marketplace revenue; target 2 live listings and 10% of new paid accounts via integrations within 9 months."
+    },
+    {
+      "id": "LEAP-018",
+      "title": "SDKs for Go, Java, Ruby, .NET and edge runtimes",
+      "description": "As a backend team not on Node or Python, I want a one-line ApiDown SDK for my stack and for Cloudflare Workers, Deno and Bun, so that I can contribute and get verdicts too. Real-traffic coverage scales with runtime reach, and every new runtime grows the reporter base that makes each API page better. Datadog's coverage comes from agents across every language; ApiDown ships only sdk-js (published as apidown-monitor) and sdk-python.",
+      "acceptanceCriteria": [
+        "New packages under packages/ (sdk-go, sdk-java, sdk-ruby, sdk-dotnet) wrap the standard HTTP client and send the same signal schema as sdk-js, including errorKind (LEAP-001) and model and TTFT fields (LEAP-005)",
+        "packages/sdk-js gains tested entry points for Cloudflare Workers, Deno and Bun",
+        "Each SDK supports verdict() (LEAP-002) and isDegraded() (LEAP-009)",
+        "Each SDK batches, never blocks the caller, fails open when ingest is unreachable, and sends no bodies, headers or URL paths, asserted by tests",
+        "Packages are published under ApiDown-owned names, and the homepage install instruction in frontend/src/routes/+page.svelte matches the published names exactly (it currently says `npm install @apidown/sdk` while packages/sdk-js/package.json is named apidown-monitor and /docs says apidown-monitor)",
+        "/docs lists every runtime with a copy-paste install",
+        "Build passes"
+      ],
+      "priority": 188,
+      "passes": false,
+      "notes": "Kept from draft LEAP-018; the homepage/package name mismatch is verified and should be fixed on its own before this story, since every visitor who copies the homepage command today installs nothing. Competitive rationale: Datadog's real-traffic detection rides its agents in every language. https://www.datadoghq.com/blog/external-provider-status ; https://docs.datadoghq.com/internal_developer_portal/external_provider_status/ . Size: XL. Success metric: contributing accounts by runtime; target non-Node/Python runtimes at 25% or more of contributing accounts within 9 months."
+    },
+    {
+      "id": "LEAP-019",
+      "title": "Live incident brief: a personalised impact summary refreshed during the outage",
+      "description": "As an on-call engineer, I want a live brief for each active incident that says what's failing (error classes, regions, models), which of my pinned APIs and status page components are affected, an estimated cost per hour, and a suggested action, so that I decide in a minute instead of reading dashboards. US-115 builds postmortems after an incident resolves; this works during the incident and is personalised. Aggregators and Updog.ai show a status; none says what it means for you.",
+      "acceptanceCriteria": [
+        "A worker job generates and refreshes a brief every 5 minutes for each open incident from incidents, signals, US-116 correlations, LEAP-014 edges and incident_updates, stored in a new incident_briefs table together with the input facts it used",
+        "The public brief on /incidents/[id] is fleet-level; signed-in users see a personalised section from pinned_apis, status_page_components (LEAP-010) and their LEAP-002 verdict, with cost from the downtime estimator (US-064)",
+        "Every number in a brief is traced to a stored fact; a test fails a brief that contains a figure absent from its inputs",
+        "Briefs are delivered through the existing Slack, email and push channels on Pro and above",
+        "The brief states 'insufficient data' rather than guessing when reporter counts are below threshold",
+        "The model provider and prompt live server-side; nothing beyond aggregates is sent to the model, asserted by a test on the request payload",
+        "Build passes"
+      ],
+      "priority": 189,
+      "passes": false,
+      "notes": "Kept from draft LEAP-019; distinct from US-115 (after-the-fact postmortem). Competitive rationale: competitors notify that a vendor is down; none quantifies per-customer impact live. https://updog.ai ; https://statusgator.com/plans ; https://isdown.app/pricing . Size: M. Success metric: brief opens per incident among alerted Pro users; target 40% open rate and Pro retention up 10 points."
+    },
+    {
+      "id": "LEAP-020",
+      "title": "Early-warning forecasts with a published hit rate",
+      "description": "As a team with a launch or a batch job planned, I want ApiDown to flag when a vendor shows leading indicators of trouble (latency creep, rising 429s, error-class drift, a scheduled maintenance window, an upstream on the cascade map failing), so that I can delay or add fallbacks before the outage. StatusGator lists 'Early Warning Signals' and IsDown markets early outage detection, both built on crowd reports and status pages; ApiDown can build it from measured leading indicators in real traffic and publish its hit rate, which neither does.",
+      "acceptanceCriteria": [
+        "A worker job scores each API's risk every 5 minutes from signals_1min trends, LEAP-001 error-class drift, scheduled_maintenances (migration 017), LEAP-014 upstream edges and recent incident history, storing api_risk (api_id, time, score, drivers[])",
+        "An 'elevated risk' state appears on /api/[slug] and the homepage grid, visually distinct from degraded, with the drivers listed in plain words",
+        "Users can subscribe to risk alerts per API with a threshold",
+        "A public scorecard reports forecast precision and recall against incidents that followed, updated weekly",
+        "Risk is withheld, never shown as low, for APIs below the reporter threshold",
+        "A backtest over 60 days of history is committed with its results before the feature is switched on",
+        "Build passes"
+      ],
+      "priority": 190,
+      "passes": false,
+      "notes": "Kept from draft LEAP-020; now consumes LEAP-014's cascade edges. Competitive claim narrowed to what the pricing pages show: StatusGator lists Early Warning Signals and IsDown lists Early Outage Detection, neither with published accuracy. https://statusgator.com/plans ; https://isdown.app/pricing ; https://isdown.app/blog/april-2026-isdown-users-saved-16-5-hours-with-early-outage-detection . Size: L. Success metric: forecast precision of 50% or more at the alert threshold and 300 risk subscriptions within 6 months."
     }
   ]
 }
