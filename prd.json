@@ -2424,7 +2424,7 @@
         "Tests under the Node built-in runner (npm test): status 0 counts as an error; a 404 does not; one account sending through five keys does not open an incident; a correlated spike across independent reporters does; no row with source 'statuspage' is ever written to signals",
         "Build passes"
       ],
-      "priority": 171,
+      "priority": 105,
       "passes": false,
       "notes": "Rewritten from draft LEAP-005 and moved to priority 1 because every other story reads these numbers. Defects verified in the repo: database/migrations/003_create_signals_table.sql (is_error GENERATED AS status_code >= 400), packages/sdk-js/src/index.js addSignal(hostname, 0, ...) on network error, services/worker/src/lib/statuspage-scraper.js pushing status_code 503 rows with reporter_hash synth-<region>, services/ingest/src/routes/signals.js reporterHash = keyHash.slice(0, 16). Competitive rationale: Datadog External Provider Status pools APM telemetry across customers into a Bayesian model and confirms when several customers are hit. https://www.datadoghq.com/blog/external-provider-status ; https://piunikaweb.com/2026/02/18/cloudflare-ceo-matthew-prince-sue-downdetector-false-outages/ ; https://www.tomsguide.com/news/live/aws-outage-october-2025 . Size: L. Success metric: backtest false-positive rate below 5% at the incident threshold, published on /methodology; share of incidents carrying a non-probe source tracked weekly."
     },
@@ -2442,7 +2442,7 @@
         "Tests under the Node built-in runner cover each verdict branch, the sole-reporter case, a Stripe card_error answering 'you', a 503 from api.openai.com during a fixture incident answering 'vendor', and unrecognised text answering that it was not recognised",
         "Build passes"
       ],
-      "priority": 172,
+      "priority": 106,
       "passes": false,
       "notes": "Merged draft LEAP-001 and draft LEAP-011 (the MCP triage tool was the same verdict delivered to agents, and MCP itself is built: US-162). Dropped the draft criterion for a 'You vs everyone' My Stack card: US-062 already shows personal vs global latency for pinned APIs on the dashboard. Competitive rationale: Datadog External Provider Status needs APM to map providers to your services; Updog.ai is its public fleet-only view; IsDown includes MCP from its $49 Pro plan (not Starter), and StatusGator lists an MCP server, both fed by status pages. https://www.datadoghq.com/blog/external-provider-status ; https://updog.ai ; https://isdown.app/pricing ; https://statusgator.com/plans . Size: L. Success metric: weekly distinct accounts calling /v1/verdict, SDK verdict(), the CLI or the MCP tools; target 50 within 90 days of launch."
     },
@@ -2459,7 +2459,7 @@
         "An ingest test posts a fixture OTLP payload and asserts the exact signals queued, including a SERVER-kind span that must be ignored and a span with a URL query string whose path must not appear in the queued payload",
         "Build passes"
       ],
-      "priority": 173,
+      "priority": 107,
       "passes": false,
       "notes": "Kept from draft LEAP-002; tied to LEAP-001's source and error_class columns and to a shared auth helper instead of reaching into routes/signals.js. Competitive rationale: Datadog's real-traffic detection is drawn from its customers' application telemetry; OTel lets ApiDown be the neutral alternative without an SDK install. https://www.datadoghq.com/blog/external-provider-status ; https://docs.datadoghq.com/internal_developer_portal/external_provider_status/ . Size: L. Success metric: distinct OTLP reporters and the share of signals with source='otlp'; baseline measured at launch, target 25 OTLP reporters within 90 days."
     },
@@ -2478,7 +2478,7 @@
         "/docs gains a browser page with the install snippet and Content-Security-Policy notes",
         "Build passes"
       ],
-      "priority": 174,
+      "priority": 108,
       "passes": false,
       "notes": "New story, replacing draft LEAP-007. It attacks the same cold-start problem as OTLP from the other side: thousands of end-user vantage points per customer site. Limitation stated up front: Resource Timing exposes responseStatus only in recent browsers and needs Timing-Allow-Origin for timings, so coverage will vary by vendor. Competitive rationale: Datadog's detection rides telemetry from its own customers; status-page aggregators have no client-side data. https://docs.datadoghq.com/internal_developer_portal/external_provider_status/ ; https://isdown.app/pricing . Size: L. Success metric: distinct countries with browser signals per catalogue API and distinct sites with a publishable key; target 20 sites and 30+ countries on the top 10 APIs within 6 months."
     },
@@ -2495,7 +2495,7 @@
         "The existing /category/[slug] page for the AI category lists models ranked by current TTFT p95 and 429 rate, omitting models below the reporter threshold",
         "Build passes"
       ],
-      "priority": 175,
+      "priority": 109,
       "passes": false,
       "notes": "Kept from draft LEAP-003; error_class moved to LEAP-001 so it applies to every API, not only AI. Competitive rationale: OpenRouter and LLM Gateway show real-traffic uptime only for traffic through their gateways; aggregators stop at provider-level status. https://openrouter.ai/docs/features/uptime-optimization ; https://llmgateway.io/models/o3/uptime ; https://isdown.app/pricing . Size: XL. Success metric: sessions and signups attributed to /api/*/models; target AI model pages at 30% or more of organic landings within 6 months."
     },
@@ -2513,7 +2513,7 @@
         "Tests cover quota enforcement, the unknown-price mapping and webhook signature verification",
         "Build passes"
       ],
-      "priority": 176,
+      "priority": 110,
       "passes": false,
       "notes": "Kept from draft LEAP-004. Corrected the competitive claim: IsDown's MCP is on Pro ($49) and above, not only on higher tiers, and StatusGator's API is on every plan including Free at 15 req/min. Verified defect: frontend/src/lib/stripe-server.js returns 'pro' as the final fallback for an unrecognised price. Sources: https://isdown.app/pricing ; https://statusgator.com/plans . Size: L. Success metric: MRR from data and keyed API plans; target first $500 MRR within 120 days."
     },
@@ -2530,7 +2530,7 @@
         "Sitemap and llms.txt pick up promoted APIs automatically; a test asserts a promoted API appears in sitemap.xml and an unpromoted discovered host does not",
         "Build passes"
       ],
-      "priority": 177,
+      "priority": 111,
       "passes": false,
       "notes": "Kept from draft LEAP-008; corrected the seeded count to 48 from the seed files. Competitive rationale: aggregators win on breadth (StatusGator 12,540+ services, IsDown 6,320+ vendors in its data API). https://statusgator.com/plans ; https://isdown.app/pricing . Size: M. Success metric: catalogue size and organic landings on promoted API pages; target 300 APIs within 6 months and promoted pages at 40% or more of new organic entrances."
     },
@@ -2548,7 +2548,7 @@
         "Matcher tests cover overlapping incidents, vendor-first, vendor-never and ApiDown-only cases",
         "Build passes"
       ],
-      "priority": 178,
+      "priority": 112,
       "passes": false,
       "notes": "New story, replacing draft LEAP-014. It turns ApiDown's central marketing claim into evidence that earns links and press coverage after every outage, and depends on LEAP-001 removing status-page rows from signals. Competitive rationale: aggregators sell 'early' detection without publishing per-incident accuracy. https://isdown.app/blog/april-2026-isdown-users-saved-16-5-hours-with-early-outage-detection ; https://dev.to/cbartlett/waiting-for-status-pages-is-the-slowest-way-to-respond-to-cloud-outages-14b6 . Size: M. Success metric: referring domains to /lead-time and incident pages; target 25 new referring domains within 6 months and a published median lead on at least 10 vendors."
     },
@@ -2565,7 +2565,7 @@
         "SDK tests cover open, half-open and closed transitions against a mocked fleet-state server",
         "Build passes"
       ],
-      "priority": 179,
+      "priority": 113,
       "passes": false,
       "notes": "Kept from draft LEAP-006; dropped the unverified '80% uptime' figure for OpenRouter and tied the breaker to LEAP-001 confidence. Competitive rationale: OpenRouter routes around providers with degraded uptime; status aggregators only notify. https://openrouter.ai/docs/features/uptime-optimization ; https://openrouter.ai/docs/guides/community/for-providers . Size: L. Success metric: installs calling breaker() or isDegraded(), counted through an opt-in SDK feature counter; target 100 within 6 months."
     },
@@ -2583,7 +2583,7 @@
         "Tests prove a free-tier user cannot create a status page through a direct Supabase insert",
         "Build passes"
       ],
-      "priority": 180,
+      "priority": 114,
       "passes": false,
       "notes": "Kept from draft LEAP-009. Corrected the price claim: StatusGator's private status pages start at $72/mo billed annually, but IsDown includes a status page from its $27 Starter plan, so the angle is impact explanation, not price. Verified: frontend/src/routes/dashboard/+page.svelte imports getTierLimits client-side; database/migrations/022_status_pages_service.sql policy status_pages_own is FOR ALL with no count check. https://statusgator.com/plans ; https://isdown.app/pricing . Size: XL. Success metric: paying status-page accounts and add-on revenue; target 25 within 6 months."
     },
@@ -2600,7 +2600,7 @@
         "A README badge snippet is generated for the detected stack, linking to /stack?apis=... (US-153)",
         "Build passes"
       ],
-      "priority": 181,
+      "priority": 115,
       "passes": false,
       "notes": "Kept from draft LEAP-010 with criteria tied to the existing CLI exit codes and /stack route. Competitive rationale: StatusGator, IsDown and Datadog deliver status in dashboards, chat and alerts; none acts at PR or deploy time. https://statusgator.com/plans ; https://isdown.app/pricing ; https://www.datadoghq.com/blog/external-provider-status . Size: L. Success metric: GitHub App installs and signups with ref=github; target 200 installs and 15% install-to-signup within 6 months."
     },
@@ -2617,7 +2617,7 @@
         "Pricing page copy matches what ships: no feature is listed that the code doesn't do",
         "Build passes"
       ],
-      "priority": 182,
+      "priority": 116,
       "passes": false,
       "notes": "Kept from draft LEAP-013. Planned in PRD.md prose (15.1 Team tier: '5 seats, SSO ... audit log'; 18.2 'SSO / SAML - Team tier') but never as a prd.json story, so this is the first buildable form. Corrected competitor framing: IsDown's admin SSO starts at Pro $49, so SSO alone is not a differentiator, it is table stakes. https://statusgator.com/plans ; https://isdown.app/pricing . Size: XL. Success metric: Team-or-above MRR and average revenue per account; target 10 Team-or-above accounts and ARPA above $60 within 6 months."
     },
@@ -2634,7 +2634,7 @@
         "A test fails if any code path still emits the literal 'us-east', 'eu-west' or 'ap-south' simulated labels",
         "Build passes"
       ],
-      "priority": 183,
+      "priority": 117,
       "passes": false,
       "notes": "Kept from draft LEAP-015; verified services/worker/src/lib/synthetic-probe.js lines 3, 23 and 178. Competitive rationale: APIContext sells global synthetic API testing to enterprises; Datadog External Provider Status covers about 40 providers. https://intellyx.com/2024/05/17/api-context-measure-api-performance-and-conformance/ ; https://www.datadoghq.com/blog/external-provider-status . Size: L. Success metric: region-scoped incidents detected and paid accounts using multi-region custom probes; target 20 within 6 months."
     },
@@ -2651,7 +2651,7 @@
         "Tests: a fixture where B fails 5 minutes after A yields edge A->B with lag 5; independent random failures yield no edge",
         "Build passes"
       ],
-      "priority": 184,
+      "priority": 118,
       "passes": false,
       "notes": "New story, replacing the slot freed by merging draft LEAP-011 into LEAP-002. It goes past US-116 (after-the-fact overlap) to a learned, forward-looking dependency graph, and feeds LEAP-020 forecasts. Competitive rationale: Datadog maps third-party providers to your services, which needs APM; aggregators read each status page in isolation. https://www.datadoghq.com/blog/external-provider-status ; https://statusgator.com/plans . Size: L. Success metric: heads-up alert opt-ins and the share of downstream incidents preceded by a heads-up; target 40% of downstream incidents on edges with support 5+ flagged in advance within 9 months."
     },
@@ -2669,7 +2669,7 @@
         "Tests cover the credit-tier calculation and the case where the account has too few signals to support a claim",
         "Build passes"
       ],
-      "priority": 185,
+      "priority": 119,
       "passes": false,
       "notes": "Kept from draft LEAP-016; tied to migration 024's existing source-URL CHECK and distinguished from US-072 (user-set targets). Competitive rationale: aggregators and Datadog report outages but never quantify SLA credits. https://isdown.app/pricing ; https://statusgator.com/plans . Size: M. Success metric: claim packets generated and dollar value surfaced; target $50k cumulative credits identified within 6 months."
     },
@@ -2686,7 +2686,7 @@
         "A test asserts the ref survives the login and callback round trip",
         "Build passes"
       ],
-      "priority": 186,
+      "priority": 120,
       "passes": false,
       "notes": "Kept from draft LEAP-012; the 'share' ref was removed with draft LEAP-007, and contributor level now uses per-account identity so key-farming can't buy features. Competitive rationale: Downdetector and status-page aggregators get no data from their users' production traffic. https://isdown.app/compare/vs-downdetector ; https://statusgator.com/plans . Size: M. Success metric: contributing accounts and ref-attributed signups; target 2x distinct weekly contributing accounts in 90 days and every new signup carrying a ref or 'direct'."
     },
@@ -2703,7 +2703,7 @@
         "Contract tests validate each payload against the target platform's documented schema",
         "Build passes"
       ],
-      "priority": 187,
+      "priority": 121,
       "passes": false,
       "notes": "Kept from draft LEAP-017; removed the PagerDuty Events v2 criterion because US-024 built the PagerDuty channel. RapDev figure verified against Datadog's case study. https://docs.datadoghq.com/integrations/isdown/ ; https://isdown.app/blog/bring-third-party-incidents-into-better-stack ; https://datadoghq.com/case-studies/rapdev . Size: L. Success metric: integration-attributed signups and marketplace revenue; target 2 live listings and 10% of new paid accounts via integrations within 9 months."
     },
@@ -2720,7 +2720,7 @@
         "/docs lists every runtime with a copy-paste install",
         "Build passes"
       ],
-      "priority": 188,
+      "priority": 122,
       "passes": false,
       "notes": "Kept from draft LEAP-018; the homepage/package name mismatch is verified and should be fixed on its own before this story, since every visitor who copies the homepage command today installs nothing. Competitive rationale: Datadog's real-traffic detection rides its agents in every language. https://www.datadoghq.com/blog/external-provider-status ; https://docs.datadoghq.com/internal_developer_portal/external_provider_status/ . Size: XL. Success metric: contributing accounts by runtime; target non-Node/Python runtimes at 25% or more of contributing accounts within 9 months."
     },
@@ -2737,7 +2737,7 @@
         "The model provider and prompt live server-side; nothing beyond aggregates is sent to the model, asserted by a test on the request payload",
         "Build passes"
       ],
-      "priority": 189,
+      "priority": 123,
       "passes": false,
       "notes": "Kept from draft LEAP-019; distinct from US-115 (after-the-fact postmortem). Competitive rationale: competitors notify that a vendor is down; none quantifies per-customer impact live. https://updog.ai ; https://statusgator.com/plans ; https://isdown.app/pricing . Size: M. Success metric: brief opens per incident among alerted Pro users; target 40% open rate and Pro retention up 10 points."
     },
@@ -2754,7 +2754,7 @@
         "A backtest over 60 days of history is committed with its results before the feature is switched on",
         "Build passes"
       ],
-      "priority": 190,
+      "priority": 124,
       "passes": false,
       "notes": "Kept from draft LEAP-020; now consumes LEAP-014's cascade edges. Competitive claim narrowed to what the pricing pages show: StatusGator lists Early Warning Signals and IsDown lists Early Outage Detection, neither with published accuracy. https://statusgator.com/plans ; https://isdown.app/pricing ; https://isdown.app/blog/april-2026-isdown-users-saved-16-5-hours-with-early-outage-detection . Size: L. Success metric: forecast precision of 50% or more at the alert threshold and 300 risk subscriptions within 6 months."
     }
